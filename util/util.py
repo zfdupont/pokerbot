@@ -5,6 +5,30 @@ import functools
 from models.card import Card
 from util.lookup_table import LookupTables
 
+# Maps pure-Python HandRank enum to the midpoint of its Cactus Kev integer range
+# so rank_to_hand_name() still returns correct names for fallback evaluations.
+_HANDRANK_TO_CK = None  # lazy-loaded to avoid circular imports
+
+
+def _fallback_hand_value(cards: List[Card]) -> int:
+    global _HANDRANK_TO_CK
+    if _HANDRANK_TO_CK is None:
+        from models.enums import HandRank
+        _HANDRANK_TO_CK = {
+            HandRank.ROYAL_FLUSH: 1,
+            HandRank.STRAIGHT_FLUSH: 6,
+            HandRank.FOUR_OF_KIND: 88,
+            HandRank.FULL_HOUSE: 244,
+            HandRank.FLUSH: 961,
+            HandRank.STRAIGHT: 1604,
+            HandRank.THREE_OF_KIND: 2038,
+            HandRank.TWO_PAIR: 2896,
+            HandRank.PAIR: 4755,
+            HandRank.HIGH_CARD: 6824,
+        }
+    from models.hand import Hand
+    return _HANDRANK_TO_CK[Hand(cards).rank]
+
 
 def popcount(v):
     c = 0
@@ -27,56 +51,60 @@ def card_to_binary_lookup(card: Card):
 
 
 def hand_value(hole_cards: List[Card], community: List[Card]) -> int:
-    hand = hole_cards + community
+    all_cards = hole_cards + community
+    binhand = list(map(card_to_binary, all_cards))
 
-    binhand = list(map(card_to_binary, hand))
-    flush_prime = functools.reduce(operator.mul, [(card >> 12) & 0xF for card in binhand])
-    flush_suit = False
-    if flush_prime in LookupTables.prime_products_to_flush:
-        flush_suit = LookupTables.prime_products_to_flush[flush_prime]
+    try:
+        flush_prime = functools.reduce(operator.mul, [(card >> 12) & 0xF for card in binhand])
+        flush_suit = False
+        if flush_prime in LookupTables.prime_products_to_flush:
+            flush_suit = LookupTables.prime_products_to_flush[flush_prime]
 
-    odd_xor = functools.reduce(operator.xor, binhand)
-    even_xor = (functools.reduce(operator.or_, binhand) >> 16) ^ odd_xor
+        odd_xor = functools.reduce(operator.xor, binhand)
+        even_xor = (functools.reduce(operator.or_, binhand) >> 16) ^ odd_xor
 
-    if flush_suit:
-        if even_xor == 0:
-            bits = functools.reduce(operator.or_, [
-                card >> 16 for card in binhand if (card >> 12) & 0xF == flush_suit
-            ])
-            return LookupTables.flush_rank_bits_to_rank[bits]
-        else:
-            if popcount(even_xor) == 2:
-                return LookupTables.flush_rank_bits_to_rank[odd_xor | even_xor]
-            else:
+        if flush_suit:
+            if even_xor == 0:
                 bits = functools.reduce(operator.or_, [
                     card >> 16 for card in binhand if (card >> 12) & 0xF == flush_suit
                 ])
                 return LookupTables.flush_rank_bits_to_rank[bits]
+            else:
+                if popcount(even_xor) == 2:
+                    return LookupTables.flush_rank_bits_to_rank[odd_xor | even_xor]
+                else:
+                    bits = functools.reduce(operator.or_, [
+                        card >> 16 for card in binhand if (card >> 12) & 0xF == flush_suit
+                    ])
+                    return LookupTables.flush_rank_bits_to_rank[bits]
 
-    if even_xor == 0:
-        odd_popcount = popcount(odd_xor)
-        if odd_popcount == 7:
-            return LookupTables.odd_xors_to_rank[odd_xor]
-        else:
-            prime_product = functools.reduce(operator.mul, [card & 0xFF for card in binhand])
-            return LookupTables.prime_products_to_rank[prime_product]
-    else:
-        odd_popcount = popcount(odd_xor)
-        if odd_popcount == 5:
-            return LookupTables.even_xors_to_odd_xors_to_rank[even_xor][odd_xor]
-        elif odd_popcount == 3:
-            even_popcount = popcount(even_xor)
-            if even_popcount == 2:
-                return LookupTables.even_xors_to_odd_xors_to_rank[even_xor][odd_xor]
+        if even_xor == 0:
+            odd_popcount = popcount(odd_xor)
+            if odd_popcount == 7:
+                return LookupTables.odd_xors_to_rank[odd_xor]
             else:
                 prime_product = functools.reduce(operator.mul, [card & 0xFF for card in binhand])
                 return LookupTables.prime_products_to_rank[prime_product]
         else:
-            even_popcount = popcount(even_xor)
-            if even_popcount == 3:
+            odd_popcount = popcount(odd_xor)
+            if odd_popcount == 5:
                 return LookupTables.even_xors_to_odd_xors_to_rank[even_xor][odd_xor]
-            elif even_popcount == 2:
-                prime_product = functools.reduce(operator.mul, [card & 0xFF for card in binhand])
-                return LookupTables.prime_products_to_rank[prime_product]
+            elif odd_popcount == 3:
+                even_popcount = popcount(even_xor)
+                if even_popcount == 2:
+                    return LookupTables.even_xors_to_odd_xors_to_rank[even_xor][odd_xor]
+                else:
+                    prime_product = functools.reduce(operator.mul, [card & 0xFF for card in binhand])
+                    return LookupTables.prime_products_to_rank[prime_product]
             else:
-                return LookupTables.even_xors_to_odd_xors_to_rank[even_xor][odd_xor]
+                even_popcount = popcount(even_xor)
+                if even_popcount == 3:
+                    return LookupTables.even_xors_to_odd_xors_to_rank[even_xor][odd_xor]
+                elif even_popcount == 2:
+                    prime_product = functools.reduce(operator.mul, [card & 0xFF for card in binhand])
+                    return LookupTables.prime_products_to_rank[prime_product]
+                else:
+                    return LookupTables.even_xors_to_odd_xors_to_rank[even_xor][odd_xor]
+
+    except KeyError:
+        return _fallback_hand_value(all_cards)
