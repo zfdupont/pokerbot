@@ -1,5 +1,4 @@
-import random
-from typing import Dict, List
+from typing import List
 import numpy as np
 
 from cfr.abstract_state import AbstractState, deal_heads_up
