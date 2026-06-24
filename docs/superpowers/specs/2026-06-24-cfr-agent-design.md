@@ -4,7 +4,7 @@
 
 **Architecture:** Tabular MCCFR with NumPy-backed regret storage. Abstraction layer (equity buckets + discretized bet sizes) makes the game tree tractable on CPU. CFR agent bridges trained strategy to the existing simulation engine via the `PokerAgent` interface. Neural value estimation (Phase 2) replaces the tabular regret table without changing any other module.
 
-**Tech Stack:** Python 3.10+, NumPy (regret tables), PyTorch MPS (Phase 2 neural), existing `models/` + `game/` engine unchanged.
+**Tech Stack:** Python 3.10+, NumPy (regret tables), tqdm (progress bars for training loop and equity bucket precomputation), PyTorch MPS (Phase 2 neural), existing `models/` + `game/` engine unchanged.
 
 ---
 
@@ -165,11 +165,11 @@ class Trainer:
 ```
 
 **Training loop:**
-1. Run one MCCFR iteration (both players)
+1. Run one MCCFR iteration (both players), advancing a `tqdm` progress bar
 2. Every `checkpoint_interval` iterations:
    - Save `RegretTable` to disk (allows resuming)
    - Compute exploitability estimate over 10,000 sampled hands
-   - Log: iteration count, exploitability (mbb/h), wall time
+   - Update tqdm postfix: iteration count, exploitability (mbb/h), wall time
 
 **Convergence target:** 10^7 iterations takes ~3 hours with NumPy arrays. Exploitability should be below 500 mbb/h at that point with the 8/5/5/5 abstraction.
 
