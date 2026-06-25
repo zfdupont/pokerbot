@@ -55,6 +55,7 @@ class PokerGame:
         for p in self.state.players:
             p.current_bet = 0
         self.state.current_bet = 0
+        self.state.raises_per_street[self.state.betting_round] = 0
 
     def _first_to_act(self, street: int) -> int:
         num = len(self.state.players)
@@ -138,6 +139,10 @@ class PokerGame:
             pot_manager.contribute(player, additional)
             if player.stack == 0:
                 player.is_all_in = True
+            street = self.state.betting_round
+            self.state.raises_per_street[street] = min(
+                self.state.raises_per_street[street] + 1, 2
+            )
 
     def _determine_winners(self, pot_manager: PotManager) -> None:
         active_players = [p for p in self.state.players if p.is_active]
@@ -155,6 +160,7 @@ class PokerGame:
         self.state.community_cards = []
         self.state.current_bet = 0
         self.state.betting_round = 0
+        self.state.raises_per_street = [0, 0, 0, 0]
         for p in self.state.players:
             p.hole_cards = []
             p.current_bet = 0

@@ -56,5 +56,5 @@ There are two independent hand-evaluation implementations:
 
 ### Known gaps
 
-- `PokerGame._process_action` treats `amount` as the new total bet for BET/RAISE but adds the full amount to the pot without crediting the player's existing `current_bet` — a raise from a player who already has chips committed will overpay.
-- `agents/cfr_agent.py` uses `betting_history=(0,0,0,0)` at inference time since live `GameState` doesn't track per-street raise counts — the agent falls back to uniform strategy for InfoSets with non-zero raise history.
+- `PokerGame._process_action` correctly computes `additional = amount - player.current_bet` so raises don't double-count committed chips. However the engine is only tested through integration tests; edge cases around all-in partial calls and multi-way pots may still have subtle accounting errors.
+- `GameState.raises_per_street` is reset at hand start and street transitions but is not exposed to agents during preflop before any street reset fires — the value is correct from the first action onward.
