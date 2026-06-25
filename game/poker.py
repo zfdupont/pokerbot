@@ -93,6 +93,7 @@ class PokerGame:
                 continue
 
             self.state.current_player_idx = idx
+            self.state.pot = pot_manager.total
             action, amount = player.make_decision(self.state)
             self._process_action(player, action, amount, pot_manager)
             self._emit("on_player_action", player, action, amount)
@@ -149,9 +150,22 @@ class PokerGame:
         pot_manager.award(player_ranks)
         self._emit("on_hand_complete", player_ranks, pot_manager.total)
 
+    def _reset_for_hand(self) -> None:
+        self.state.deck = self.state._create_deck()
+        self.state.community_cards = []
+        self.state.current_bet = 0
+        self.state.betting_round = 0
+        for p in self.state.players:
+            p.hole_cards = []
+            p.current_bet = 0
+            p.is_active = p.stack > 0
+            p.is_all_in = False
+            p.total_contributed = 0
+
     def play_hand(self) -> None:
         pot_manager = PotManager()
 
+        self._reset_for_hand()
         self._assign_positions()
         self.state.deal_hole_cards()
         self._emit("on_hand_start", self.state.players, self.state.button_pos)

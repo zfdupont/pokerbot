@@ -18,7 +18,7 @@ class Trainer:
     def train(
         self,
         num_iterations: int,
-        checkpoint_interval: int = 100_000,
+        checkpoint_interval: int = 10_000,
         checkpoint_dir: Optional[str] = None,
     ) -> None:
         if checkpoint_dir:

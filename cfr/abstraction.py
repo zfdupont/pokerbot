@@ -7,7 +7,7 @@ from util.util import hand_value
 
 NUM_PREFLOP_BUCKETS = 8
 NUM_POSTFLOP_BUCKETS = 5
-MONTE_CARLO_SAMPLES = 100  # rollouts per equity estimate (higher = more stable)
+MONTE_CARLO_SAMPLES = 500  # rollouts per equity estimate (higher = more stable)
 
 BET_SIZES = {
     "fold":  None,
