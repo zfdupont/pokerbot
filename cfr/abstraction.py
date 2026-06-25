@@ -1,12 +1,13 @@
 import random
-from typing import List
+from functools import lru_cache
+from typing import List, Tuple
 from models.card import Card
 from models.enums import Suit
 from util.util import hand_value
 
 NUM_PREFLOP_BUCKETS = 8
 NUM_POSTFLOP_BUCKETS = 5
-MONTE_CARLO_SAMPLES = 500  # rollouts per equity estimate (higher = more stable)
+MONTE_CARLO_SAMPLES = 100  # rollouts per equity estimate (higher = more stable)
 
 BET_SIZES = {
     "fold":  None,
@@ -43,28 +44,52 @@ def _equity(hole: List[Card], board: List[Card]) -> float:
     return wins / MONTE_CARLO_SAMPLES
 
 
-def hand_to_bucket(hole: List[Card], board: List[Card], street: int) -> int:
-    """Map hole cards + board to an equity bucket (0 = strongest)."""
+def _card_key(card: Card) -> Tuple[int, int]:
+    return (card.rank, card.suit.value)
+
+
+@lru_cache(maxsize=None)
+def _hand_to_bucket_cached(hole_key: Tuple, board_key: Tuple, street: int) -> int:
+
+    hole = [Card(r, Suit(s)) for r,s in hole_key]
+    board = [Card(r, Suit(s)) for r,s in board_key]
     eq = _equity(hole, board)
+
     if street == 0:
         n = NUM_PREFLOP_BUCKETS
     else:
         n = NUM_POSTFLOP_BUCKETS
-    # Invert: equity=1.0 → bucket 0, equity=0.0 → bucket n-1
+
     bucket = int((1.0 - eq) * n)
-    return min(bucket, n - 1)
+    return min(bucket, n-1)
+
+
+@lru_cache(maxsize=None)
+def _board_to_bucket_cached(board_key: Tuple, street: int) -> int:
+
+    if street == 0 or not board_key:
+        return 0
+    
+    suits = [suit for _, suit in board_key]
+    ranks = [rank for rank, _ in board_key]
+
+    flush_draw = max(suits.count(s) for s in set(suits)) >= 2
+    straight_draw = any(ranks[i+1] - ranks[i] <= 2 for i in range(len(ranks) - 1))
+
+    return int(flush_draw) + int(straight_draw)
+
+
+def hand_to_bucket(hole: List[Card], board: List[Card], street: int) -> int:
+    """Map hole cards + board to an equity bucket (0 = strongest)."""
+    hole_key = tuple(sorted(_card_key(c) for c in hole))
+    board_key = tuple(sorted(_card_key(c) for c in board))
+    return _hand_to_bucket_cached(hole_key, board_key, street)
 
 
 def board_to_bucket(board: List[Card], street: int) -> int:
     """Classify board texture: 0=dry, 1=semi-wet, 2=wet."""
-    if street == 0 or not board:
-        return 0
-    suits = [c.suit for c in board]
-    ranks = sorted([c.rank for c in board])
-    flush_draw = max(suits.count(s) for s in set(suits)) >= 2
-    straight_draw = any(ranks[i+1] - ranks[i] <= 2 for i in range(len(ranks)-1))
-    score = int(flush_draw) + int(straight_draw)
-    return min(score, 2)
+    board_key = tuple(sorted(_card_key(c) for c in board))
+    return _board_to_bucket_cached(board_key, street)
 
 
 def legal_abstract_actions(
