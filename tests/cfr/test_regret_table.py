@@ -29,8 +29,8 @@ class TestRegretMatching:
     def test_positive_regrets_proportional(self):
         t = RegretTable()
         i = make_infoset()
-        # Manually set regrets: only "check" has positive regret
-        t.regrets[i] = np.array([0.0, 3.0, 0.0, 0.0, 0.0])
+        # ALL_ACTIONS order: fold=0, check=1, call=2, b0.5=3, b1.0=4, allin=5
+        t.regrets[i] = np.array([0.0, 3.0, 0.0, 0.0, 0.0, 0.0])
         strat = t.get_strategy(i, ACTIONS)
         assert strat[1] == pytest.approx(1.0)  # check gets all probability
         assert strat[0] == pytest.approx(0.0)
@@ -38,7 +38,8 @@ class TestRegretMatching:
     def test_negative_regrets_clipped_to_zero(self):
         t = RegretTable()
         i = make_infoset()
-        t.regrets[i] = np.array([-5.0, 2.0, -1.0, 0.0, 0.0])
+        # fold=-5, check=2, call=0, b0.5=-1, b1.0=0, allin=0
+        t.regrets[i] = np.array([-5.0, 2.0, 0.0, -1.0, 0.0, 0.0])
         strat = t.get_strategy(i, ACTIONS)
         assert strat[0] == pytest.approx(0.0)  # fold clipped
         assert strat[1] > 0                     # check has prob
@@ -46,7 +47,8 @@ class TestRegretMatching:
     def test_strategy_sums_to_one(self):
         t = RegretTable()
         i = make_infoset()
-        t.regrets[i] = np.array([1.0, 2.0, 0.5, 0.0, -1.0])
+        # fold=1, check=2, call=0, b0.5=0.5, b1.0=0, allin=-1
+        t.regrets[i] = np.array([1.0, 2.0, 0.0, 0.5, 0.0, -1.0])
         strat = t.get_strategy(i, ACTIONS)
         assert np.sum(strat) == pytest.approx(1.0)
 

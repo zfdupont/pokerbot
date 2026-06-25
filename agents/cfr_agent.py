@@ -43,7 +43,7 @@ class CFRAgent(PokerAgent):
                 game_state.community_cards,
                 game_state.betting_round,
             ),
-            betting_history=(),
+            betting_history=(0, 0, 0, 0),
             stack_bucket=stack_bucket(player.stack, big_blind),
         )
 

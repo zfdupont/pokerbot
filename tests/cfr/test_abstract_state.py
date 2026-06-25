@@ -96,9 +96,11 @@ class TestAdvanceStreet:
         s = deal_heads_up().apply_action("call").apply_action("check").advance_street()
         assert s.to_act[0] == 1
 
-    def test_betting_history_has_street_separator(self):
-        s = deal_heads_up().apply_action("call").apply_action("check").advance_street()
-        assert "/" in s.betting_history
+    def test_betting_history_tracks_raises_per_street(self):
+        s = deal_heads_up().apply_action("call").apply_action("b1.0").apply_action("allin")
+        # preflop: one raise (b1.0), then allin → capped at 2
+        assert s.betting_history[0] == 2
+        assert s.betting_history[1:] == (0, 0, 0)
 
 
 class TestIsTerminal:

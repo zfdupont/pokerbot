@@ -23,7 +23,7 @@ class AbstractState:
     current_bet: float
     player_bets: List[float]                   # [p0, p1] this street
     to_act: Tuple[int, ...]                    # action queue
-    betting_history: Tuple[str, ...]
+    betting_history: Tuple[int, int, int, int]  # raise counts per street, capped at 2
     folded: List[bool]                         # [p0_folded, p1_folded]
 
     def is_terminal(self) -> bool:
@@ -83,7 +83,12 @@ class AbstractState:
         folded = list(self.folded)
         pot = self.pot
         current_bet = self.current_bet
-        history = self.betting_history + (action,)
+        if action in ("b0.5", "b1.0", "allin"):
+            counts = list(self.betting_history)
+            counts[self.street] = min(counts[self.street] + 1, 2)
+            history = tuple(counts)
+        else:
+            history = self.betting_history
 
         if action == "fold":
             folded[p] = True
@@ -154,8 +159,6 @@ class AbstractState:
             if not self.folded[i] and self.stacks[i] > 0
         )
 
-        history = self.betting_history + ("/",)
-
         return AbstractState(
             hole_cards=self.hole_cards,
             board=tuple(board),
@@ -166,7 +169,7 @@ class AbstractState:
             current_bet=0.0,
             player_bets=[0.0] * num,
             to_act=to_act,
-            betting_history=history,
+            betting_history=self.betting_history,
             folded=list(self.folded),
         )
 
@@ -195,6 +198,6 @@ def deal_heads_up(
         current_bet=bb,
         player_bets=[sb, bb],
         to_act=(0, 1),  # BTN/SB acts first preflop, then BB
-        betting_history=(),
+        betting_history=(0, 0, 0, 0),
         folded=[False, False],
     )
