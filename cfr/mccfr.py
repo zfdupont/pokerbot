@@ -1,5 +1,6 @@
 from typing import List
 import numpy as np
+from tqdm import tqdm
 
 from cfr.abstract_state import AbstractState, deal_heads_up
 from cfr.regret_table import RegretTable
@@ -91,16 +92,26 @@ def best_response(
         ]))
 
 
-def compute_exploitability(table: RegretTable, num_samples: int = 10_000) -> float:
+def compute_exploitability(
+    table: RegretTable, num_samples: int = 10_000, show_progress: bool = False
+) -> float:
     """
     Estimate exploitability in milli-big-blinds per hand (mbb/h).
     exploitability = average of best-response values for each player / 2 * 1000
     """
     br_values = []
     for br_player in [0, 1]:
-        total = sum(
+        samples = (
             best_response(deal_heads_up(), br_player, table)
             for _ in range(num_samples)
         )
-        br_values.append(total / num_samples)
+        if show_progress:
+            samples = tqdm(
+                samples,
+                total=num_samples,
+                desc=f"BR player {br_player}",
+                unit="sample",
+                leave=False,
+            )
+        br_values.append(sum(samples) / num_samples)
     return (br_values[0] + br_values[1]) / 2.0 * 1000.0

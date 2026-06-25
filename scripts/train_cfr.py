@@ -43,7 +43,7 @@ def main():
     )
 
     print("\nFinal exploitability estimate (10,000 samples)...")
-    expl = compute_exploitability(table, num_samples=10_000)
+    expl = compute_exploitability(table, num_samples=10_000, show_progress=True)
     print(f"Exploitability: {expl:.1f} mbb/h")
     print(f"Info sets visited: {len(table.regrets):,}")
 
