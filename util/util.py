@@ -1,7 +1,6 @@
 from typing import List, Tuple
 import operator
 import functools
-from functools import lru_cache
 
 from models.card import Card
 from util.lookup_table import LookupTables
@@ -15,6 +14,7 @@ for _even, _inner in PATCH.items():
         LookupTables.even_xors_to_odd_xors_to_rank[_even] = dict(_inner)
 
 _HANDRANK_TO_CK = None
+_hand_value_cache: dict = {}
 
 
 def _fallback_hand_value(cards: List[Card]) -> int:
@@ -57,10 +57,8 @@ def card_to_binary_lookup(card: Card):
     return LookupTables.card_to_binary[card.rank][card.suit_index]
 
 
-@lru_cache(maxsize=None)
-def _hand_value_fast(binhand_key: Tuple[int, ...]) -> int:
+def _hand_value_xor(binhand: List[int]) -> int:
     """XOR-based 7-card evaluation. Raises KeyError on table miss."""
-    binhand = list(binhand_key)
     flush_prime = functools.reduce(operator.mul, [(card >> 12) & 0xF for card in binhand])
     flush_suit = False
     if flush_prime in LookupTables.prime_products_to_flush:
@@ -115,8 +113,13 @@ def _hand_value_fast(binhand_key: Tuple[int, ...]) -> int:
 
 def hand_value(hole_cards: List[Card], community: List[Card]) -> int:
     all_cards = hole_cards + community
-    binhand = tuple(sorted(card_to_binary(c) for c in all_cards))
+    binhand_key = tuple(sorted(card_to_binary(c) for c in all_cards))
+    cached = _hand_value_cache.get(binhand_key)
+    if cached is not None:
+        return cached
     try:
-        return _hand_value_fast(binhand)
+        result = _hand_value_xor(list(binhand_key))
     except KeyError:
-        return _fallback_hand_value(all_cards)
+        result = _fallback_hand_value(all_cards)
+    _hand_value_cache[binhand_key] = result
+    return result
