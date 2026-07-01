@@ -160,3 +160,10 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+util/_index52c7_cache.pkl
+util/7card_rank_table.npy
+util/missing_entries.py
+util/prime_products_patch.py
+cfr/mccfr_cy.c
+cfr/checkpoints/
+.DS_Store

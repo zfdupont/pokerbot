@@ -1,21 +1,31 @@
+import random
 from typing import List
-import numpy as np
 from tqdm import tqdm
 
 from cfr.abstract_state import AbstractState, deal_heads_up
 from cfr.regret_table import RegretTable
 from cfr.info_set import InfoSet, stack_bucket
-from cfr.abstraction import hand_to_bucket, board_to_bucket
+from cfr.abstraction import _hand_to_bucket_cached, _board_to_bucket_cached
+
+
+def _weighted_choice(actions: List[str], probs: list) -> str:
+    """Sample one action proportional to probs (pure-Python list, no numpy overhead)."""
+    r = random.random()
+    w = 0.0
+    for i in range(len(actions)):
+        w += probs[i]
+        if w > r:
+            return actions[i]
+    return actions[-1]  # floating-point fallback: probs may sum to 0.9999...
 
 
 def _encode_infoset(state: AbstractState, player: int) -> InfoSet:
-    board = list(state.board)
     street = state.street
     return InfoSet(
         player=player,
-        hand_bucket=hand_to_bucket(list(state.hole_cards[player]), board, street),
+        hand_bucket=_hand_to_bucket_cached(state.hole_keys[player], state.board_key, street),
         street=street,
-        board_bucket=board_to_bucket(board, street),
+        board_bucket=_board_to_bucket_cached(state.board_key, street),
         betting_history=state.betting_history,
         stack_bucket=stack_bucket(state.stacks[player]),
     )
@@ -43,18 +53,19 @@ def external_sample(
     infoset = _encode_infoset(state, acting)
     strategy = table.get_strategy(infoset, legal)
 
+    strat_list = strategy.tolist()
     if acting == traversing_player:
         action_values = {}
         for action in legal:
             action_values[action] = external_sample(
                 state.apply_action(action), traversing_player, table
             )
-        node_value = float(np.dot(strategy, [action_values[a] for a in legal]))
+        node_value = sum(strat_list[i] * action_values[legal[i]] for i in range(len(legal)))
         table.update_regrets(infoset, action_values, node_value, legal)
         return node_value
     else:
         # Sample one opponent action
-        action = np.random.choice(legal, p=strategy)
+        action = _weighted_choice(legal, strat_list)
         table.accumulate_strategy(infoset, strategy, legal)
         return external_sample(state.apply_action(action), traversing_player, table)
 
@@ -85,11 +96,9 @@ def best_response(
         return max(values)
     else:
         infoset = _encode_infoset(state, acting)
-        strategy = table.get_average_strategy(infoset, legal)
-        return float(np.dot(strategy, [
-            best_response(state.apply_action(a), br_player, table)
-            for a in legal
-        ]))
+        strategy = table.get_average_strategy(infoset, legal).tolist()
+        child_values = [best_response(state.apply_action(a), br_player, table) for a in legal]
+        return sum(strategy[i] * child_values[i] for i in range(len(legal)))
 
 
 def compute_exploitability(

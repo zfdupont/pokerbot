@@ -1,48 +1,172 @@
-from typing import List, Tuple
-import operator
-import functools
+import array
+import os
+
+import numpy as np
 
 from models.card import Card
 from util.lookup_table import LookupTables
-from util.missing_entries import PATCH
+from util.ck_tables import FLUSHES, UNIQUE5, HASH_ADJUST, HASH_VALUES
+from util.index52c7 import index52c7, cards_to_bitmask
 
-# Apply missing XOR table entries at import time
-for _even, _inner in PATCH.items():
-    if _even in LookupTables.even_xors_to_odd_xors_to_rank:
-        LookupTables.even_xors_to_odd_xors_to_rank[_even].update(_inner)
-    else:
-        LookupTables.even_xors_to_odd_xors_to_rank[_even] = dict(_inner)
+_PRIMES = LookupTables.primes  # [2,3,5,7,11,13,17,19,23,29,31,37,41], indexed by rank-2
 
-_HANDRANK_TO_CK = None
+# Straight detection: A-high (index 0) down to 5-high/wheel (last)
+_STRAIGHT_MASKS = (
+    [(1 << h) | (1 << (h-1)) | (1 << (h-2)) | (1 << (h-3)) | (1 << (h-4))
+     for h in range(14, 5, -1)]
+    + [(1 << 14) | (1 << 5) | (1 << 4) | (1 << 3) | (1 << 2)]
+)
+
 _hand_value_cache: dict = {}
 
-
-def _fallback_hand_value(cards: List[Card]) -> int:
-    global _HANDRANK_TO_CK
-    if _HANDRANK_TO_CK is None:
-        from models.enums import HandRank
-        _HANDRANK_TO_CK = {
-            HandRank.ROYAL_FLUSH: 1,
-            HandRank.STRAIGHT_FLUSH: 6,
-            HandRank.FOUR_OF_KIND: 88,
-            HandRank.FULL_HOUSE: 244,
-            HandRank.FLUSH: 961,
-            HandRank.STRAIGHT: 1604,
-            HandRank.THREE_OF_KIND: 2038,
-            HandRank.TWO_PAIR: 2896,
-            HandRank.PAIR: 4755,
-            HandRank.HIGH_CARD: 6824,
-        }
-    from models.hand import Hand
-    return _HANDRANK_TO_CK[Hand(cards).rank]
+# Precomputed 133,784,560-entry rank table: RANK7[index52c7(mask)] → CK rank.
+# When present, eliminates _best_5_of_7 and the dict cache entirely.
+_TABLE_PATH = os.path.join(os.path.dirname(__file__), '7card_rank_table.npy')
+_RANK7: array.array | None = None
+if os.path.exists(_TABLE_PATH):
+    _data = np.load(_TABLE_PATH)
+    _RANK7 = array.array('H', _data)
+    del _data
 
 
-def popcount(v):
-    c = 0
-    while v:
-        v &= v - 1
-        c += 1
-    return c
+def _hash_lookup(prime_product: int) -> int:
+    """Perfect hash from senzee.blogspot.com — simulates 32-bit unsigned overflow."""
+    u = (prime_product + 0xe91aaa35) & 0xFFFFFFFF
+    u ^= u >> 16
+    u = (u + (u << 8)) & 0xFFFFFFFF
+    u ^= u >> 4
+    return HASH_VALUES[(((u + (u << 2)) & 0xFFFFFFFF) >> 19) ^ HASH_ADJUST[(u >> 8) & 0x1ff]]
+
+
+def _bits_to_rank_q(bits: int, n: int) -> int:
+    """Return bitmask-for-FLUSHES/UNIQUE5 using top-n ranks set in `bits`."""
+    q = 0
+    for r in range(14, 1, -1):
+        if bits & (1 << r):
+            q |= 1 << (r - 2)
+            n -= 1
+            if n == 0:
+                break
+    return q
+
+
+def _best_5_of_7(cards) -> int:
+    """
+    Best CK rank from 7 cards via single-pass preprocessing + CK table lookup.
+
+    Processes rank/suit information in O(7), then determines category and
+    computes the exact CK rank without enumerating all 21 subsets.
+    """
+    rank_count = [0] * 15
+    suit_count = [0] * 5
+    suit_rank_bits = [0] * 5
+    rank_bits = 0
+
+    for c in cards:
+        r, si = c.rank, c.suit_index
+        rank_count[r] += 1
+        suit_count[si] += 1
+        suit_rank_bits[si] |= 1 << r
+        rank_bits |= 1 << r
+
+    # --- Flush / Straight Flush ---
+    flush_si = 0
+    flush_bits = 0
+    for si in range(1, 5):
+        if suit_count[si] >= 5:
+            flush_si = si
+            flush_bits = suit_rank_bits[si]
+            break
+
+    if flush_si:
+        for mask in _STRAIGHT_MASKS:
+            if flush_bits & mask == mask:
+                q = sum(1 << (r - 2) for r in range(2, 15) if mask & (1 << r))
+                return FLUSHES[q]
+        # Plain flush: top 5 ranks in flush suit
+        return FLUSHES[_bits_to_rank_q(flush_bits, 5)]
+
+    # --- Quads ---
+    for r in range(14, 1, -1):
+        if rank_count[r] == 4:
+            kicker = next(r2 for r2 in range(14, 1, -1) if r2 != r and rank_count[r2] > 0)
+            return _hash_lookup((_PRIMES[r - 2] ** 4) * _PRIMES[kicker - 2])
+
+    # --- Full House ---
+    trips_r = next((r for r in range(14, 1, -1) if rank_count[r] >= 3), None)
+    if trips_r is not None:
+        pair_r = next((r for r in range(14, 1, -1) if r != trips_r and rank_count[r] >= 2), None)
+        if pair_r is not None:
+            return _hash_lookup((_PRIMES[trips_r - 2] ** 3) * (_PRIMES[pair_r - 2] ** 2))
+
+    # --- Straight ---
+    for mask in _STRAIGHT_MASKS:
+        if rank_bits & mask == mask:
+            q = sum(1 << (r - 2) for r in range(2, 15) if mask & (1 << r))
+            return UNIQUE5[q]
+
+    # --- Three of a Kind ---
+    if trips_r is not None:
+        kickers = [r for r in range(14, 1, -1) if r != trips_r and rank_count[r] > 0][:2]
+        return _hash_lookup((_PRIMES[trips_r - 2] ** 3)
+                            * _PRIMES[kickers[0] - 2] * _PRIMES[kickers[1] - 2])
+
+    # --- Two Pair ---
+    pairs = [r for r in range(14, 1, -1) if rank_count[r] >= 2]
+    if len(pairs) >= 2:
+        p1, p2 = pairs[0], pairs[1]
+        kicker = next(r for r in range(14, 1, -1) if r not in (p1, p2) and rank_count[r] > 0)
+        return _hash_lookup((_PRIMES[p1 - 2] ** 2) * (_PRIMES[p2 - 2] ** 2) * _PRIMES[kicker - 2])
+
+    # --- One Pair ---
+    if pairs:
+        p1 = pairs[0]
+        kickers = [r for r in range(14, 1, -1) if r != p1 and rank_count[r] > 0][:3]
+        return _hash_lookup((_PRIMES[p1 - 2] ** 2)
+                            * _PRIMES[kickers[0] - 2] * _PRIMES[kickers[1] - 2] * _PRIMES[kickers[2] - 2])
+
+    # --- High Card ---
+    return UNIQUE5[_bits_to_rank_q(rank_bits, 5)]
+
+
+def hand_value(hole_cards, community) -> int:
+    """Best 5-card CK rank from 7 cards (2 hole + 5 board). Lower = better hand."""
+    mask = 0
+    for c in hole_cards:
+        mask |= c.card_mask
+    for c in community:
+        mask |= c.card_mask
+    if _RANK7 is not None:
+        return _RANK7[index52c7(mask)]
+    key = index52c7(mask)
+    cached = _hand_value_cache.get(key)
+    if cached is not None:
+        return cached
+    result = _best_5_of_7(list(hole_cards) + list(community))
+    _hand_value_cache[key] = result
+    return result
+
+
+def hand_value_fast(hole_cards, community) -> int:
+    """Same as hand_value — unified CK evaluator. Lower = better hand."""
+    return hand_value(hole_cards, community)
+
+
+def hand_value_from_key(key: int, hole_cards, community) -> int:
+    """Direct lookup using a precomputed index52c7 integer key."""
+    if _RANK7 is not None:
+        return _RANK7[key]
+    cached = _hand_value_cache.get(key)
+    if cached is not None:
+        return cached
+    result = _best_5_of_7(list(hole_cards) + list(community))
+    _hand_value_cache[key] = result
+    return result
+
+
+def hand_value_from_mask(mask: int) -> int:
+    """Best CK rank from a precomputed 52-bit card bitmask. Requires _RANK7 table."""
+    return _RANK7[index52c7(mask)]
 
 
 def card_to_binary(card: Card):
@@ -55,71 +179,3 @@ def card_to_binary(card: Card):
 
 def card_to_binary_lookup(card: Card):
     return LookupTables.card_to_binary[card.rank][card.suit_index]
-
-
-def _hand_value_xor(binhand: List[int]) -> int:
-    """XOR-based 7-card evaluation. Raises KeyError on table miss."""
-    flush_prime = functools.reduce(operator.mul, [(card >> 12) & 0xF for card in binhand])
-    flush_suit = False
-    if flush_prime in LookupTables.prime_products_to_flush:
-        flush_suit = LookupTables.prime_products_to_flush[flush_prime]
-
-    odd_xor = functools.reduce(operator.xor, binhand)
-    even_xor = (functools.reduce(operator.or_, binhand) >> 16) ^ odd_xor
-
-    if flush_suit:
-        if even_xor == 0:
-            bits = functools.reduce(operator.or_, [
-                card >> 16 for card in binhand if (card >> 12) & 0xF == flush_suit
-            ])
-            return LookupTables.flush_rank_bits_to_rank[bits]
-        else:
-            if popcount(even_xor) == 2:
-                return LookupTables.flush_rank_bits_to_rank[odd_xor | even_xor]
-            else:
-                bits = functools.reduce(operator.or_, [
-                    card >> 16 for card in binhand if (card >> 12) & 0xF == flush_suit
-                ])
-                return LookupTables.flush_rank_bits_to_rank[bits]
-
-    if even_xor == 0:
-        odd_popcount = popcount(odd_xor)
-        if odd_popcount == 7:
-            return LookupTables.odd_xors_to_rank[odd_xor]
-        else:
-            prime_product = functools.reduce(operator.mul, [card & 0xFF for card in binhand])
-            return LookupTables.prime_products_to_rank[prime_product]
-    else:
-        odd_popcount = popcount(odd_xor)
-        if odd_popcount == 5:
-            return LookupTables.even_xors_to_odd_xors_to_rank[even_xor][odd_xor]
-        elif odd_popcount == 3:
-            even_popcount = popcount(even_xor)
-            if even_popcount == 2:
-                return LookupTables.even_xors_to_odd_xors_to_rank[even_xor][odd_xor]
-            else:
-                prime_product = functools.reduce(operator.mul, [card & 0xFF for card in binhand])
-                return LookupTables.prime_products_to_rank[prime_product]
-        else:
-            even_popcount = popcount(even_xor)
-            if even_popcount == 3:
-                return LookupTables.even_xors_to_odd_xors_to_rank[even_xor][odd_xor]
-            elif even_popcount == 2:
-                prime_product = functools.reduce(operator.mul, [card & 0xFF for card in binhand])
-                return LookupTables.prime_products_to_rank[prime_product]
-            else:
-                return LookupTables.even_xors_to_odd_xors_to_rank[even_xor][odd_xor]
-
-
-def hand_value(hole_cards: List[Card], community: List[Card]) -> int:
-    all_cards = hole_cards + community
-    binhand_key = tuple(sorted(card_to_binary(c) for c in all_cards))
-    cached = _hand_value_cache.get(binhand_key)
-    if cached is not None:
-        return cached
-    try:
-        result = _hand_value_xor(list(binhand_key))
-    except KeyError:
-        result = _fallback_hand_value(all_cards)
-    _hand_value_cache[binhand_key] = result
-    return result

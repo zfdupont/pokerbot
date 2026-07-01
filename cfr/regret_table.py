@@ -67,6 +67,20 @@ class RegretTable:
             probs_full = mask / mask.sum()
         return probs_full[mask.astype(bool)]
 
+    def merge(self, other: "RegretTable") -> None:
+        """Merge another table by summing regrets and strategy arrays elementwise.
+
+        Regrets and strategy sums are cumulative, so merging tables from K and M
+        iterations is equivalent to a single run of K+M iterations.
+        """
+        for infoset in other.regrets:
+            self._ensure(infoset)
+            self.regrets[infoset] += other.regrets[infoset]
+
+        for infoset in other.strategy:
+            self._ensure(infoset)
+            self.strategy[infoset] += other.strategy[infoset]
+    
     def save(self, path: str) -> None:
         with open(path, "wb") as f:
             pickle.dump({"regrets": self.regrets, "strategy": self.strategy}, f)
