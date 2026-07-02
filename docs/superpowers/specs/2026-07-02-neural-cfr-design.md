@@ -150,8 +150,16 @@ neural_cfr.Trainer(reservoir_size=2_000_000, batch_size=4096, lr=1e-4)
   .load(path: str)                 # restores from checkpoint
 
 neural_cfr.Strategy(checkpoint_path: str)
-  .get_average_strategy(info_set) -> dict[str, float]   # drop-in for RegretTable
-  .get_action_probs(info_state_str: str) -> dict[str, float]  # for eval_openspiel.py
+  .get_action_probs(
+      hole_cards: list[int],        # [c0, c1] as 0-51
+      board_cards: list[int],       # 0-5 cards as 0-51
+      street: int,                  # 0-3
+      pot: float,
+      stack: float,
+      to_call: float,               # 0.0 if first to act / no bet facing
+      raises_per_street: list[int], # [r0, r1, r2, r3]
+      position: int                 # 0 or 1
+  ) -> dict[str, float]             # action -> probability
 ```
 
 `Strategy` is a drop-in for `RegretTable`: `eval_openspiel.py` and `play.py` require only a

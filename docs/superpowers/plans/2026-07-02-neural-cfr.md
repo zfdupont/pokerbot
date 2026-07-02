@@ -1385,11 +1385,13 @@ void Trainer::run(int iterations) {
 }
 
 void Trainer::checkpoint(const std::string& path) {
-    torch::serialize::OutputArchive archive;
-    adv0_.save(archive);
-    adv1_.save(archive);
-    strat_.save(archive);
-    archive.save_to(path);
+    torch::serialize::OutputArchive root;
+    torch::serialize::OutputArchive a0, a1, s;
+    adv0_.save(a0); adv1_.save(a1); strat_.save(s);
+    root.write("adv0", a0);
+    root.write("adv1", a1);
+    root.write("strat", s);
+    root.save_to(path);
     std::cout << "Checkpoint saved to " << path << "\n";
 }
 
@@ -1397,11 +1399,11 @@ void Trainer::load(const std::string& path) {
     std::ifstream f(path);
     if (!f.good()) throw std::runtime_error("Checkpoint not found: " + path);
     f.close();
-    torch::serialize::InputArchive archive;
-    archive.load_from(path);
-    adv0_.load(archive);
-    adv1_.load(archive);
-    strat_.load(archive);
+    torch::serialize::InputArchive root;
+    root.load_from(path);
+    torch::serialize::InputArchive a0, a1, s;
+    root.read("adv0", a0); root.read("adv1", a1); root.read("strat", s);
+    adv0_.load(a0); adv1_.load(a1); strat_.load(s);
     std::cout << "Checkpoint loaded from " << path << "\n";
 }
 ```
@@ -1456,12 +1458,10 @@ public:
             throw std::runtime_error("Checkpoint not found: " + checkpoint_path);
         torch::serialize::InputArchive archive;
         archive.load_from(checkpoint_path);
-        // The checkpoint saves adv0, adv1, strat_ in that order.
-        // Skip adv0 and adv1, load strat_.
-        MLP skip1, skip2;
-        skip1.load(archive);
-        skip2.load(archive);
-        net_.load(archive);
+        torch::serialize::InputArchive root, s;
+        root.load_from(checkpoint_path);
+        root.read("strat", s);
+        net_.load(s);
         net_.eval();
     }
 
@@ -1470,16 +1470,18 @@ public:
     // board_cards: 0-5 cards as 0-51 ints
     // street: 0-3
     // pot, stack: raw float values (normalized internally)
+    // to_call: amount player must call (0 if facing check / acting first)
     // raises_per_street: list of 4 ints
     // position: 0 or 1
     py::dict get_action_probs(
         std::vector<int> hole_cards,
         std::vector<int> board_cards,
         int street, float pot, float stack,
+        float to_call,
         std::vector<int> raises_per_street,
         int position)
     {
-        // Build a synthetic AbstractState for feature encoding
+        // Build a synthetic AbstractState for feature encoding + legal action derivation
         AbstractState s{};
         s.hole_cards[position][0] = hole_cards[0];
         s.hole_cards[position][1] = hole_cards[1];
@@ -1488,8 +1490,9 @@ public:
         s.pot = pot;
         s.stacks[position] = stack;
         s.stacks[1 - position] = stack;  // approximation
+        // Set current_bet and player_bets so that to_call = current_bet - player_bets[position]
         s.player_bets = {0.0f, 0.0f};
-        s.current_bet = 0.0f;
+        s.current_bet = to_call;  // player_bets[position]=0, so to_call = current_bet - 0
         s.betting_history = {0, 0, 0, 0};
         for (int i = 0; i < 4 && i < (int)raises_per_street.size(); ++i)
             s.betting_history[i] = raises_per_street[i];
@@ -1550,6 +1553,7 @@ PYBIND11_MODULE(neural_cfr, m) {
              py::arg("street"),
              py::arg("pot"),
              py::arg("stack"),
+             py::arg("to_call"),
              py::arg("raises_per_street"),
              py::arg("position"));
 }
@@ -1706,6 +1710,7 @@ def test_get_action_probs_valid_distribution(checkpoint_path):
         street=0,
         pot=1.5,
         stack=99.0,
+        to_call=0.5,             # SB faces BB raise of 0.5
         raises_per_street=[0, 0, 0, 0],
         position=0,
     )
@@ -1727,6 +1732,7 @@ def test_get_action_probs_postflop(checkpoint_path):
         street=1,
         pot=4.0,
         stack=96.0,
+        to_call=0.0,         # first to act postflop, no bet facing
         raises_per_street=[1, 0, 0, 0],
         position=1,
     )
@@ -1793,6 +1799,7 @@ class NeuralCFRPolicy(pyspiel.Policy):
             street=parsed['street'],
             pot=parsed['pot'],
             stack=parsed['stack'],
+            to_call=parsed['to_call'],
             raises_per_street=parsed['raises_per_street'],
             position=parsed['position'],
         )
