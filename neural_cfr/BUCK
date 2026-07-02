@@ -5,7 +5,7 @@ cxx_library(
     header_namespace = "",
     compiler_flags = ["-std=c++17", "-O2"],
     exported_preprocessor_flags = ["-Ineural_cfr/src"],
-    deps = ["//third_party:libtorch"],
+    deps = ["//third_party:libtorch", "//third_party:indicators"],
     preferred_linkage = "static",
     visibility = ["PUBLIC"],
 )

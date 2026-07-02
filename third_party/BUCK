@@ -44,3 +44,9 @@ prebuilt_cxx_library(
     static_lib = "gtest/libgtest.a",
     visibility = ["PUBLIC"],
 )
+
+prebuilt_cxx_library(
+    name = "indicators",
+    header_dirs = ["indicators/include"],
+    visibility = ["PUBLIC"],
+)

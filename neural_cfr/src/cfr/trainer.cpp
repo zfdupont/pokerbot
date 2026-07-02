@@ -3,6 +3,7 @@
 #include "game/abstract_state.h"
 #include "net/features.h"
 #include <torch/torch.h>
+#include <indicators/indicators.hpp>
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
@@ -71,6 +72,20 @@ void Trainer::train_step(MLP& net, torch::optim::Adam& opt,
 }
 
 void Trainer::run(int iterations) {
+    using namespace indicators;
+    ProgressBar bar{
+        option::BarWidth{40},
+        option::Start{"["},
+        option::Fill{"="},
+        option::Lead{">"},
+        option::Remainder{" "},
+        option::End{"]"},
+        option::ForegroundColor{Color::cyan},
+        option::ShowElapsedTime{true},
+        option::ShowRemainingTime{true},
+        option::MaxProgress{iterations},
+    };
+
     for (int t = 1; t <= iterations; ++t) {
         // Player 0 traversal
         {
@@ -88,11 +103,13 @@ void Trainer::run(int iterations) {
         train_step(adv1_, opt_adv1_, mv1_, "advantage");
         train_step(strat_, opt_strat_, mpi_, "strategy");
 
-        if (t % 1000 == 0)
-            std::cout << "Iteration " << t << " / " << iterations
-                      << "  |  buffers: mv0=" << mv0_.size()
-                      << " mv1=" << mv1_.size()
-                      << " mpi=" << mpi_.size() << "\n";
+        bar.set_option(option::PostfixText{
+            "iter " + std::to_string(t) +
+            "  mv0=" + std::to_string(mv0_.size()) +
+            " mv1=" + std::to_string(mv1_.size()) +
+            " mpi=" + std::to_string(mpi_.size())
+        });
+        bar.tick();
     }
 }
 
