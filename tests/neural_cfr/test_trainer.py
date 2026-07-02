@@ -14,12 +14,12 @@ import neural_cfr
 def test_buffers_populated_after_run():
     """Trainer.run() should populate internal buffers — indirectly verified via no crash."""
     trainer = neural_cfr.Trainer(reservoir_size=500, batch_size=64, lr=1e-3)
-    trainer.run(50)  # 50 iterations — fast smoke test
+    trainer.run(500)  # 500 iterations per spec
 
 
 def test_checkpoint_roundtrip():
     trainer = neural_cfr.Trainer(reservoir_size=500, batch_size=64, lr=1e-3)
-    trainer.run(10)
+    trainer.run(500)
     with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
         path = f.name
     try:
@@ -34,6 +34,6 @@ def test_checkpoint_roundtrip():
 
 
 def test_load_missing_file_raises():
-    trainer = neural_cfr.Trainer()
+    trainer = neural_cfr.Trainer(reservoir_size=500, batch_size=64, lr=1e-3)
     with pytest.raises(RuntimeError):
         trainer.load("/tmp/definitely_does_not_exist.pt")
