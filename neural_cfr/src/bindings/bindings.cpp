@@ -18,8 +18,6 @@ public:
         std::ifstream f(checkpoint_path);
         if (!f.good())
             throw std::runtime_error("Checkpoint not found: " + checkpoint_path);
-        torch::serialize::InputArchive archive;
-        archive.load_from(checkpoint_path);
         torch::serialize::InputArchive root, s;
         root.load_from(checkpoint_path);
         root.read("strat", s);
@@ -91,7 +89,7 @@ private:
         static const std::array<std::string, 6> ALL =
             {"fold","check","call","b0.5","b1.0","allin"};
         for (int i = 0; i < 6; ++i) if (ALL[i] == a) return i;
-        return -1;
+        throw std::runtime_error("unknown action: " + a);
     }
 };
 
