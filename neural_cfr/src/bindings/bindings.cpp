@@ -97,10 +97,11 @@ PYBIND11_MODULE(neural_cfr, m) {
     m.doc() = "Deep CFR neural network strategy -- C++ core via libtorch";
 
     py::class_<Trainer>(m, "Trainer")
-        .def(py::init<size_t, size_t, float>(),
-             py::arg("reservoir_size") = 2'000'000,
-             py::arg("batch_size")     = 4096,
-             py::arg("lr")             = 1e-4f)
+        .def(py::init<size_t, size_t, float, int>(),
+             py::arg("reservoir_size")  = DEFAULT_RESERVOIR_SIZE,
+             py::arg("batch_size")      = DEFAULT_BATCH_SIZE,
+             py::arg("lr")              = DEFAULT_LR,
+             py::arg("train_interval")  = DEFAULT_TRAIN_INTERVAL)
         .def("run",        &Trainer::run,        py::arg("iterations"))
         .def("checkpoint", &Trainer::checkpoint, py::arg("path"))
         .def("load",       &Trainer::load,       py::arg("path"));

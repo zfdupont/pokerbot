@@ -10,13 +10,19 @@
 #include <algorithm>
 #include <random>
 #include <numeric>
+#include <csignal>
+#include <atomic>
 
-Trainer::Trainer(size_t reservoir_size, size_t batch_size, float lr)
+static std::atomic<bool> g_interrupted{false};
+static void sigint_handler(int) { g_interrupted = true; }
+
+Trainer::Trainer(size_t reservoir_size, size_t batch_size, float lr, int train_interval)
     : mv0_(reservoir_size), mv1_(reservoir_size), mpi_(reservoir_size),
       opt_adv0_(adv0_.parameters(), torch::optim::AdamOptions(lr)),
       opt_adv1_(adv1_.parameters(), torch::optim::AdamOptions(lr)),
       opt_strat_(strat_.parameters(), torch::optim::AdamOptions(lr)),
-      batch_size_(batch_size)
+      batch_size_(batch_size),
+      train_interval_(train_interval)
 {}
 
 void Trainer::train_step(MLP& net, torch::optim::Adam& opt,
@@ -25,13 +31,12 @@ void Trainer::train_step(MLP& net, torch::optim::Adam& opt,
 {
     if (buffer.size() < batch_size_) return;  // not enough data yet
 
-    // Sample a random batch
+    // Sample batch_size random indices — O(batch) not O(N)
     const auto& data = buffer.data();
     static std::mt19937 rng{std::random_device{}()};
-    std::vector<size_t> indices(data.size());
-    std::iota(indices.begin(), indices.end(), 0);
-    std::shuffle(indices.begin(), indices.end(), rng);
-    indices.resize(batch_size_);
+    std::uniform_int_distribution<size_t> dist(0, data.size() - 1);
+    std::vector<size_t> indices(batch_size_);
+    for (size_t i = 0; i < batch_size_; ++i) indices[i] = dist(rng);
 
     // Stack features, targets, weights into tensors
     auto feat_t   = torch::zeros({(int64_t)batch_size_, FEATURE_DIM});
@@ -72,6 +77,9 @@ void Trainer::train_step(MLP& net, torch::optim::Adam& opt,
 }
 
 void Trainer::run(int iterations) {
+    g_interrupted = false;
+    auto prev_handler = std::signal(SIGINT, sigint_handler);
+
     using namespace indicators;
     ProgressBar bar{
         option::BarWidth{40},
@@ -87,21 +95,28 @@ void Trainer::run(int iterations) {
     };
 
     for (int t = 1; t <= iterations; ++t) {
+        if (g_interrupted) {
+            std::cerr << "\nInterrupted at iteration " << t << "\n";
+            break;
+        }
+
         // Player 0 traversal
         {
             auto s = deal_heads_up();
             external_sample(s, 0, adv0_, adv1_, strat_, mv0_, mpi_, t);
         }
-        train_step(adv0_, opt_adv0_, mv0_, "advantage");
-        train_step(strat_, opt_strat_, mpi_, "strategy");
 
         // Player 1 traversal
         {
             auto s = deal_heads_up();
             external_sample(s, 1, adv1_, adv0_, strat_, mv1_, mpi_, t);
         }
-        train_step(adv1_, opt_adv1_, mv1_, "advantage");
-        train_step(strat_, opt_strat_, mpi_, "strategy");
+
+        if (t % train_interval_ == 0) {
+            train_step(adv0_, opt_adv0_, mv0_, "advantage");
+            train_step(adv1_, opt_adv1_, mv1_, "advantage");
+            train_step(strat_, opt_strat_, mpi_, "strategy");
+        }
 
         bar.set_option(option::PostfixText{
             "iter " + std::to_string(t) +
@@ -111,6 +126,8 @@ void Trainer::run(int iterations) {
         });
         bar.tick();
     }
+
+    std::signal(SIGINT, prev_handler);
 }
 
 void Trainer::checkpoint(const std::string& path) {
