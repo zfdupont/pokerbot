@@ -30,16 +30,16 @@ torch::Tensor encode_features(const AbstractState& state, int player) {
     d[119 + state.street] = 1.0f;
 
     // [123] pot normalized, [124] stack normalized
-    d[123] = state.pot / 200.0f;
-    d[124] = state.stacks[player] / 200.0f;
+    d[123] = state.pot / CHIP_NORM;
+    d[124] = state.stacks[player] / CHIP_NORM;
 
-    // [125–128] betting history (raise counts per street, normalized by 2)
+    // [125–128] betting history (raise counts per street, normalized by RAISE_NORM)
     for (int i = 0; i < 4; ++i)
-        d[125 + i] = state.betting_history[i] / 2.0f;
+        d[125 + i] = state.betting_history[i] / RAISE_NORM;
 
     // [129–132] player bets per street (current street's bet, normalized)
-    d[129] = state.player_bets[player] / 200.0f;
-    d[130] = state.player_bets[1-player] / 200.0f;
+    d[129] = state.player_bets[player] / CHIP_NORM;
+    d[130] = state.player_bets[1-player] / CHIP_NORM;
     d[131] = 0.0f;  // reserved
     d[132] = 0.0f;
 

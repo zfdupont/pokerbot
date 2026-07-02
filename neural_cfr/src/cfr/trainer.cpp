@@ -34,7 +34,7 @@ void Trainer::train_step(MLP& net, torch::optim::Adam& opt,
 
     // Stack features, targets, weights into tensors
     auto feat_t   = torch::zeros({(int64_t)batch_size_, FEATURE_DIM});
-    auto target_t = torch::zeros({(int64_t)batch_size_, 6});
+    auto target_t = torch::zeros({(int64_t)batch_size_, NUM_ACTIONS});
     auto weight_t = torch::zeros({(int64_t)batch_size_});
 
     auto fa = feat_t.accessor<float, 2>();
@@ -43,8 +43,8 @@ void Trainer::train_step(MLP& net, torch::optim::Adam& opt,
 
     for (size_t i = 0; i < batch_size_; ++i) {
         const auto& e = data[indices[i]];
-        for (int j = 0; j < FEATURE_DIM; ++j) fa[i][j] = e.features[j];
-        for (int j = 0; j < 6; ++j)           ta[i][j] = e.targets[j];
+        for (int j = 0; j < FEATURE_DIM; ++j)   fa[i][j] = e.features[j];
+        for (int j = 0; j < NUM_ACTIONS; ++j)   ta[i][j] = e.targets[j];
         wa[i] = e.weight;
     }
 

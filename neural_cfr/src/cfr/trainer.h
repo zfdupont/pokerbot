@@ -5,12 +5,16 @@
 #include <memory>
 #include <torch/optim.h>
 
+constexpr int   DEFAULT_BATCH_SIZE       = 4096;
+constexpr float DEFAULT_LR               = 1e-4f;
+constexpr int   DEFAULT_RESERVOIR_SIZE   = 2'000'000;
+
 class Trainer {
 public:
     explicit Trainer(
-        size_t reservoir_size = 2'000'000,
-        size_t batch_size     = 4096,
-        float  lr             = 1e-4f);
+        size_t reservoir_size = DEFAULT_RESERVOIR_SIZE,
+        size_t batch_size     = DEFAULT_BATCH_SIZE,
+        float  lr             = DEFAULT_LR);
 
     void run(int iterations);
     void checkpoint(const std::string& path);

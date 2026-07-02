@@ -11,7 +11,7 @@ static const std::array<std::string, 6> ALL_ACTIONS =
 // Regret matching: given raw advantage logits and legal action indices,
 // return a probability distribution via ReLU + normalize.
 static std::vector<float> regret_match(
-    const std::array<float, 6>& advantages,
+    const std::array<float, NUM_ACTIONS>& advantages,
     const std::vector<int>& legal_indices)
 {
     std::vector<float> pos(legal_indices.size());
@@ -36,7 +36,7 @@ static int sample_action(const std::vector<float>& probs) {
 
 // Map action string to index in ALL_ACTIONS
 static int action_idx(const std::string& a) {
-    for (int i = 0; i < 6; ++i)
+    for (int i = 0; i < NUM_ACTIONS; ++i)
         if (ALL_ACTIONS[i] == a) return i;
     return -1;
 }
@@ -74,13 +74,13 @@ float external_sample(
         // Query advantage net → regret match → traverse ALL actions
         torch::NoGradGuard no_grad;
         auto logits = adv_net.forward(feat_tensor.unsqueeze(0)).squeeze(0);
-        std::array<float, 6> advantages{};
-        for (int i = 0; i < 6; ++i) advantages[i] = logits[i].item<float>();
+        std::array<float, NUM_ACTIONS> advantages{};
+        for (int i = 0; i < NUM_ACTIONS; ++i) advantages[i] = logits[i].item<float>();
 
         auto strategy = regret_match(advantages, legal_idx);
 
         // Traverse all legal actions
-        std::array<float, 6> action_values{};
+        std::array<float, NUM_ACTIONS> action_values{};
         float node_value = 0.0f;
         for (size_t i = 0; i < legal_strs.size(); ++i) {
             float v = external_sample(state.apply_action(legal_strs[i]),
@@ -91,14 +91,14 @@ float external_sample(
         }
 
         // Compute advantages and store in M_v
-        std::array<float, 6> adv_targets{};
+        std::array<float, NUM_ACTIONS> adv_targets{};
         for (size_t i = 0; i < legal_strs.size(); ++i)
             adv_targets[legal_idx[i]] = action_values[legal_idx[i]] - node_value;
 
         adv_buffer.add({feat_vec, adv_targets, static_cast<float>(iteration)});
 
         // Also accumulate strategy for M_π
-        std::array<float, 6> strat_targets{};
+        std::array<float, NUM_ACTIONS> strat_targets{};
         for (size_t i = 0; i < legal_strs.size(); ++i)
             strat_targets[legal_idx[i]] = strategy[i];
         strat_buffer.add({feat_vec, strat_targets, static_cast<float>(iteration)});
@@ -110,13 +110,13 @@ float external_sample(
         // (Brown et al. 2019: M_π populated at both traverser and opponent nodes)
         torch::NoGradGuard no_grad;
         auto logits = opp_adv_net.forward(feat_tensor.unsqueeze(0)).squeeze(0);
-        std::array<float, 6> advantages{};
-        for (int i = 0; i < 6; ++i) advantages[i] = logits[i].item<float>();
+        std::array<float, NUM_ACTIONS> advantages{};
+        for (int i = 0; i < NUM_ACTIONS; ++i) advantages[i] = logits[i].item<float>();
 
         auto strategy = regret_match(advantages, legal_idx);
 
         // Accumulate strategy for M_π
-        std::array<float, 6> strat_targets{};
+        std::array<float, NUM_ACTIONS> strat_targets{};
         for (size_t i = 0; i < legal_idx.size(); ++i)
             strat_targets[legal_idx[i]] = strategy[i];
         strat_buffer.add({feat_vec, strat_targets, static_cast<float>(iteration)});
