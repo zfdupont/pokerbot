@@ -61,6 +61,12 @@ neural_cfr/
       trainer.h/.cpp          # alternating traversal → buffer → train loop
     bindings/
       bindings.cpp            # pybind11 module definition
+  tests/
+    BUCK
+    test_features.cpp
+    test_reservoir_buffer.cpp
+    test_abstract_state.cpp
+    test_traversal.cpp
   third_party/
     BUCK                      # prebuilt_cxx_library() rules for libtorch + pybind11 + gtest
 scripts/
@@ -167,7 +173,9 @@ prebuilt_cxx_library("gtest")      # googletest prebuilt or source
 # neural_cfr/BUCK
 cxx_library("core")                # all src/ except bindings/, links libtorch
 cxx_library("neural_cfr")          # bindings.cpp → neural_cfr.so, preferred_linkage=shared
-cxx_test("test_*")                 # each test file, links :core + gtest
+
+# neural_cfr/tests/BUCK
+cxx_test("test_*")                 # each test file, links //neural_cfr:core + gtest
 ```
 
 ---
