@@ -1,0 +1,27 @@
+cxx_test(
+    name = "test_abstract_state",
+    srcs = ["test_abstract_state.cpp"],
+    deps = ["//neural_cfr:core", "//third_party:gtest"],
+    compiler_flags = ["-std=c++17"],
+)
+
+cxx_test(
+    name = "test_features",
+    srcs = ["test_features.cpp"],
+    deps = ["//neural_cfr:core", "//third_party:gtest"],
+    compiler_flags = ["-std=c++17"],
+)
+
+cxx_test(
+    name = "test_reservoir_buffer",
+    srcs = ["test_reservoir_buffer.cpp"],
+    deps = ["//neural_cfr:core", "//third_party:gtest"],
+    compiler_flags = ["-std=c++17"],
+)
+
+cxx_test(
+    name = "test_traversal",
+    srcs = ["test_traversal.cpp"],
+    deps = ["//neural_cfr:core", "//third_party:gtest"],
+    compiler_flags = ["-std=c++17"],
+)

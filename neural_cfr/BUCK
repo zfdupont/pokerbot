@@ -1,0 +1,26 @@
+cxx_library(
+    name = "core",
+    srcs = glob(["src/**/*.cpp"]),
+    headers = glob(["src/**/*.h"]),
+    header_namespace = "",
+    compiler_flags = ["-std=c++17", "-O2"],
+    deps = ["//third_party:libtorch"],
+    preferred_linkage = "static",
+    visibility = ["PUBLIC"],
+)
+
+cxx_library(
+    name = "neural_cfr",
+    srcs = ["src/bindings/bindings.cpp"],
+    headers = [],
+    header_namespace = "",
+    compiler_flags = [
+        "-std=c++17",
+        "-O2",
+        "-I/Users/zfdupont/.pyenv/versions/3.10.10/include/python3.10",
+    ],
+    deps = [":core", "//third_party:pybind11", "//third_party:libtorch"],
+    preferred_linkage = "shared",
+    soname = "neural_cfr.so",
+    visibility = ["PUBLIC"],
+)

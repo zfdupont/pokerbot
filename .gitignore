@@ -169,3 +169,9 @@ cfr/checkpoints/
 .DS_Store
 .python-version
 .claude/
+
+# Buck2 build outputs and downloads
+buck-out/
+third_party/libtorch/
+third_party/libtorch.zip
+third_party/pybind11/

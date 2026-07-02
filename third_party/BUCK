@@ -1,0 +1,46 @@
+# libtorch — split into separate prebuilt targets because prebuilt_cxx_library
+# in the current Buck2 prelude accepts shared_lib (singular), not shared_libs (dict).
+
+prebuilt_cxx_library(
+    name = "libc10",
+    shared_lib = "libtorch/lib/libc10.dylib",
+    visibility = ["PUBLIC"],
+)
+
+prebuilt_cxx_library(
+    name = "libtorch_cpu",
+    shared_lib = "libtorch/lib/libtorch_cpu.dylib",
+    deps = [":libc10"],
+    visibility = ["PUBLIC"],
+)
+
+prebuilt_cxx_library(
+    name = "libtorch",
+    header_dirs = [
+        "libtorch/include",
+        "libtorch/include/torch/csrc/api/include",
+    ],
+    shared_lib = "libtorch/lib/libtorch.dylib",
+    exported_deps = [":libtorch_cpu", ":libc10"],
+    visibility = ["PUBLIC"],
+)
+
+prebuilt_cxx_library(
+    name = "pybind11",
+    header_dirs = ["pybind11/include"],
+    visibility = ["PUBLIC"],
+)
+
+prebuilt_cxx_library(
+    name = "gtest",
+    header_dirs = ["gtest/include"],
+    static_lib = "gtest/libgtest_main.a",
+    exported_deps = [":gtest_core"],
+    visibility = ["PUBLIC"],
+)
+
+prebuilt_cxx_library(
+    name = "gtest_core",
+    static_lib = "gtest/libgtest.a",
+    visibility = ["PUBLIC"],
+)
