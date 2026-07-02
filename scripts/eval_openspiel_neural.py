@@ -72,6 +72,13 @@ ACTION_ALLIN = 3
 
 BIG_BLIND = 10
 
+# The OpenSpiel game uses stack=1000; training uses starting_stack=100.0 (deal_heads_up default).
+# Divide chip values by this factor before passing to get_action_probs so they fall in the
+# same [0, ~200] range the network saw during training (pot/200 and stack/200 ≈ [0, 1]).
+OPENSPIEL_STARTING_STACK = 1000.0
+TRAINING_STARTING_STACK  = 100.0
+_CHIP_SCALE = OPENSPIEL_STARTING_STACK / TRAINING_STARTING_STACK  # 10.0
+
 SUIT_MAP = {"h": Suit.HEARTS, "d": Suit.DIAMONDS, "c": Suit.CLUBS, "s": Suit.SPADES}
 RANK_MAP = {
     "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9,
@@ -187,9 +194,9 @@ class NeuralCFRPolicy(ospiel_policy.Policy):
             hole_cards        = hole_ints,
             board_cards       = board_ints,
             street            = street,
-            pot               = float(pot),
-            stack             = float(stack_my),
-            to_call           = to_call,
+            pot               = float(pot)     / _CHIP_SCALE,
+            stack             = float(stack_my) / _CHIP_SCALE,
+            to_call           = to_call        / _CHIP_SCALE,
             raises_per_street = raises,
             position          = pid,
         )
