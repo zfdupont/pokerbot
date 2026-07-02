@@ -21,7 +21,7 @@ POSTFLOP_THRESHOLDS = {
     2: (0.736, 0.548, 0.405, 0.263),  # turn
     3: (0.808, 0.594, 0.385, 0.187),  # river
 }
-MONTE_CARLO_SAMPLES = 500  # rollouts per equity estimate (higher = more stable)
+MONTE_CARLO_SAMPLES = 200  # rollouts per equity estimate; 200 gives ~1.8% σ vs 1.1% at 500
 
 BET_SIZES = {
     "fold":  None,
@@ -132,7 +132,7 @@ def _hand_to_bucket_cached(hole_key: Tuple, board_key: Tuple, street: int) -> in
 
     hole = [Card(r, Suit(s)) for r,s in hole_key]
     board = [Card(r, Suit(s)) for r,s in board_key]
-    eq = _equity_vec(hole, board) if _RANK7 is not None else _equity(hole, board)
+    eq = _equity_vec(hole, board, MONTE_CARLO_SAMPLES) if _RANK7 is not None else _equity(hole, board)
 
     if street == 0:
         return sum(1 for t in PREFLOP_THRESHOLDS if eq < t)

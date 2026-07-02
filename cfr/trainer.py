@@ -137,6 +137,21 @@ class Trainer:
             prewarm_preflop_buckets()
             print(f"done in {time.time()-t0:.1f}s")
 
+            # Postflop warmup: run training iterations single-threaded so workers
+            # inherit a warm postflop lru_cache via fork (zero-copy CoW).
+            # ~10k iters reaches ~94% hit rate; workers start hot instead of cold.
+            _N_POSTFLOP_WARMUP = 10_000
+            print(f"Pre-warming postflop bucket cache ({_N_POSTFLOP_WARMUP:,} iters)...",
+                  end=" ", flush=True)
+            t0 = time.time()
+            _rt_warm = RegretTable()
+            for _ in range(_N_POSTFLOP_WARMUP):
+                _s = deal_heads_up()
+                _external_sample(_s, 0, _rt_warm)
+                _external_sample(_s, 1, _rt_warm)
+            del _rt_warm
+            print(f"done in {time.time()-t0:.1f}s")
+
         use_fork = sys.platform != 'win32'
         ctx = mp.get_context('fork' if use_fork else 'spawn')
         init_fn = None if use_fork else _worker_init

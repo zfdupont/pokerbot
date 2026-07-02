@@ -103,7 +103,11 @@ class PokerGame:
                 next_start = (idx + 1) % len(self.state.players)
                 to_act = self._build_action_queue(next_start, exclude_idx=idx)
 
-            if len([p for p in self.state.players if p.is_active and not p.is_all_in]) <= 1:
+            # Only short-circuit on fold: the surviving player needs no further action.
+            # After an all-in raise, the opponent still needs a chance to call/fold,
+            # so we let to_act drive the loop instead.
+            if action == Action.FOLD and \
+                    len([p for p in self.state.players if p.is_active and not p.is_all_in]) <= 1:
                 break
 
     def _process_action(

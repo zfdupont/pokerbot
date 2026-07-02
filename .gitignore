@@ -167,3 +167,5 @@ util/prime_products_patch.py
 cfr/mccfr_cy.c
 cfr/checkpoints/
 .DS_Store
+.python-version
+.claude/
