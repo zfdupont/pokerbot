@@ -117,4 +117,113 @@ Connects to `wss://openpoker.ai/ws` with `Authorization: Bearer <api_key>`. `Han
 - `_fallback_hand_value()` in `util/util.py` uses coarse `HandRank` without kicker discrimination — a full 7-card lookup table would improve postflop equity estimates.
 - Board abstraction ignores suit texture (flush draws, monotone boards get same bucket as rainbow).
 - 6 preflop equity buckets means hands like A9o and KTs share a strategy — expanding to 169 exact preflop hands would be the largest single quality improvement.
-- Next major milestone: **Neural CFR** (Deep CFR) — replace `RegretTable` with two MLPs, eliminating the abstraction ceiling. The MCCFR traversal in `cfr/mccfr.py` carries over directly; new additions are a feature encoder, advantage/strategy memory buffers, and interleaved network training.
+
+---
+
+## Neural CFR (`neural_cfr/`)
+
+C++ Deep CFR implementation (Brown et al. 2019). Self-contained — never imports `game/poker.py` or `cfr/`. Built with libtorch + pybind11 via Buck2 (`~/bin/buck2`). Exposed to Python as `import neural_cfr`.
+
+### Card / hand representation
+
+```
+card  : int  (0–51)
+rank  : card / 4      →  0=2, 1=3, …, 12=A
+suit  : card % 4      →  0=clubs, 1=diamonds, 2=hearts, 3=spades
+```
+
+Examples: `2c=0`, `Ah=51-1=50`… actually: `As=12*4+3=51`, `Ah=12*4+2=50`, `Ks=11*4+3=47`, `Kh=11*4+2=46`.
+
+Full table: `card = rank_index * 4 + suit_index` where `rank_index = face_value - 2`.
+
+### Hand rank / equity evaluator (`neural_cfr/src/game/card.cpp`)
+
+`evaluate_5card(array<Card,5>) -> uint32_t` — **lower = better**.
+
+Encoding: `category << 20 | kicker_bits`. Categories (bits 20+):
+```
+1=straight_flush  2=quads  3=full_house  4=flush
+5=straight        6=trips  7=two_pair    8=pair   9=high_card
+```
+Kickers are **inverted** (`12 - rank`) so Ace (rank 12) → 0 (best within category), 2 (rank 0) → 12 (worst). This ensures AA < 22 in category 8, consistent with lower=better.
+
+`evaluate_7card(array<Card,7>) -> uint32_t` — tries all C(7,5)=21 five-card combos, returns `min`.
+
+**Critical invariant:** Any change to kicker encoding must maintain the `12 - rank` inversion. Removing it causes hand strength to invert (AA folds, 22 raises) — this was a confirmed training bug.
+
+### Feature encoding (`neural_cfr/src/net/features.h/.cpp`)
+
+134-dim float tensor. Constants defined in `features.h`:
+- `FEATURE_DIM = 134`
+- `NUM_ACTIONS = 6`
+- `CHIP_NORM = 200.0f` (normalize pot/stack/player_bets)
+- `RAISE_NORM = 2.0f` (normalize betting_history counts)
+
+| Dims    | Content                                      |
+|---------|----------------------------------------------|
+| 0–33    | 2 hole cards × 17 (13-dim rank one-hot + 4-dim suit one-hot) |
+| 34–118  | 5 board cards × 17, zero-padded for missing  |
+| 119–122 | street one-hot (preflop/flop/turn/river)     |
+| 123     | pot / CHIP_NORM                              |
+| 124     | stack[player] / CHIP_NORM                   |
+| 125–128 | betting_history[0..3] / RAISE_NORM           |
+| 129     | player_bets[player] / CHIP_NORM             |
+| 130     | player_bets[1-player] / CHIP_NORM           |
+| 131–132 | 0.0 (reserved)                               |
+| 133     | position (player index as float)             |
+
+Training uses `starting_stack=100, big_blind=1`. Inference inputs from other game engines must be divided by `(their_stack / 100)` before passing to `get_action_probs`.
+
+### MLP architecture (`neural_cfr/src/net/mlp.h`)
+
+```
+Input: 134  →  256  →  256  →  256  →  6
+           ReLU     ReLU     ReLU    (raw logits)
+```
+Constants in `trainer.h`: `DEFAULT_HIDDEN_DIM=256`, `DEFAULT_BATCH_SIZE=4096`, `DEFAULT_LR=1e-4`, `DEFAULT_RESERVOIR_SIZE=2_000_000`, `DEFAULT_TRAIN_INTERVAL=10`.
+
+Two roles:
+- **Advantage net** (`adv0_`, `adv1_`): one per player, output = counterfactual advantage per action (no output activation). Trained with weighted MSE.
+- **Strategy net** (`strat_`): shared, trained with weighted cross-entropy on M_π. Used at inference via `neural_cfr.Strategy`.
+
+### Action vocabulary (index order matters)
+
+```
+0=fold  1=check  2=call  3=b0.5  4=b1.0  5=allin
+```
+
+### Training algorithm
+
+External Sampling MCCFR (Brown et al. 2019, faithful):
+- Traverser node: regret-match `adv_net` → traverse ALL actions → compute advantages → store in `M_v[p]` only
+- Opponent node: regret-match `opp_adv_net` → store σ in `M_π` → sample ONE action
+- `strat_net` trained offline on `M_π` (never queried during traversal)
+- Linear CFR weighting: `weight = iteration t`
+
+### Commands
+
+```bash
+# Train (fresh)
+mkdir -p neural_cfr/checkpoints
+uv run python scripts/train_neural.py \
+    --iterations 5_000_000 \
+    --checkpoint neural_cfr/checkpoints/checkpoint.pt
+
+# Resume
+uv run python scripts/train_neural.py \
+    --resume neural_cfr/checkpoints/checkpoint.pt \
+    --iterations 5_000_000 \
+    --checkpoint neural_cfr/checkpoints/checkpoint.pt
+
+# Evaluate vs random
+uv run python scripts/eval_openspiel_neural.py \
+    --checkpoint neural_cfr/checkpoints/checkpoint.pt \
+    --hands 2000 --baseline random
+
+# Build C++ extension only
+~/bin/buck2 build //neural_cfr:neural_cfr
+```
+
+### Checkpoint format
+
+Named sub-archives (NOT flat): `root.write("adv0", a0)`, `root.write("adv1", a1)`, `root.write("strat", s)`. `neural_cfr.Strategy` loads only `"strat"`. Buffers are NOT serialized (checkpoint restores nets, not buffer contents).
