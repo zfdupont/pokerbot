@@ -4,7 +4,7 @@ cxx_library(
     headers = glob(["src/**/*.h"]),
     header_namespace = "",
     compiler_flags = ["-std=c++17", "-O2"],
-    deps = ["//third_party:libtorch"],
+    exported_preprocessor_flags = ["-Ineural_cfr/src"],
     preferred_linkage = "static",
     visibility = ["PUBLIC"],
 )
