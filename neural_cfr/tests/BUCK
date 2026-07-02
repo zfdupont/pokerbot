@@ -1,15 +1,19 @@
+_libtorch_env = {"DYLD_LIBRARY_PATH": "third_party/libtorch/lib"}
+
 cxx_test(
     name = "test_abstract_state",
     srcs = ["test_abstract_state.cpp"],
     deps = ["//neural_cfr:core", "//third_party:gtest"],
     compiler_flags = ["-std=c++17"],
+    env = _libtorch_env,
 )
 
 cxx_test(
     name = "test_features",
     srcs = ["test_features.cpp"],
-    deps = ["//neural_cfr:core", "//third_party:gtest"],
+    deps = ["//neural_cfr:core", "//third_party:gtest", "//third_party:libtorch"],
     compiler_flags = ["-std=c++17"],
+    env = _libtorch_env,
 )
 
 cxx_test(
@@ -17,6 +21,7 @@ cxx_test(
     srcs = ["test_reservoir_buffer.cpp"],
     deps = ["//neural_cfr:core", "//third_party:gtest"],
     compiler_flags = ["-std=c++17"],
+    env = _libtorch_env,
 )
 
 cxx_test(
@@ -24,4 +29,5 @@ cxx_test(
     srcs = ["test_traversal.cpp"],
     deps = ["//neural_cfr:core", "//third_party:gtest"],
     compiler_flags = ["-std=c++17"],
+    env = _libtorch_env,
 )
