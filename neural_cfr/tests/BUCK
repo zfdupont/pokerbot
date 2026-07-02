@@ -27,7 +27,7 @@ cxx_test(
 cxx_test(
     name = "test_traversal",
     srcs = ["test_traversal.cpp"],
-    deps = ["//neural_cfr:core", "//third_party:gtest"],
+    deps = ["//neural_cfr:core", "//third_party:gtest", "//third_party:libtorch"],
     compiler_flags = ["-std=c++17"],
     env = _libtorch_env,
 )
