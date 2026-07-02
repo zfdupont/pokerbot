@@ -45,10 +45,12 @@ uint32_t evaluate_5card(std::array<Card, 5> cards) {
         return counts[a] != counts[b] ? counts[a] > counts[b] : rank_by_count[a] > rank_by_count[b];
     });
 
+    // Invert rank kickers: Ace(12)→0 (lowest bits = best within category),
+    // 2(0)→12 (highest bits = worst within category). Consistent with lower=better.
     auto cat_rank = [&](uint32_t cat, std::initializer_list<int> kickers) -> uint32_t {
         uint32_t v = cat << 20;
         int shift = 16;
-        for (int k : kickers) { v |= (k << shift); shift -= 4; }
+        for (int k : kickers) { v |= ((12 - k) << shift); shift -= 4; }
         return v;
     };
 
