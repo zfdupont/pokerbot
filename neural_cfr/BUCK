@@ -1,6 +1,6 @@
 cxx_library(
     name = "core",
-    srcs = glob(["src/**/*.cpp"]),
+    srcs = glob(["src/**/*.cpp"], exclude = ["src/bindings/bindings.cpp"]),
     headers = glob(["src/**/*.h"]),
     header_namespace = "",
     compiler_flags = ["-std=c++17", "-O2"],
@@ -30,5 +30,8 @@ cxx_library(
     deps = [":core", "//third_party:pybind11", "//third_party:libtorch"],
     preferred_linkage = "shared",
     soname = "neural_cfr.so",
+    # On macOS, Python extension modules must defer libpython symbol resolution
+    # to the Python runtime (which is already loaded at import time).
+    linker_flags = ["-undefined", "dynamic_lookup"],
     visibility = ["PUBLIC"],
 )
