@@ -97,17 +97,11 @@ float external_sample(
 
         adv_buffer.add({feat_vec, adv_targets, static_cast<float>(iteration)});
 
-        // Also accumulate strategy for M_π
-        std::array<float, NUM_ACTIONS> strat_targets{};
-        for (size_t i = 0; i < legal_strs.size(); ++i)
-            strat_targets[legal_idx[i]] = strategy[i];
-        strat_buffer.add({feat_vec, strat_targets, static_cast<float>(iteration)});
-
         return node_value;
 
     } else {
         // Opponent: query opponent's advantage net → regret-match → sample ONE action
-        // (Brown et al. 2019: M_π populated at both traverser and opponent nodes)
+        // (Brown et al. 2019: M_π populated only at opponent nodes, not the traverser)
         torch::NoGradGuard no_grad;
         auto logits = opp_adv_net.forward(feat_tensor.unsqueeze(0)).squeeze(0);
         std::array<float, NUM_ACTIONS> advantages{};
