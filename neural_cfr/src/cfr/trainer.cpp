@@ -75,7 +75,7 @@ void Trainer::run(int iterations) {
         // Player 0 traversal
         {
             auto s = deal_heads_up();
-            external_sample(s, 0, adv0_, strat_, mv0_, mpi_, t);
+            external_sample(s, 0, adv0_, adv1_, strat_, mv0_, mpi_, t);
         }
         train_step(adv0_, opt_adv0_, mv0_, "advantage");
         train_step(strat_, opt_strat_, mpi_, "strategy");
@@ -83,7 +83,7 @@ void Trainer::run(int iterations) {
         // Player 1 traversal
         {
             auto s = deal_heads_up();
-            external_sample(s, 1, adv1_, strat_, mv1_, mpi_, t);
+            external_sample(s, 1, adv1_, adv0_, strat_, mv1_, mpi_, t);
         }
         train_step(adv1_, opt_adv1_, mv1_, "advantage");
         train_step(strat_, opt_strat_, mpi_, "strategy");

@@ -12,9 +12,9 @@ TEST(Traversal, BuffersPopulatedAfterTraversal) {
     // Run 20 traversals for each player
     for (int t = 1; t <= 20; ++t) {
         auto s = deal_heads_up();
-        external_sample(s, 0, adv0, strat, mv0, mpi, t);
+        external_sample(s, 0, adv0, adv1, strat, mv0, mpi, t);
         s = deal_heads_up();
-        external_sample(s, 1, adv1, strat, mv1, mpi, t);
+        external_sample(s, 1, adv1, adv0, strat, mv1, mpi, t);
     }
 
     EXPECT_GT(mv0.size(), 0u);
@@ -26,7 +26,7 @@ TEST(Traversal, ReturnedEVIsFinite) {
     MLP adv0, adv1, strat;
     ReservoirBuffer<BufferEntry> mv0(1000), mv1(1000), mpi(1000);
     auto s = deal_heads_up();
-    float ev = external_sample(s, 0, adv0, strat, mv0, mpi, 1);
+    float ev = external_sample(s, 0, adv0, adv1, strat, mv0, mpi, 1);
     EXPECT_TRUE(std::isfinite(ev));
 }
 
@@ -35,7 +35,7 @@ TEST(Traversal, FeatureDimInBuffer) {
     ReservoirBuffer<BufferEntry> mv0(1000), mv1(1000), mpi(1000);
     for (int t = 1; t <= 5; ++t) {
         auto s = deal_heads_up();
-        external_sample(s, 0, adv0, strat, mv0, mpi, t);
+        external_sample(s, 0, adv0, adv1, strat, mv0, mpi, t);
     }
     ASSERT_GT(mv0.size(), 0u);
     EXPECT_EQ(mv0.data()[0].features.size(), 134u);
