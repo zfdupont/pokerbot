@@ -181,7 +181,7 @@ class NeuralCFRPolicy(ospiel_policy.Policy):
         is_check = _is_check_action(legal, street, sequences)
         stack_my = stacks[pid]
         stack_op = stacks[1 - pid]
-        to_call  = 0.0 if is_check else float(stack_op - stack_my) if stack_my < stack_op else 0.0
+        to_call  = 0.0 if is_check else float(stack_my - stack_op) if stack_my > stack_op else 0.0
 
         probs = self.strategy.get_action_probs(
             hole_cards        = hole_ints,
