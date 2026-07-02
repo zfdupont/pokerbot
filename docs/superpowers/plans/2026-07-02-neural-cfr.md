@@ -8,6 +8,19 @@
 
 **Tech Stack:** C++17, libtorch (PyTorch C++ frontend), pybind11, Google Test, Buck2, Python 3 / pytest
 
+## Branch Setup
+
+Before starting Task 1, create and switch to the feature branch:
+
+```bash
+git checkout main
+git checkout -b feature/neural-cfr
+```
+
+All commits in Tasks 1–8 land on `feature/neural-cfr`. Open a PR to `main` after Task 8 passes.
+
+---
+
 ## Global Constraints
 
 - C++17 throughout (`-std=c++17`)
