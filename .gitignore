@@ -175,3 +175,6 @@ buck-out/
 third_party/libtorch/
 third_party/libtorch.zip
 third_party/pybind11/
+
+# Buck2 local config (machine-specific, never commit)
+.buckconfig.local

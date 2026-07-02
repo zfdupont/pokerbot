@@ -24,3 +24,11 @@
 
 [build]
   execution_platforms = prelude//platforms:default
+
+[python]
+  # Placeholder — each developer must set this in .buckconfig.local (gitignored).
+  # Run: python3 -c "import sysconfig; print(sysconfig.get_path('include'))"
+  # and copy the result to .buckconfig.local as:
+  #   [python]
+  #     include_path = /path/to/python/include
+  include_path =

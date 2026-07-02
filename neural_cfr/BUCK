@@ -9,6 +9,14 @@ cxx_library(
     visibility = ["PUBLIC"],
 )
 
+# Python include path is machine-specific. Set [python] include_path in
+# .buckconfig.local (gitignored, never commit). Get the correct value with:
+#   python3 -c "import sysconfig; print(sysconfig.get_path('include'))"
+# Then add to .buckconfig.local:
+#   [python]
+#     include_path = /path/to/python/include
+_python_include = read_config("python", "include_path", "")
+
 cxx_library(
     name = "neural_cfr",
     srcs = ["src/bindings/bindings.cpp"],
@@ -17,8 +25,7 @@ cxx_library(
     compiler_flags = [
         "-std=c++17",
         "-O2",
-        "-I/Users/zfdupont/.pyenv/versions/3.10.10/include/python3.10",
-    ],
+    ] + (["-I" + _python_include] if _python_include else []),
     deps = [":core", "//third_party:pybind11", "//third_party:libtorch"],
     preferred_linkage = "shared",
     soname = "neural_cfr.so",
