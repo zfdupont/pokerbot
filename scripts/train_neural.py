@@ -10,12 +10,13 @@ Usage:
     uv run python scripts/train_neural.py [options]
 
 Options:
-    --iterations      CFR traversal iterations          (default: 100_000)
-    --reservoir-size  Reservoir buffer capacity per net  (default: 2_000_000)
-    --batch-size      SGD mini-batch size                (default: 4096)
-    --lr              Learning rate                      (default: 1e-4)
-    --checkpoint      Output checkpoint path             (default: neural_cfr/checkpoints/checkpoint.pt)
-    --resume          Resume from existing checkpoint    (default: None)
+    --iterations           CFR traversal iterations total     (default: 100_000)
+    --checkpoint-interval  Save every N iterations            (default: 100_000, i.e. end only)
+    --reservoir-size       Reservoir buffer capacity per net  (default: 2_000_000)
+    --batch-size           SGD mini-batch size                (default: 4096)
+    --lr                   Learning rate                      (default: 1e-4)
+    --checkpoint           Output checkpoint path             (default: neural_cfr/checkpoints/checkpoint.pt)
+    --resume               Resume from existing checkpoint    (default: None)
 """
 import argparse
 import ctypes
@@ -72,18 +73,20 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Neural CFR training launcher (C++ core via pybind11)"
     )
-    parser.add_argument("--iterations",     type=int,   default=100_000,
-                        help="Number of CFR traversal iterations (default: 100000)")
-    parser.add_argument("--reservoir-size", type=int,   default=2_000_000,
+    parser.add_argument("--iterations",          type=int,   default=100_000,
+                        help="Total CFR traversal iterations (default: 100000)")
+    parser.add_argument("--checkpoint-interval", type=int,   default=None,
+                        help="Save checkpoint every N iterations (default: end only)")
+    parser.add_argument("--reservoir-size",      type=int,   default=2_000_000,
                         help="Reservoir buffer capacity per network (default: 2000000)")
-    parser.add_argument("--batch-size",     type=int,   default=4096,
+    parser.add_argument("--batch-size",          type=int,   default=4096,
                         help="SGD mini-batch size (default: 4096)")
-    parser.add_argument("--lr",             type=float, default=1e-4,
+    parser.add_argument("--lr",                  type=float, default=1e-4,
                         help="Learning rate (default: 1e-4)")
-    parser.add_argument("--checkpoint",     type=str,
+    parser.add_argument("--checkpoint",          type=str,
                         default="neural_cfr/checkpoints/checkpoint.pt",
                         help="Output checkpoint path (default: neural_cfr/checkpoints/checkpoint.pt)")
-    parser.add_argument("--resume",         type=str,   default=None,
+    parser.add_argument("--resume",              type=str,   default=None,
                         help="Resume from an existing checkpoint file")
     args = parser.parse_args()
 
@@ -99,11 +102,16 @@ def main() -> None:
         print(f"Resuming from {args.resume}")
         trainer.load(args.resume)
 
+    interval = args.checkpoint_interval or args.iterations
+    completed = 0
     print(f"Running {args.iterations:,} iterations …")
-    trainer.run(args.iterations)
-
-    trainer.checkpoint(args.checkpoint)
-    print(f"Checkpoint saved to {args.checkpoint}")
+    while completed < args.iterations:
+        chunk = min(interval, args.iterations - completed)
+        trainer.run(chunk)
+        completed += chunk
+        trainer.checkpoint(args.checkpoint)
+        if completed < args.iterations:
+            print(f"[{completed:,}/{args.iterations:,}] Checkpoint saved to {args.checkpoint}")
 
 
 if __name__ == "__main__":
