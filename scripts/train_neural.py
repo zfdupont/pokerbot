@@ -88,6 +88,10 @@ def main() -> None:
                         help="Output checkpoint path (default: neural_cfr/checkpoints/checkpoint.pt)")
     parser.add_argument("--resume",              type=str,   default=None,
                         help="Resume from an existing checkpoint file")
+    parser.add_argument("--eval-interval",       type=int,   default=None,
+                        help="Run win-rate eval every N iterations (default: off)")
+    parser.add_argument("--eval-hands",          type=int,   default=500,
+                        help="Hands per eval run (default: 500)")
     args = parser.parse_args()
 
     os.makedirs(os.path.dirname(os.path.abspath(args.checkpoint)), exist_ok=True)
@@ -102,16 +106,29 @@ def main() -> None:
         print(f"Resuming from {args.resume}")
         trainer.load(args.resume)
 
-    interval = args.checkpoint_interval or args.iterations
+    ckpt_interval = args.checkpoint_interval or args.iterations
+    eval_interval = args.eval_interval
     completed = 0
     print(f"Running {args.iterations:,} iterations …")
     while completed < args.iterations:
-        chunk = min(interval, args.iterations - completed)
+        chunk = min(ckpt_interval, args.iterations - completed)
         trainer.run(chunk)
         completed += chunk
         trainer.checkpoint(args.checkpoint)
         if completed < args.iterations:
             print(f"[{completed:,}/{args.iterations:,}] Checkpoint saved to {args.checkpoint}")
+        if eval_interval and completed % eval_interval == 0:
+            print(f"[{completed:,}] Running eval …")
+            eval_script = os.path.join(repo_root, "scripts", "eval_openspiel_neural.py")
+            result = subprocess.run(
+                [sys.executable, eval_script,
+                 "--checkpoint", args.checkpoint,
+                 "--hands", str(args.eval_hands),
+                 "--baseline", "random"],
+                cwd=repo_root,
+            )
+            if result.returncode != 0:
+                print(f"[{completed:,}] Eval failed (exit {result.returncode}), continuing …")
 
 
 if __name__ == "__main__":
