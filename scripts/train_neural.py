@@ -88,9 +88,13 @@ def main() -> None:
                         help="Output checkpoint path (default: neural_cfr/checkpoints/checkpoint.pt)")
     parser.add_argument("--resume",              type=str,   default=None,
                         help="Resume from an existing checkpoint file")
-    parser.add_argument("--eval-interval",       type=int,   default=None,
+    parser.add_argument("--train-interval",       type=int,   default=10,
+                        help="Train networks every N CFR rounds (default: 10)")
+    parser.add_argument("--num-threads",          type=int,   default=0,
+                        help="Traversal threads (default: 0 = hardware_concurrency)")
+    parser.add_argument("--eval-interval",        type=int,   default=None,
                         help="Run win-rate eval every N iterations (default: off)")
-    parser.add_argument("--eval-hands",          type=int,   default=500,
+    parser.add_argument("--eval-hands",           type=int,   default=500,
                         help="Hands per eval run (default: 500)")
     args = parser.parse_args()
 
@@ -100,6 +104,8 @@ def main() -> None:
         reservoir_size=args.reservoir_size,
         batch_size=args.batch_size,
         lr=args.lr,
+        train_interval=args.train_interval,
+        num_threads=args.num_threads,
     )
 
     if args.resume:
