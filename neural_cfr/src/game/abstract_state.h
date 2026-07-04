@@ -30,6 +30,15 @@ std::vector<std::string> legal_abstract_actions(
     float to_call, float pot, float stack,
     float current_bet, float player_bet);
 
+constexpr float STARTING_STACK = 100.0f;
+constexpr float DEFAULT_BIG_BLIND = 1.0f;
+
 AbstractState deal_heads_up(
-    float starting_stack = 100.0f,
-    float big_blind = 1.0f);
+    float starting_stack = STARTING_STACK,
+    float big_blind = DEFAULT_BIG_BLIND);
+
+// Thread-safe overload: uses caller-supplied RNG instead of a static one.
+AbstractState deal_heads_up(
+    float starting_stack,
+    float big_blind,
+    std::mt19937& rng);

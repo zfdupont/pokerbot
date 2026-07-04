@@ -5,7 +5,6 @@
 #include <stdexcept>
 #include <cassert>
 
-static constexpr float STARTING_STACK = 100.0f;
 
 // ---------- legal_abstract_actions ----------
 // Port of cfr/abstraction.py:legal_abstract_actions()
@@ -134,10 +133,8 @@ AbstractState AbstractState::advance_street() const {
 }
 
 // ---------- deal_heads_up ----------
-AbstractState deal_heads_up(float starting_stack, float big_blind) {
-    auto deck = make_deck();
-    shuffle_deck(deck);
-
+static AbstractState deal_heads_up_impl(float starting_stack, float big_blind,
+                                         std::vector<Card>& deck) {
     AbstractState s;
     s.hole_cards[0] = {deck[0], deck[1]};
     s.hole_cards[1] = {deck[2], deck[3]};
@@ -158,4 +155,16 @@ AbstractState deal_heads_up(float starting_stack, float big_blind) {
     s.betting_history = {0, 0, 0, 0};
     s.folded = {false, false};
     return s;
+}
+
+AbstractState deal_heads_up(float starting_stack, float big_blind) {
+    auto deck = make_deck();
+    shuffle_deck(deck);
+    return deal_heads_up_impl(starting_stack, big_blind, deck);
+}
+
+AbstractState deal_heads_up(float starting_stack, float big_blind, std::mt19937& rng) {
+    auto deck = make_deck();
+    shuffle_deck(deck, rng);
+    return deal_heads_up_impl(starting_stack, big_blind, deck);
 }

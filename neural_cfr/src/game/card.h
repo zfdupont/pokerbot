@@ -21,6 +21,11 @@ inline std::vector<Card> make_deck() {
     return deck;
 }
 
+inline void shuffle_deck(std::vector<Card>& deck, std::mt19937& rng) {
+    std::shuffle(deck.begin(), deck.end(), rng);
+}
+
+// Single-threaded convenience overload (uses a static RNG — not thread-safe).
 inline void shuffle_deck(std::vector<Card>& deck) {
     static std::mt19937 rng{std::random_device{}()};
     std::shuffle(deck.begin(), deck.end(), rng);

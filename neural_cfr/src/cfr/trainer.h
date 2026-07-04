@@ -8,9 +8,10 @@
 constexpr int   DEFAULT_BATCH_SIZE       = 4096;
 constexpr float DEFAULT_LR               = 1e-4f;
 constexpr int   DEFAULT_RESERVOIR_SIZE   = 2'000'000;
-// Train networks every N CFR iterations. Higher = more traversals per SGD step,
-// faster wall-clock but slightly noisier gradient signal.
+// Train networks every N CFR iterations (rounds, not per-thread).
 constexpr int   DEFAULT_TRAIN_INTERVAL   = 10;
+// 0 = use std::thread::hardware_concurrency()
+constexpr int   DEFAULT_NUM_THREADS      = 0;
 
 class Trainer {
 public:
@@ -18,7 +19,8 @@ public:
         size_t reservoir_size  = DEFAULT_RESERVOIR_SIZE,
         size_t batch_size      = DEFAULT_BATCH_SIZE,
         float  lr              = DEFAULT_LR,
-        int    train_interval  = DEFAULT_TRAIN_INTERVAL);
+        int    train_interval  = DEFAULT_TRAIN_INTERVAL,
+        int    num_threads     = DEFAULT_NUM_THREADS);
 
     void run(int iterations);
     void checkpoint(const std::string& path);
@@ -30,6 +32,7 @@ private:
     torch::optim::Adam opt_adv0_, opt_adv1_, opt_strat_;
     size_t batch_size_;
     int    train_interval_;
+    int    num_threads_;
 
     // Train a network on its buffer using weighted loss.
     // mode: "advantage" uses weighted MSE; "strategy" uses weighted cross-entropy.

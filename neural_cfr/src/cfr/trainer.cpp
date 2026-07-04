@@ -12,17 +12,21 @@
 #include <numeric>
 #include <csignal>
 #include <atomic>
+#include <thread>
+#include <vector>
 
 static std::atomic<bool> g_interrupted{false};
 static void sigint_handler(int) { g_interrupted = true; }
 
-Trainer::Trainer(size_t reservoir_size, size_t batch_size, float lr, int train_interval)
+Trainer::Trainer(size_t reservoir_size, size_t batch_size, float lr, int train_interval,
+                 int num_threads)
     : mv0_(reservoir_size), mv1_(reservoir_size), mpi_(reservoir_size),
       opt_adv0_(adv0_.parameters(), torch::optim::AdamOptions(lr)),
       opt_adv1_(adv1_.parameters(), torch::optim::AdamOptions(lr)),
       opt_strat_(strat_.parameters(), torch::optim::AdamOptions(lr)),
       batch_size_(batch_size),
-      train_interval_(train_interval)
+      train_interval_(train_interval),
+      num_threads_(num_threads > 0 ? num_threads : (int)std::thread::hardware_concurrency())
 {}
 
 void Trainer::train_step(MLP& net, torch::optim::Adam& opt,
@@ -94,38 +98,58 @@ void Trainer::run(int iterations) {
         option::MaxProgress{iterations},
     };
 
-    for (int t = 1; t <= iterations; ++t) {
-        if (g_interrupted) {
-            std::cerr << "\nInterrupted at iteration " << t << "\n";
-            break;
-        }
+    int completed = 0;
+    while (completed < iterations && !g_interrupted) {
+        int batch = std::min(train_interval_, iterations - completed);
+        std::atomic<int> next{0};
 
-        // Player 0 traversal
-        {
-            auto s = deal_heads_up();
-            external_sample(s, 0, adv0_, adv1_, strat_, mv0_, mpi_, t);
-        }
+        // TODO(human): implement the worker lambda that each thread will run.
+        // Each worker should:
+        //   1. Create its own std::mt19937 rng seeded from std::random_device + thread index
+        //   2. Loop: atomically grab the next iteration index via next.fetch_add(1),
+        //      exit when index >= batch
+        //   3. Compute the global iteration number (completed + index + 1)
+        //   4. Run a P0 traversal then a P1 traversal using deal_heads_up(rng) and external_sample(..., rng)
+        //      (P0: adv0_ vs adv1_; P1: adv1_ vs adv0_)
+        auto worker = [&](int thread_id) {
+            std::mt19937 rng{std::random_device{}() + (unsigned)thread_id};
+            for (int index = next.fetch_add(1); index < batch; index = next.fetch_add(1)) {
+                if (g_interrupted) break;
+                int global_iter = completed + index + 1;
 
-        // Player 1 traversal
-        {
-            auto s = deal_heads_up();
-            external_sample(s, 1, adv1_, adv0_, strat_, mv1_, mpi_, t);
-        }
+                auto s0 = deal_heads_up(STARTING_STACK, DEFAULT_BIG_BLIND, rng);
+                external_sample(s0, 0, adv0_, adv1_, strat_, mv0_, mpi_, global_iter, rng);
 
-        if (t % train_interval_ == 0) {
+                auto s1 = deal_heads_up(STARTING_STACK, DEFAULT_BIG_BLIND, rng);
+                external_sample(s1, 1, adv1_, adv0_, strat_, mv1_, mpi_, global_iter, rng);
+            }
+        };
+
+        std::vector<std::thread> threads;
+        for (int i = 0; i < num_threads_; ++i)
+            threads.emplace_back(worker, i);
+        for (auto& t : threads) t.join();
+
+        completed += batch;
+
+        if (!g_interrupted) {
             train_step(adv0_, opt_adv0_, mv0_, "advantage");
             train_step(adv1_, opt_adv1_, mv1_, "advantage");
             train_step(strat_, opt_strat_, mpi_, "strategy");
         }
 
         bar.set_option(option::PostfixText{
-            "iter " + std::to_string(t) +
+            "iter " + std::to_string(completed) +
             "  mv0=" + std::to_string(mv0_.size()) +
             " mv1=" + std::to_string(mv1_.size()) +
-            " mpi=" + std::to_string(mpi_.size())
+            " mpi=" + std::to_string(mpi_.size()) +
+            "  threads=" + std::to_string(num_threads_)
         });
-        bar.tick();
+        bar.set_progress(completed);
     }
+
+    if (g_interrupted)
+        std::cerr << "\nInterrupted at iteration " << completed << "\n";
 
     std::signal(SIGINT, prev_handler);
 }

@@ -27,9 +27,7 @@ static std::vector<float> regret_match(
     return pos;
 }
 
-// Sample index from probability distribution
-static int sample_action(const std::vector<float>& probs) {
-    static std::mt19937 rng{std::random_device{}()};
+static int sample_action(const std::vector<float>& probs, std::mt19937& rng) {
     std::discrete_distribution<int> dist(probs.begin(), probs.end());
     return dist(rng);
 }
@@ -49,7 +47,8 @@ float external_sample(
     MLP& strat_net,
     ReservoirBuffer<BufferEntry>& adv_buffer,
     ReservoirBuffer<BufferEntry>& strat_buffer,
-    int iteration)
+    int iteration,
+    std::mt19937& rng)
 {
     if (state.is_terminal())
         return state.payoff(traversing_player);
@@ -57,7 +56,7 @@ float external_sample(
     // Chance node: advance street
     if (state.to_act.empty())
         return external_sample(state.advance_street(), traversing_player,
-                               adv_net, opp_adv_net, strat_net, adv_buffer, strat_buffer, iteration);
+                               adv_net, opp_adv_net, strat_net, adv_buffer, strat_buffer, iteration, rng);
 
     int acting = state.acting_player();
     auto legal_strs = state.legal_actions();
@@ -85,7 +84,7 @@ float external_sample(
         for (size_t i = 0; i < legal_strs.size(); ++i) {
             float v = external_sample(state.apply_action(legal_strs[i]),
                                       traversing_player, adv_net, opp_adv_net, strat_net,
-                                      adv_buffer, strat_buffer, iteration);
+                                      adv_buffer, strat_buffer, iteration, rng);
             action_values[legal_idx[i]] = v;
             node_value += strategy[i] * v;
         }
@@ -115,9 +114,9 @@ float external_sample(
             strat_targets[legal_idx[i]] = strategy[i];
         strat_buffer.add({feat_vec, strat_targets, static_cast<float>(iteration)});
 
-        int chosen = sample_action(strategy);
+        int chosen = sample_action(strategy, rng);
         return external_sample(state.apply_action(legal_strs[chosen]),
                                traversing_player, adv_net, opp_adv_net, strat_net,
-                               adv_buffer, strat_buffer, iteration);
+                               adv_buffer, strat_buffer, iteration, rng);
     }
 }
