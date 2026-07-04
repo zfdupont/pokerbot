@@ -11,7 +11,9 @@ Usage:
         [--hands 2000] [--baseline random|cfr] [--cfr-iters 500]
 """
 import argparse
+import contextlib
 import ctypes
+import io
 import os
 import subprocess
 import sys
@@ -52,8 +54,9 @@ sys.path.insert(0, _REPO_ROOT)
 
 import re
 import numpy as np
-import pyspiel
-from open_spiel.python import policy as ospiel_policy
+with contextlib.redirect_stdout(io.StringIO()):
+    import pyspiel
+    from open_spiel.python import policy as ospiel_policy
 
 from models.enums import Suit
 
