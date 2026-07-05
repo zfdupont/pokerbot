@@ -12,6 +12,8 @@ constexpr int   DEFAULT_RESERVOIR_SIZE   = 2'000'000;
 constexpr int   DEFAULT_TRAIN_INTERVAL   = 10;
 // 0 = use std::thread::hardware_concurrency()
 constexpr int   DEFAULT_NUM_THREADS      = 0;
+// ε-greedy exploration at opponent nodes (Brown et al. 2019 uses 0.06)
+constexpr float DEFAULT_EPSILON          = 0.06f;
 
 class Trainer {
 public:
@@ -20,7 +22,8 @@ public:
         size_t batch_size      = DEFAULT_BATCH_SIZE,
         float  lr              = DEFAULT_LR,
         int    train_interval  = DEFAULT_TRAIN_INTERVAL,
-        int    num_threads     = DEFAULT_NUM_THREADS);
+        int    num_threads     = DEFAULT_NUM_THREADS,
+        float  epsilon         = DEFAULT_EPSILON);
 
     void run(int iterations);
     void checkpoint(const std::string& path);
@@ -33,6 +36,7 @@ private:
     size_t batch_size_;
     int    train_interval_;
     int    num_threads_;
+    float  epsilon_;
 
     // Train a network on its buffer using weighted loss.
     // mode: "advantage" uses weighted MSE; "strategy" uses weighted cross-entropy.

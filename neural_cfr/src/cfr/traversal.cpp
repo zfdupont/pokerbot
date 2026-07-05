@@ -27,7 +27,14 @@ static std::vector<float> regret_match(
     return pos;
 }
 
-static int sample_action(const std::vector<float>& probs, std::mt19937& rng) {
+static int sample_action(const std::vector<float>& probs, std::mt19937& rng, float epsilon) {
+    if (epsilon > 0.0f) {
+        std::uniform_real_distribution<float> coin(0.0f, 1.0f);
+        if (coin(rng) < epsilon) {
+            std::uniform_int_distribution<int> uni(0, (int)probs.size() - 1);
+            return uni(rng);
+        }
+    }
     std::discrete_distribution<int> dist(probs.begin(), probs.end());
     return dist(rng);
 }
@@ -48,7 +55,8 @@ float external_sample(
     ReservoirBuffer<BufferEntry>& adv_buffer,
     ReservoirBuffer<BufferEntry>& strat_buffer,
     int iteration,
-    std::mt19937& rng)
+    std::mt19937& rng,
+    float epsilon)
 {
     if (state.is_terminal())
         return state.payoff(traversing_player);
@@ -56,7 +64,7 @@ float external_sample(
     // Chance node: advance street
     if (state.to_act.empty())
         return external_sample(state.advance_street(), traversing_player,
-                               adv_net, opp_adv_net, strat_net, adv_buffer, strat_buffer, iteration, rng);
+                               adv_net, opp_adv_net, strat_net, adv_buffer, strat_buffer, iteration, rng, epsilon);
 
     int acting = state.acting_player();
     auto legal_strs = state.legal_actions();
@@ -84,7 +92,7 @@ float external_sample(
         for (size_t i = 0; i < legal_strs.size(); ++i) {
             float v = external_sample(state.apply_action(legal_strs[i]),
                                       traversing_player, adv_net, opp_adv_net, strat_net,
-                                      adv_buffer, strat_buffer, iteration, rng);
+                                      adv_buffer, strat_buffer, iteration, rng, epsilon);
             action_values[legal_idx[i]] = v;
             node_value += strategy[i] * v;
         }
@@ -114,9 +122,9 @@ float external_sample(
             strat_targets[legal_idx[i]] = strategy[i];
         strat_buffer.add({feat_vec, strat_targets, static_cast<float>(iteration)});
 
-        int chosen = sample_action(strategy, rng);
+        int chosen = sample_action(strategy, rng, epsilon);
         return external_sample(state.apply_action(legal_strs[chosen]),
                                traversing_player, adv_net, opp_adv_net, strat_net,
-                               adv_buffer, strat_buffer, iteration, rng);
+                               adv_buffer, strat_buffer, iteration, rng, epsilon);
     }
 }

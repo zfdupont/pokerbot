@@ -19,14 +19,15 @@ static std::atomic<bool> g_interrupted{false};
 static void sigint_handler(int) { g_interrupted = true; }
 
 Trainer::Trainer(size_t reservoir_size, size_t batch_size, float lr, int train_interval,
-                 int num_threads)
+                 int num_threads, float epsilon)
     : mv0_(reservoir_size), mv1_(reservoir_size), mpi_(reservoir_size),
       opt_adv0_(adv0_.parameters(), torch::optim::AdamOptions(lr)),
       opt_adv1_(adv1_.parameters(), torch::optim::AdamOptions(lr)),
       opt_strat_(strat_.parameters(), torch::optim::AdamOptions(lr)),
       batch_size_(batch_size),
       train_interval_(train_interval),
-      num_threads_(num_threads > 0 ? num_threads : (int)std::thread::hardware_concurrency())
+      num_threads_(num_threads > 0 ? num_threads : (int)std::thread::hardware_concurrency()),
+      epsilon_(epsilon)
 {}
 
 void Trainer::train_step(MLP& net, torch::optim::Adam& opt,
@@ -103,14 +104,6 @@ void Trainer::run(int iterations) {
         int batch = std::min(train_interval_, iterations - completed);
         std::atomic<int> next{0};
 
-        // TODO(human): implement the worker lambda that each thread will run.
-        // Each worker should:
-        //   1. Create its own std::mt19937 rng seeded from std::random_device + thread index
-        //   2. Loop: atomically grab the next iteration index via next.fetch_add(1),
-        //      exit when index >= batch
-        //   3. Compute the global iteration number (completed + index + 1)
-        //   4. Run a P0 traversal then a P1 traversal using deal_heads_up(rng) and external_sample(..., rng)
-        //      (P0: adv0_ vs adv1_; P1: adv1_ vs adv0_)
         auto worker = [&](int thread_id) {
             std::mt19937 rng{std::random_device{}() + (unsigned)thread_id};
             for (int index = next.fetch_add(1); index < batch; index = next.fetch_add(1)) {
@@ -118,10 +111,10 @@ void Trainer::run(int iterations) {
                 int global_iter = completed + index + 1;
 
                 auto s0 = deal_heads_up(STARTING_STACK, DEFAULT_BIG_BLIND, rng);
-                external_sample(s0, 0, adv0_, adv1_, strat_, mv0_, mpi_, global_iter, rng);
+                external_sample(s0, 0, adv0_, adv1_, strat_, mv0_, mpi_, global_iter, rng, epsilon_);
 
                 auto s1 = deal_heads_up(STARTING_STACK, DEFAULT_BIG_BLIND, rng);
-                external_sample(s1, 1, adv1_, adv0_, strat_, mv1_, mpi_, global_iter, rng);
+                external_sample(s1, 1, adv1_, adv0_, strat_, mv1_, mpi_, global_iter, rng, epsilon_);
             }
         };
 

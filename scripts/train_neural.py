@@ -92,6 +92,8 @@ def main() -> None:
                         help="Train networks every N CFR rounds (default: 10)")
     parser.add_argument("--num-threads",          type=int,   default=0,
                         help="Traversal threads (default: 0 = hardware_concurrency)")
+    parser.add_argument("--epsilon",              type=float, default=0.06,
+                        help="ε-greedy exploration at opponent nodes (default: 0.06)")
     parser.add_argument("--eval-interval",        type=int,   default=None,
                         help="Run win-rate eval every N iterations (default: off)")
     parser.add_argument("--eval-hands",           type=int,   default=500,
@@ -106,6 +108,7 @@ def main() -> None:
         lr=args.lr,
         train_interval=args.train_interval,
         num_threads=args.num_threads,
+        epsilon=args.epsilon,
     )
 
     if args.resume:

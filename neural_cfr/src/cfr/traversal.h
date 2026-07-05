@@ -13,5 +13,6 @@ float external_sample(
     ReservoirBuffer<BufferEntry>& adv_buffer,   // M_v[traversing_player]
     ReservoirBuffer<BufferEntry>& strat_buffer, // M_π
     int iteration,           // t — used as linear CFR weight
-    std::mt19937& rng        // caller-owned RNG — thread-safe, no static state
+    std::mt19937& rng,       // caller-owned RNG — thread-safe, no static state
+    float epsilon = 0.0f     // ε-greedy exploration at opponent nodes (Brown et al. 0.06)
 );
