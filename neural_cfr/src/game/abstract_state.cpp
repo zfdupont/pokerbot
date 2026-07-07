@@ -44,6 +44,9 @@ bool AbstractState::is_terminal() const {
 int AbstractState::acting_player() const { return to_act[0]; }
 
 float AbstractState::payoff(int player) const {
+    // Assumes the hand was dealt with starting_stack == STARTING_STACK.
+    // deal_heads_up() accepts other stack sizes, but payoff() would then be
+    // silently wrong — Trainer always uses the constant.
     float invest = STARTING_STACK - stacks[player];
     if (folded[0]) return player == 1 ? (pot - invest) : -invest;
     if (folded[1]) return player == 0 ? (pot - invest) : -invest;
