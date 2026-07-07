@@ -1,0 +1,12 @@
+# Legacy cheap regime — smoke tests only. Reproduces the pre-2026-07
+# continual-training behavior: 1 SGD step every 10 traversal-pairs.
+
+[training]
+iterations = 10_000
+checkpoint = "neural_cfr/checkpoints/smoke.pt"
+
+[trainer]
+lr             = 1e-4
+train_interval = 10
+sgd_steps      = 1
+reinit_adv     = false

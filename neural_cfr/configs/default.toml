@@ -1,0 +1,17 @@
+# Paper-faithful Deep CFR regime (Brown et al. 2019).
+# Precedence: CLI flag > this file > built-in defaults.
+
+[training]
+iterations          = 5_000_000
+checkpoint_interval = 500_000
+checkpoint          = "neural_cfr/checkpoints/checkpoint.pt"
+
+[trainer]
+reservoir_size = 2_000_000
+batch_size     = 4096
+lr             = 1e-3
+train_interval = 10_000   # traversal-pairs per CFR iteration
+sgd_steps      = 2_000    # mini-batches per training event
+reinit_adv     = true     # from-scratch retraining (key paper ablation)
+num_threads    = 0        # 0 = hardware concurrency
+epsilon        = 0.06
