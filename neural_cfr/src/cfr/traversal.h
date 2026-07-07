@@ -16,3 +16,11 @@ float external_sample(
     std::mt19937& rng,       // caller-owned RNG — thread-safe, no static state
     float epsilon = 0.0f     // ε-greedy exploration at opponent nodes (Brown et al. 0.06)
 );
+
+// Regret matching over legal action indices: ReLU(advantages) normalized.
+// When no advantage is positive, returns a one-hot on the argmax advantage
+// (Brown et al. 2019) rather than uniform. Result is index-aligned with
+// legal_indices.
+std::vector<float> regret_match(
+    const std::array<float, 6>& advantages,
+    const std::vector<int>& legal_indices);

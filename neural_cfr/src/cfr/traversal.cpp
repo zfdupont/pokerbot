@@ -9,9 +9,12 @@ static const std::array<std::string, 6> ALL_ACTIONS =
     {"fold", "check", "call", "b0.5", "b1.0", "allin"};
 
 // Regret matching: given raw advantage logits and legal action indices,
-// return a probability distribution via ReLU + normalize.
-static std::vector<float> regret_match(
-    const std::array<float, NUM_ACTIONS>& advantages,
+// return a probability distribution via ReLU + normalize. When all
+// advantages are non-positive, play the argmax advantage as a pure
+// strategy (Brown et al. 2019) — uniform here would both add noise at
+// traverser nodes and train the strategy net toward uniform via M_π.
+std::vector<float> regret_match(
+    const std::array<float, 6>& advantages,
     const std::vector<int>& legal_indices)
 {
     std::vector<float> pos(legal_indices.size());
@@ -20,10 +23,16 @@ static std::vector<float> regret_match(
         pos[i] = std::max(0.0f, advantages[legal_indices[i]]);
         total += pos[i];
     }
-    if (total > 0.0f)
+    if (total > 0.0f) {
         for (auto& p : pos) p /= total;
-    else
-        for (auto& p : pos) p = 1.0f / pos.size();
+    } else {
+        size_t best = 0;
+        for (size_t i = 1; i < legal_indices.size(); ++i)
+            if (advantages[legal_indices[i]] > advantages[legal_indices[best]])
+                best = i;
+        std::fill(pos.begin(), pos.end(), 0.0f);
+        pos[best] = 1.0f;
+    }
     return pos;
 }
 
