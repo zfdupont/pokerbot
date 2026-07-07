@@ -19,15 +19,18 @@ static std::atomic<bool> g_interrupted{false};
 static void sigint_handler(int) { g_interrupted = true; }
 
 Trainer::Trainer(size_t reservoir_size, size_t batch_size, float lr, int train_interval,
-                 int num_threads, float epsilon)
+                 int num_threads, float epsilon, int sgd_steps, bool reinit_adv)
     : mv0_(reservoir_size), mv1_(reservoir_size), mpi_(reservoir_size),
-      opt_adv0_(adv0_.parameters(), torch::optim::AdamOptions(lr)),
-      opt_adv1_(adv1_.parameters(), torch::optim::AdamOptions(lr)),
-      opt_strat_(strat_.parameters(), torch::optim::AdamOptions(lr)),
+      opt_adv0_(std::make_unique<torch::optim::Adam>(adv0_.parameters(), torch::optim::AdamOptions(lr))),
+      opt_adv1_(std::make_unique<torch::optim::Adam>(adv1_.parameters(), torch::optim::AdamOptions(lr))),
+      opt_strat_(std::make_unique<torch::optim::Adam>(strat_.parameters(), torch::optim::AdamOptions(lr))),
       batch_size_(batch_size),
+      lr_(lr),
       train_interval_(train_interval),
       num_threads_(num_threads > 0 ? num_threads : (int)std::thread::hardware_concurrency()),
-      epsilon_(epsilon)
+      epsilon_(epsilon),
+      sgd_steps_(sgd_steps),
+      reinit_adv_(reinit_adv)
 {}
 
 void Trainer::train_step(MLP& net, torch::optim::Adam& opt,
@@ -78,7 +81,33 @@ void Trainer::train_step(MLP& net, torch::optim::Adam& opt,
     }
 
     loss.backward();
+    torch::nn::utils::clip_grad_norm_(net.parameters(), DEFAULT_GRAD_CLIP);
     opt.step();
+}
+
+void Trainer::train_event(MLP& net, std::unique_ptr<torch::optim::Adam>& opt,
+                          ReservoirBuffer<BufferEntry>& buffer,
+                          const std::string& mode, int steps, bool reinit)
+{
+    if (buffer.size() < batch_size_) return;  // keep current net — never
+                                              // reinit without retraining
+    if (reinit) {
+        net.reset_parameters();
+        opt = std::make_unique<torch::optim::Adam>(
+            net.parameters(), torch::optim::AdamOptions(lr_));
+    }
+    for (int i = 0; i < steps; ++i)
+        train_step(net, *opt, buffer, mode);
+}
+
+void Trainer::train_strategy(int sgd_steps) {
+    if (sgd_steps < 0) sgd_steps = sgd_steps_;
+    if (mpi_.size() < batch_size_) {
+        std::cerr << "train_strategy: skipped — " << mpi_.size()
+                  << " samples < batch size " << batch_size_ << "\n";
+        return;
+    }
+    train_event(strat_, opt_strat_, mpi_, "strategy", sgd_steps, reinit_adv_);
 }
 
 void Trainer::run(int iterations) {
@@ -126,9 +155,11 @@ void Trainer::run(int iterations) {
         completed += batch;
 
         if (!g_interrupted) {
-            train_step(adv0_, opt_adv0_, mv0_, "advantage");
-            train_step(adv1_, opt_adv1_, mv1_, "advantage");
-            train_step(strat_, opt_strat_, mpi_, "strategy");
+            // Training event per CFR iteration: from-scratch retrain of the
+            // advantage nets. The strategy net is trained only at
+            // checkpoint time (it is never queried during traversal).
+            train_event(adv0_, opt_adv0_, mv0_, "advantage", sgd_steps_, reinit_adv_);
+            train_event(adv1_, opt_adv1_, mv1_, "advantage", sgd_steps_, reinit_adv_);
         }
 
         bar.set_option(option::PostfixText{
@@ -148,6 +179,7 @@ void Trainer::run(int iterations) {
 }
 
 void Trainer::checkpoint(const std::string& path) {
+    train_strategy();
     torch::serialize::OutputArchive root;
     torch::serialize::OutputArchive a0, a1, s;
     adv0_.save(a0); adv1_.save(a1); strat_.save(s);
