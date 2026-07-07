@@ -126,6 +126,22 @@ def _count_raises(sequences: str) -> list[int]:
     return counts
 
 
+def _street_start_committed(sequences: str, street: int, big_blind: float) -> float:
+    """Per-player chips committed at the start of `street`.
+
+    universal_poker r<N> amounts are cumulative for the hand, so the last
+    raise-to amount on any completed street is both players' total at that
+    street's close (the street only ends once the raise is called). With no
+    raises yet, both players have matched the big blind (or nothing preflop).
+    """
+    committed = 0.0 if street == 0 else float(big_blind)
+    for part in sequences.split("|")[:street]:
+        raises = re.findall(r"r(\d+)", part)
+        if raises:
+            committed = float(raises[-1])
+    return committed
+
+
 def _is_check_action(legal: list[int], street: int, sequences: str) -> bool:
     if ACTION_FOLD not in legal:
         return street > 0
@@ -193,6 +209,20 @@ class NeuralCFRPolicy(ospiel_policy.Policy):
         stack_op = stacks[1 - pid]
         to_call  = 0.0 if is_check else float(stack_my - stack_op) if stack_my > stack_op else 0.0
 
+        # Exact street bets for feature parity with training (dims 129/130).
+        my_total  = OPENSPIEL_STARTING_STACK - stack_my
+        opp_total = OPENSPIEL_STARTING_STACK - stack_op
+        c0 = _street_start_committed(sequences, street, BIG_BLIND)
+        my_sb, opp_sb = my_total - c0, opp_total - c0
+        street_bet_kwargs = {}
+        if my_sb >= 0.0 and opp_sb >= 0.0:
+            street_bet_kwargs = {
+                "my_street_bet":  my_sb  / _CHIP_SCALE,
+                "opp_street_bet": opp_sb / _CHIP_SCALE,
+            }
+        # Negative values mean the sequence parse disagreed with the stacks —
+        # omit the kwargs and let the C++ fallback (opp bet = to_call) apply.
+
         probs = self.strategy.get_action_probs(
             hole_cards        = hole_ints,
             board_cards       = board_ints,
@@ -202,6 +232,7 @@ class NeuralCFRPolicy(ospiel_policy.Policy):
             to_call           = to_call        / _CHIP_SCALE,
             raises_per_street = raises,
             position          = pid,
+            **street_bet_kwargs,
         )
 
         # Map abstract action names → OpenSpiel FCPA action IDs
