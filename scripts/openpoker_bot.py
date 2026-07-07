@@ -220,6 +220,8 @@ class HandTracker:
             to_call_chips / scale,
             self.raises_per_street,
             self.my_position,
+            my_street_bet  = self.my_committed / scale,
+            opp_street_bet = (self.my_committed + to_call_chips) / scale,
         )
 
         # Mask to OpenPoker's legal actions and renormalize
