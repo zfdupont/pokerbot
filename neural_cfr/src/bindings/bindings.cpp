@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include "cfr/trainer.h"
+#include "cfr/traversal.h"
 #include "net/mlp.h"
 #include "net/features.h"
 #include "net/inference.h"
@@ -124,17 +125,12 @@ public:
                                to_call, raises_per_street, position,
                                my_street_bet, opp_street_bet);
 
-        std::vector<float> probs;
-        float total = 0.0f;
-        for (auto& a : legal) {
-            float v = std::max(0.0f, logits[action_idx(a)].item<float>());
-            probs.push_back(v);
-            total += v;
-        }
-        if (total > 0.0f)
-            for (auto& v : probs) v /= total;
-        else
-            for (auto& v : probs) v = 1.0f / probs.size();
+        std::array<float, 6> adv{};
+        for (int i = 0; i < 6; ++i) adv[i] = logits[i].item<float>();
+        std::vector<int> legal_idx;
+        for (auto& a : legal) legal_idx.push_back(action_idx(a));
+        // Same regret matching (incl. argmax fallback) as traversal.
+        auto probs = regret_match(adv, legal_idx);
 
         py::dict result;
         for (size_t i = 0; i < legal.size(); ++i)
