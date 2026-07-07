@@ -182,7 +182,7 @@ class CFRBotPolicy(ospiel_policy.Policy):
         if ACTION_FOLD  in legal:
             result[ACTION_FOLD]  = amap.get("fold", 0.0)
         if ACTION_CALL  in legal:
-            result[ACTION_CALL]  = amap.get("call", 0.0)
+            result[ACTION_CALL]  = amap.get("check" if is_check else "call", 0.0)
         if ACTION_BET   in legal:
             # Merge both bet sizes into pot-size bet
             result[ACTION_BET]   = amap.get("b0.5", 0.0) + amap.get("b1.0", 0.0)

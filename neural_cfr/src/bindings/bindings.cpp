@@ -93,8 +93,160 @@ private:
     }
 };
 
+// AdvantageProbe: loads adv0_ and adv1_ nets, exposes regret-matched action probs
+// and raw advantage values. Used to diagnose whether the advantage nets have
+// learned hand-strength discrimination even when the strategy net hasn't.
+class AdvantageProbe {
+public:
+    explicit AdvantageProbe(const std::string& checkpoint_path) {
+        std::ifstream f(checkpoint_path);
+        if (!f.good())
+            throw std::runtime_error("Checkpoint not found: " + checkpoint_path);
+        torch::serialize::InputArchive root, a0, a1;
+        root.load_from(checkpoint_path);
+        root.read("adv0", a0);
+        root.read("adv1", a1);
+        adv0_.load(a0);
+        adv1_.load(a1);
+        adv0_.eval();
+        adv1_.eval();
+    }
+
+    // Returns action->probability via regret matching (ReLU + normalize),
+    // identical to what traversal.cpp does at traverser nodes.
+    py::dict get_advantage_probs(
+        int player,
+        std::vector<int> hole_cards,
+        std::vector<int> board_cards,
+        int street, float pot, float stack,
+        float to_call,
+        std::vector<int> raises_per_street,
+        int position)
+    {
+        auto legal = _build_legal(hole_cards, board_cards, street, pot, stack,
+                                  to_call, raises_per_street, position);
+        auto logits = _forward(player, hole_cards, board_cards, street, pot, stack,
+                               to_call, raises_per_street, position);
+
+        std::vector<float> probs;
+        float total = 0.0f;
+        for (auto& a : legal) {
+            float v = std::max(0.0f, logits[action_idx(a)].item<float>());
+            probs.push_back(v);
+            total += v;
+        }
+        if (total > 0.0f)
+            for (auto& v : probs) v /= total;
+        else
+            for (auto& v : probs) v = 1.0f / probs.size();
+
+        py::dict result;
+        for (size_t i = 0; i < legal.size(); ++i)
+            result[py::str(legal[i])] = probs[i];
+        return result;
+    }
+
+    // Returns raw advantage logits (before regret matching) for each legal action.
+    py::dict get_raw_advantages(
+        int player,
+        std::vector<int> hole_cards,
+        std::vector<int> board_cards,
+        int street, float pot, float stack,
+        float to_call,
+        std::vector<int> raises_per_street,
+        int position)
+    {
+        auto legal = _build_legal(hole_cards, board_cards, street, pot, stack,
+                                  to_call, raises_per_street, position);
+        auto logits = _forward(player, hole_cards, board_cards, street, pot, stack,
+                               to_call, raises_per_street, position);
+
+        py::dict result;
+        for (auto& a : legal)
+            result[py::str(a)] = logits[action_idx(a)].item<float>();
+        return result;
+    }
+
+private:
+    MLP adv0_, adv1_;
+
+    static int action_idx(const std::string& a) {
+        static const std::array<std::string, 6> ALL =
+            {"fold","check","call","b0.5","b1.0","allin"};
+        for (int i = 0; i < 6; ++i) if (ALL[i] == a) return i;
+        throw std::runtime_error("unknown action: " + a);
+    }
+
+    AbstractState _make_state(
+        const std::vector<int>& hole_cards,
+        const std::vector<int>& board_cards,
+        int street, float pot, float stack,
+        float to_call,
+        const std::vector<int>& raises_per_street,
+        int position) const
+    {
+        AbstractState s{};
+        s.hole_cards[position][0] = hole_cards[0];
+        s.hole_cards[position][1] = hole_cards[1];
+        s.board = std::vector<Card>(board_cards.begin(), board_cards.end());
+        s.street = street;
+        s.pot = pot;
+        s.stacks[position] = stack;
+        s.stacks[1 - position] = stack;
+        s.player_bets = {0.0f, 0.0f};
+        s.current_bet = to_call;
+        s.betting_history = {0, 0, 0, 0};
+        for (int i = 0; i < 4 && i < (int)raises_per_street.size(); ++i)
+            s.betting_history[i] = raises_per_street[i];
+        s.folded = {false, false};
+        s.to_act = {position};
+        return s;
+    }
+
+    std::vector<std::string> _build_legal(
+        const std::vector<int>& hole_cards,
+        const std::vector<int>& board_cards,
+        int street, float pot, float stack,
+        float to_call,
+        const std::vector<int>& raises_per_street,
+        int position) const
+    {
+        return _make_state(hole_cards, board_cards, street, pot, stack,
+                           to_call, raises_per_street, position).legal_actions();
+    }
+
+    torch::Tensor _forward(
+        int player,
+        const std::vector<int>& hole_cards,
+        const std::vector<int>& board_cards,
+        int street, float pot, float stack,
+        float to_call,
+        const std::vector<int>& raises_per_street,
+        int position)
+    {
+        auto s = _make_state(hole_cards, board_cards, street, pot, stack,
+                             to_call, raises_per_street, position);
+        auto feat = encode_features(s, position);
+        MLP& net = (player == 0) ? adv0_ : adv1_;
+        torch::NoGradGuard no_grad;
+        return net.forward(feat.unsqueeze(0)).squeeze(0);
+    }
+};
+
 PYBIND11_MODULE(neural_cfr, m) {
     m.doc() = "Deep CFR neural network strategy -- C++ core via libtorch";
+
+    // evaluate_hand(cards) -> int  (lower = better; pass 5 or 7 card ints 0-51)
+    m.def("evaluate_hand", [](std::vector<int> cards) -> uint32_t {
+        if (cards.size() == 7) {
+            std::array<Card, 7> a; std::copy(cards.begin(), cards.end(), a.begin());
+            return evaluate_7card(a);
+        } else if (cards.size() == 5) {
+            std::array<Card, 5> a; std::copy(cards.begin(), cards.end(), a.begin());
+            return evaluate_5card(a);
+        }
+        throw std::runtime_error("evaluate_hand requires 5 or 7 cards");
+    }, py::arg("cards"), "Evaluate a 5- or 7-card hand (lower = better)");
 
     py::class_<Trainer>(m, "Trainer")
         .def(py::init<size_t, size_t, float, int, int, float>(),
@@ -119,4 +271,29 @@ PYBIND11_MODULE(neural_cfr, m) {
              py::arg("to_call"),
              py::arg("raises_per_street"),
              py::arg("position"));
+
+    py::class_<AdvantageProbe>(m, "AdvantageProbe")
+        .def(py::init<const std::string&>(), py::arg("checkpoint_path"))
+        .def("get_advantage_probs", &AdvantageProbe::get_advantage_probs,
+             py::arg("player"),
+             py::arg("hole_cards"),
+             py::arg("board_cards"),
+             py::arg("street"),
+             py::arg("pot"),
+             py::arg("stack"),
+             py::arg("to_call"),
+             py::arg("raises_per_street"),
+             py::arg("position"),
+             "Regret-matched action probs from the advantage net (same as traversal-time strategy)")
+        .def("get_raw_advantages", &AdvantageProbe::get_raw_advantages,
+             py::arg("player"),
+             py::arg("hole_cards"),
+             py::arg("board_cards"),
+             py::arg("street"),
+             py::arg("pot"),
+             py::arg("stack"),
+             py::arg("to_call"),
+             py::arg("raises_per_street"),
+             py::arg("position"),
+             "Raw advantage logits before regret matching — negative = action is being avoided");
 }
