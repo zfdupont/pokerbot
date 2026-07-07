@@ -249,16 +249,20 @@ PYBIND11_MODULE(neural_cfr, m) {
     }, py::arg("cards"), "Evaluate a 5- or 7-card hand (lower = better)");
 
     py::class_<Trainer>(m, "Trainer")
-        .def(py::init<size_t, size_t, float, int, int, float>(),
+        .def(py::init<size_t, size_t, float, int, int, float, int, bool>(),
              py::arg("reservoir_size")  = DEFAULT_RESERVOIR_SIZE,
              py::arg("batch_size")      = DEFAULT_BATCH_SIZE,
              py::arg("lr")              = DEFAULT_LR,
              py::arg("train_interval")  = DEFAULT_TRAIN_INTERVAL,
              py::arg("num_threads")     = DEFAULT_NUM_THREADS,
-             py::arg("epsilon")         = DEFAULT_EPSILON)
-        .def("run",        &Trainer::run,        py::arg("iterations"))
-        .def("checkpoint", &Trainer::checkpoint, py::arg("path"))
-        .def("load",       &Trainer::load,       py::arg("path"));
+             py::arg("epsilon")         = DEFAULT_EPSILON,
+             py::arg("sgd_steps")       = DEFAULT_SGD_STEPS,
+             py::arg("reinit_adv")      = DEFAULT_REINIT_ADV)
+        .def("run",            &Trainer::run,            py::arg("iterations"))
+        .def("train_strategy", &Trainer::train_strategy, py::arg("sgd_steps") = -1,
+             "Retrain the strategy net on M_pi (called automatically by checkpoint)")
+        .def("checkpoint",     &Trainer::checkpoint,     py::arg("path"))
+        .def("load",           &Trainer::load,           py::arg("path"));
 
     py::class_<Strategy>(m, "Strategy")
         .def(py::init<const std::string&>(), py::arg("checkpoint_path"))
