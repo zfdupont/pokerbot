@@ -64,7 +64,10 @@ def test_default_config_file_autoloaded(train_neural, tmp_path):
 
 
 def test_snapshot_roundtrips(train_neural, tmp_path):
-    import tomllib
+    try:
+        import tomllib
+    except ImportError:
+        import tomli as tomllib  # py3.10 backport, declared in pyproject
     cfg = {"iterations": 5, "lr": 1e-3, "reinit_adv": True,
            "checkpoint": "a/b.pt", "eval_interval": None}
     ckpt = tmp_path / "ckpt.pt"

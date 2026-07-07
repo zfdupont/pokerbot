@@ -18,3 +18,6 @@ dev = ["pytest>=9.0"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+# importlib mode allows same-basename test files in different directories
+# (tests/cfr/test_trainer.py vs tests/neural_cfr/test_trainer.py)
+addopts = "--import-mode=importlib"
