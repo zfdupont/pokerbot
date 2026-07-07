@@ -11,10 +11,10 @@ Usage:
 
 Options:
     --iterations           CFR traversal iterations total     (default: 100_000)
-    --checkpoint-interval  Save every N iterations            (default: 100_000, i.e. end only)
+    --checkpoint-interval  Save every N iterations            (default: None, i.e. end only)
     --reservoir-size       Reservoir buffer capacity per net  (default: 2_000_000)
     --batch-size           SGD mini-batch size                (default: 4096)
-    --lr                   Learning rate                      (default: 1e-4)
+    --lr                   Learning rate                      (default: 1e-3)
     --checkpoint           Output checkpoint path             (default: neural_cfr/checkpoints/checkpoint.pt)
     --resume               Resume from existing checkpoint    (default: None)
 """
