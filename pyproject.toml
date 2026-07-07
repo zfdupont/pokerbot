@@ -8,6 +8,7 @@ dependencies = [
     "cython>=3.2.8",
     "numpy>=1.26",
     "setuptools>=82.0.1",
+    "tomli>=2.0; python_version < '3.11'",
     "tqdm>=4.66",
     "websockets>=12.0",
 ]
