@@ -31,3 +31,11 @@ cxx_test(
     compiler_flags = ["-std=c++17"],
     env = _libtorch_env,
 )
+
+cxx_test(
+    name = "test_trainer",
+    srcs = ["test_trainer.cpp"],
+    deps = ["//neural_cfr:core", "//third_party:gtest", "//third_party:libtorch"],
+    compiler_flags = ["-std=c++17"],
+    env = _libtorch_env,
+)

@@ -13,3 +13,8 @@ torch::Tensor MLP::forward(torch::Tensor x) {
     x = torch::relu(fc3->forward(x));
     return fc4->forward(x);  // raw logits — no output activation
 }
+
+void MLP::reset_parameters() {
+    for (auto* fc : {&fc1, &fc2, &fc3, &fc4})
+        (*fc)->reset_parameters();
+}
