@@ -7,6 +7,7 @@
 #include "cfr/trainer.h"
 #include "net/mlp.h"
 #include "net/features.h"
+#include "net/inference.h"
 #include "game/abstract_state.h"
 
 namespace py = pybind11;
@@ -29,36 +30,27 @@ public:
     // hole_cards: [c0, c1] as 0-51 ints (player's own cards)
     // board_cards: 0-5 cards as 0-51 ints
     // street: 0-3
-    // pot, stack: raw float values (normalized internally)
+    // pot: total pot INCLUDING all street bets (same as during training traversal)
+    // stack: acting player's remaining stack (normalized internally)
     // to_call: amount player must call (0 if facing check / acting first)
-    // raises_per_street: list of 4 ints
+    // raises_per_street: list of 4 ints (clamped to [0,2] internally)
     // position: 0 or 1
+    // my_street_bet: chips committed this street by the acting player (-1 = unknown)
+    // opp_street_bet: chips committed this street by the opponent (-1 = unknown)
+    // If either sentinel is -1, falls back to player_bets={0, to_call}.
     py::dict get_action_probs(
         std::vector<int> hole_cards,
         std::vector<int> board_cards,
         int street, float pot, float stack,
         float to_call,
         std::vector<int> raises_per_street,
-        int position)
+        int position,
+        float my_street_bet  = -1.0f,
+        float opp_street_bet = -1.0f)
     {
-        // Build a synthetic AbstractState for feature encoding + legal action derivation
-        AbstractState s{};
-        s.hole_cards[position][0] = hole_cards[0];
-        s.hole_cards[position][1] = hole_cards[1];
-        s.board = std::vector<Card>(board_cards.begin(), board_cards.end());
-        s.street = street;
-        s.pot = pot;
-        s.stacks[position] = stack;
-        s.stacks[1 - position] = stack;  // approximation
-        // Set current_bet and player_bets so that to_call = current_bet - player_bets[position]
-        s.player_bets = {0.0f, 0.0f};
-        s.current_bet = to_call;  // player_bets[position]=0, so to_call = current_bet - 0
-        s.betting_history = {0, 0, 0, 0};
-        for (int i = 0; i < 4 && i < (int)raises_per_street.size(); ++i)
-            s.betting_history[i] = raises_per_street[i];
-        s.folded = {false, false};
-        s.to_act = {position};
-
+        auto s = make_inference_state(hole_cards, board_cards, street, pot,
+                                      stack, to_call, raises_per_street,
+                                      position, my_street_bet, opp_street_bet);
         auto feat = encode_features(s, position);
 
         torch::NoGradGuard no_grad;
@@ -121,12 +113,16 @@ public:
         int street, float pot, float stack,
         float to_call,
         std::vector<int> raises_per_street,
-        int position)
+        int position,
+        float my_street_bet  = -1.0f,
+        float opp_street_bet = -1.0f)
     {
-        auto legal = _build_legal(hole_cards, board_cards, street, pot, stack,
-                                  to_call, raises_per_street, position);
+        auto legal = make_inference_state(hole_cards, board_cards, street, pot, stack,
+                                         to_call, raises_per_street, position,
+                                         my_street_bet, opp_street_bet).legal_actions();
         auto logits = _forward(player, hole_cards, board_cards, street, pot, stack,
-                               to_call, raises_per_street, position);
+                               to_call, raises_per_street, position,
+                               my_street_bet, opp_street_bet);
 
         std::vector<float> probs;
         float total = 0.0f;
@@ -154,12 +150,16 @@ public:
         int street, float pot, float stack,
         float to_call,
         std::vector<int> raises_per_street,
-        int position)
+        int position,
+        float my_street_bet  = -1.0f,
+        float opp_street_bet = -1.0f)
     {
-        auto legal = _build_legal(hole_cards, board_cards, street, pot, stack,
-                                  to_call, raises_per_street, position);
+        auto legal = make_inference_state(hole_cards, board_cards, street, pot, stack,
+                                         to_call, raises_per_street, position,
+                                         my_street_bet, opp_street_bet).legal_actions();
         auto logits = _forward(player, hole_cards, board_cards, street, pot, stack,
-                               to_call, raises_per_street, position);
+                               to_call, raises_per_street, position,
+                               my_street_bet, opp_street_bet);
 
         py::dict result;
         for (auto& a : legal)
@@ -177,44 +177,6 @@ private:
         throw std::runtime_error("unknown action: " + a);
     }
 
-    AbstractState _make_state(
-        const std::vector<int>& hole_cards,
-        const std::vector<int>& board_cards,
-        int street, float pot, float stack,
-        float to_call,
-        const std::vector<int>& raises_per_street,
-        int position) const
-    {
-        AbstractState s{};
-        s.hole_cards[position][0] = hole_cards[0];
-        s.hole_cards[position][1] = hole_cards[1];
-        s.board = std::vector<Card>(board_cards.begin(), board_cards.end());
-        s.street = street;
-        s.pot = pot;
-        s.stacks[position] = stack;
-        s.stacks[1 - position] = stack;
-        s.player_bets = {0.0f, 0.0f};
-        s.current_bet = to_call;
-        s.betting_history = {0, 0, 0, 0};
-        for (int i = 0; i < 4 && i < (int)raises_per_street.size(); ++i)
-            s.betting_history[i] = raises_per_street[i];
-        s.folded = {false, false};
-        s.to_act = {position};
-        return s;
-    }
-
-    std::vector<std::string> _build_legal(
-        const std::vector<int>& hole_cards,
-        const std::vector<int>& board_cards,
-        int street, float pot, float stack,
-        float to_call,
-        const std::vector<int>& raises_per_street,
-        int position) const
-    {
-        return _make_state(hole_cards, board_cards, street, pot, stack,
-                           to_call, raises_per_street, position).legal_actions();
-    }
-
     torch::Tensor _forward(
         int player,
         const std::vector<int>& hole_cards,
@@ -222,10 +184,13 @@ private:
         int street, float pot, float stack,
         float to_call,
         const std::vector<int>& raises_per_street,
-        int position)
+        int position,
+        float my_street_bet  = -1.0f,
+        float opp_street_bet = -1.0f)
     {
-        auto s = _make_state(hole_cards, board_cards, street, pot, stack,
-                             to_call, raises_per_street, position);
+        auto s = make_inference_state(hole_cards, board_cards, street, pot, stack,
+                                      to_call, raises_per_street, position,
+                                      my_street_bet, opp_street_bet);
         auto feat = encode_features(s, position);
         MLP& net = (player == 0) ? adv0_ : adv1_;
         torch::NoGradGuard no_grad;
@@ -270,7 +235,9 @@ PYBIND11_MODULE(neural_cfr, m) {
              py::arg("stack"),
              py::arg("to_call"),
              py::arg("raises_per_street"),
-             py::arg("position"));
+             py::arg("position"),
+             py::arg("my_street_bet")  = -1.0f,
+             py::arg("opp_street_bet") = -1.0f);
 
     py::class_<AdvantageProbe>(m, "AdvantageProbe")
         .def(py::init<const std::string&>(), py::arg("checkpoint_path"))
@@ -284,6 +251,8 @@ PYBIND11_MODULE(neural_cfr, m) {
              py::arg("to_call"),
              py::arg("raises_per_street"),
              py::arg("position"),
+             py::arg("my_street_bet")  = -1.0f,
+             py::arg("opp_street_bet") = -1.0f,
              "Regret-matched action probs from the advantage net (same as traversal-time strategy)")
         .def("get_raw_advantages", &AdvantageProbe::get_raw_advantages,
              py::arg("player"),
@@ -295,5 +264,7 @@ PYBIND11_MODULE(neural_cfr, m) {
              py::arg("to_call"),
              py::arg("raises_per_street"),
              py::arg("position"),
+             py::arg("my_street_bet")  = -1.0f,
+             py::arg("opp_street_bet") = -1.0f,
              "Raw advantage logits before regret matching — negative = action is being avoided");
 }
