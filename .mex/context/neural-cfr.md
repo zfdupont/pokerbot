@@ -66,7 +66,7 @@ External Sampling MCCFR, faithful to Brown et al. 2019:
 - `strat_net` is trained offline on `M_π`, never queried during traversal.
 - Linear CFR weighting: `weight = iteration t`.
 - Traversal is multithreaded (thread-safe RNG, buffer mutex, thread pool in `Trainer::run()`); `--num-threads` exposed in `scripts/train_neural.py`.
-- **Training regime (paper-faithful, 2026-07):** every `train_interval` traversal-pairs = one CFR iteration → advantage nets reinitialized from scratch and trained `sgd_steps` mini-batches. Strategy net is trained from scratch on M_π only at checkpoint time (`Trainer.train_strategy`, called automatically by `checkpoint()`). Legacy continual regime: `neural_cfr/configs/smoke.toml`.
+- **Training regime (paper-faithful, 2026-07):** every `train_interval` traversal-pairs = one CFR iteration → advantage nets reinitialized from scratch and trained `sgd_steps` mini-batches (the two events run on concurrent threads — they share nothing). Strategy net is trained from scratch on M_π only at checkpoint time (`Trainer.train_strategy`, called automatically by `checkpoint()`). Legacy continual regime: `neural_cfr/configs/smoke.toml`.
 - **Regret-matching fallback:** if all predicted advantages are ≤ 0, play argmax(advantage) as a pure strategy (not uniform).
 
 ## Checkpoint format

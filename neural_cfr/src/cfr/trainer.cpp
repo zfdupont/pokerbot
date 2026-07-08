@@ -41,7 +41,8 @@ void Trainer::train_step(MLP& net, torch::optim::Adam& opt,
 
     // Sample batch_size random indices — O(batch) not O(N)
     const auto& data = buffer.data();
-    static std::mt19937 rng{std::random_device{}()};
+    // thread_local: the two advantage-net training events run concurrently
+    thread_local std::mt19937 rng{std::random_device{}()};
     std::uniform_int_distribution<size_t> dist(0, data.size() - 1);
     std::vector<size_t> indices(batch_size_);
     for (size_t i = 0; i < batch_size_; ++i) indices[i] = dist(rng);
@@ -156,10 +157,15 @@ void Trainer::run(int iterations) {
 
         if (!g_interrupted) {
             // Training event per CFR iteration: from-scratch retrain of the
-            // advantage nets. The strategy net is trained only at
-            // checkpoint time (it is never queried during traversal).
-            train_event(adv0_, opt_adv0_, mv0_, "advantage", sgd_steps_, reinit_adv_);
-            train_event(adv1_, opt_adv1_, mv1_, "advantage", sgd_steps_, reinit_adv_);
+            // advantage nets. The two events are fully independent (separate
+            // nets, optimizers, buffers), so run them concurrently — SGD is
+            // the wall-clock-dominant phase and uses ~1 core per event.
+            // The strategy net is trained only at checkpoint time (it is
+            // never queried during traversal).
+            std::thread t0([&]{ train_event(adv0_, opt_adv0_, mv0_, "advantage", sgd_steps_, reinit_adv_); });
+            std::thread t1([&]{ train_event(adv1_, opt_adv1_, mv1_, "advantage", sgd_steps_, reinit_adv_); });
+            t0.join();
+            t1.join();
         }
 
         bar.set_option(option::PostfixText{
