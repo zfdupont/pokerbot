@@ -183,3 +183,38 @@ a training problem), so acceptance is head-to-head only.
   matches the tabular port).
 - `payoff()`'s hardcoded `STARTING_STACK` — gets a comment/assert only.
 - Board-texture features, ε tuning, network architecture changes.
+
+## Acceptance Results (2026-07-09)
+
+Full 5M-iteration retrain under the new regime (`configs/default.toml`,
+~22 h wall clock). All evals 20,000 hands (SE ≈ ±7 BB/100). Baseline =
+pre-fix checkpoint evaluated under the merged code.
+
+| Checkpoint | vs random (BB/100) | vs tabular (BB/100) |
+|---|---|---|
+| Pre-fix baseline | +334.97 | −241.8 |
+| 500k | +374.25 | −101.0 |
+| 1M | +408.39 | −137.7 |
+| 3.5M | +467.31 | −9.3 |
+| 4M | +419.88 | **+3.2** |
+| 4.5M | +551.81 | −31.8 |
+| 5M (final) | +455.25 | −80.8 |
+
+**Verdicts against the targets:**
+
+- **Sanity floor (beat pre-fix on both evals): PASS** — every checkpoint,
+  including the final one, beats both baseline numbers by wide margins.
+- **Secondary (≥ tabular's win rate vs random): PASS** — +455 vs +335 at 5M;
+  every checkpoint from 500k onward passes.
+- **Primary (≥ 0 BB/100 vs tabular): PARTIAL** — parity reached at
+  3.5M–4M (−9.3, +3.2 — both within noise of zero) but not held stably;
+  late checkpoints oscillate in a ≈ −30 ± 40 band. The 5M checkpoint
+  itself measures −80.8. Mean of the last four checkpoints ≈ −29.7.
+
+**Interpretation:** the fixes moved the bot from −242 to statistical parity
+with the 9M-iteration tabular baseline, but per-checkpoint variance from
+the from-scratch strategy-net retrain (2,000 batches per event) dominates
+the late curve. The best-measured artifact is the 4M checkpoint
+(`neural_cfr/checkpoints/archive_1302.pt`, +3.2). Follow-up candidates:
+more `sgd_steps` for `train_strategy`, checkpoint selection by validation
+eval, or serializing M_π to allow a final high-budget strategy fit.
