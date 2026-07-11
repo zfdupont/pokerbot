@@ -50,6 +50,6 @@ nohup zsh -c "
 " > /dev/null 2>&1 &
 disown
 
-echo "training PID $PID  ($ITERS iterations, resumed from $CKPT)"
-echo "log:      tail -f $LOG | tr '\r' '\n'"
-echo "progress: ps -o etime=,time=,%cpu= -p $PID"
+print -r -- "training PID $PID  ($ITERS iterations, resumed from $CKPT)"
+print -r -- "log:      tail -f $LOG | tr '\\r' '\\n'"
+print -r -- "progress: ps -o etime=,time=,%cpu= -p $PID"
