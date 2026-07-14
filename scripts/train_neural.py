@@ -165,6 +165,35 @@ def update_best(bb100: float, ckpt_path: str, total_iters: int,
     return True
 
 
+def run_selection(cfg: dict, repo_root: str, trainer) -> None:
+    """Eval the just-saved checkpoint vs tabular; update best_checkpoint.pt.
+
+    Never raises: selection is advisory and must not kill training.
+    """
+    ckpt = cfg["checkpoint"]
+    cmd = [sys.executable,
+           os.path.join(repo_root, "scripts", "eval_neural_vs_tabular.py"),
+           "--neural-checkpoint", ckpt,
+           "--hands", str(cfg["selection_hands"])]
+    if cfg["selection_tabular_checkpoint"]:
+        cmd += ["--tabular-checkpoint", cfg["selection_tabular_checkpoint"]]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True,
+                                cwd=repo_root, timeout=3600)
+        bb100 = parse_bb100(result.stdout)
+        if result.returncode != 0 or bb100 is None:
+            print(f"[selection] eval failed (exit {result.returncode}); skipping. "
+                  f"stderr tail: {result.stderr[-300:]}")
+            return
+        replaced = update_best(bb100, ckpt, trainer.total_iterations(),
+                               cfg["selection_hands"])
+        print(f"[selection] {bb100:+.1f} BB/100 vs tabular @ "
+              f"{trainer.total_iterations():,} iters — "
+              f"{'NEW BEST → best_checkpoint.pt' if replaced else 'kept existing best'}")
+    except Exception as e:  # noqa: BLE001 — advisory path, never fatal
+        print(f"[selection] skipped ({type(e).__name__}: {e})")
+
+
 def main() -> None:
     repo_root = _get_repo_root()
 
@@ -249,6 +278,8 @@ def main() -> None:
         completed += chunk
         trainer.checkpoint(cfg["checkpoint"])
         write_config_snapshot(cfg, cfg["checkpoint"])
+        if cfg["selection_enabled"]:
+            run_selection(cfg, repo_root, trainer)
         if completed < cfg["iterations"]:
             print(f"[{completed:,}/{cfg['iterations']:,}] Checkpoint saved to {cfg['checkpoint']}")
         if eval_interval and completed % eval_interval == 0:

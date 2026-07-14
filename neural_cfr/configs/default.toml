@@ -15,3 +15,6 @@ sgd_steps      = 2_000    # mini-batches per training event
 reinit_adv     = true     # from-scratch retraining (key paper ablation)
 num_threads    = 0        # 0 = hardware concurrency
 epsilon        = 0.06
+selection_enabled          = true      # keep best_checkpoint.pt by vs-tabular eval
+selection_hands            = 10_000    # SE ≈ ±10 BB/100 per selection eval
+selection_tabular_checkpoint = ""      # "" = auto-detect latest tabular ckpt

@@ -21,7 +21,7 @@ edges:
     condition: when the trained bot behaves nonsensically
   - target: patterns/train-strategy.md
     condition: when running a neural training job
-last_updated: 2026-07-07
+last_updated: 2026-07-14
 ---
 
 # Neural CFR (`neural_cfr/`)
@@ -66,12 +66,12 @@ External Sampling MCCFR, faithful to Brown et al. 2019:
 - `strat_net` is trained offline on `M_π`, never queried during traversal.
 - Linear CFR weighting: `weight = iteration t`.
 - Traversal is multithreaded (thread-safe RNG, buffer mutex, thread pool in `Trainer::run()`); `--num-threads` exposed in `scripts/train_neural.py`.
-- **Training regime (paper-faithful, 2026-07):** every `train_interval` traversal-pairs = one CFR iteration → advantage nets reinitialized from scratch and trained `sgd_steps` mini-batches (the two events run on concurrent threads — they share nothing). Strategy net is trained from scratch on M_π only at checkpoint time (`Trainer.train_strategy`, called automatically by `checkpoint()`). Legacy continual regime: `neural_cfr/configs/smoke.toml`.
+- **Training regime (paper-faithful, 2026-07):** every `train_interval` traversal-pairs = one CFR iteration → advantage nets reinitialized from scratch and trained `sgd_steps` mini-batches (the two events run on concurrent threads — they share nothing). Strategy net is trained from scratch on M_π only at checkpoint time (`Trainer.train_strategy`, called automatically by `checkpoint()`). Legacy continual regime: `neural_cfr/configs/smoke.toml`. With selection_enabled (on in default.toml), the driver evals each save vs the tabular baseline (selection_hands, default 10k) and keeps the best in best_checkpoint.pt + best_checkpoint.json (strict-improvement replacement).
 - **Regret-matching fallback:** if all predicted advantages are ≤ 0, play argmax(advantage) as a pure strategy (not uniform).
 
 ## Checkpoint format
 
-Named sub-archives, NOT flat: `root.write("adv0", ...)`, `("adv1", ...)`, `("strat", ...)`. `neural_cfr.Strategy` loads only `"strat"`. Reservoir buffers are never serialized — `--resume` restores nets only. `checkpoint()` retrains the strategy net on M_π before saving; because buffers are not serialized, prefer single uninterrupted runs (a resumed run's strategy net only sees post-resume M_π).
+Named sub-archives, NOT flat: `root.write("adv0", ...)`, `("adv1", ...)`, `("strat", ...)`. `neural_cfr.Strategy` loads only `"strat"`. Reservoir buffers are never serialized — `--resume` restores nets only. `checkpoint()` retrains the strategy net on M_π before saving; because buffers are not serialized, prefer single uninterrupted runs (a resumed run's strategy net only sees post-resume M_π). Checkpoints also carry a "meta" sub-archive with the cumulative iteration counter (total_iterations()); legacy checkpoints load with counter 0. Linear-CFR weights are globally monotonic across chunks and resumes.
 
 ## Commands
 
