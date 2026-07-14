@@ -70,7 +70,7 @@ when selection is enabled:
 2. Parse stdout with module-level `parse_bb100(text) -> float | None`
    (regex on the `Neural win rate` line).
 3. Compare with the sidecar via module-level
-   `update_best(bb100, ckpt_path, total_iters, hands, best_dir) -> bool`:
+   `update_best(bb100, ckpt_path, total_iters, hands) -> bool`:
    - Sidecar `best_checkpoint.json` (same directory as the checkpoint):
      `{"bb100": float, "total_iters": int, "hands": int, "timestamp": iso8601,
      "source_checkpoint": str}`.

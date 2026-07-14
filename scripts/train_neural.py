@@ -140,7 +140,7 @@ def update_best(bb100: float, ckpt_path: str, total_iters: int,
 
     Replaces on strict improvement only (bounds winner's-curse churn).
     Returns True if the best checkpoint was replaced.
-    Both files are replaced atomically; a crash between them leaves at worst an older sidecar, which a later eval self-heals by re-copying.
+    Both files are replaced atomically; a crash between them leaves at worst an older sidecar (the .pt is at least as good as advertised), corrected the next time an eval strictly beats the stale value.
     """
     ckpt_dir = os.path.dirname(os.path.abspath(ckpt_path))
     sidecar = os.path.join(ckpt_dir, "best_checkpoint.json")
