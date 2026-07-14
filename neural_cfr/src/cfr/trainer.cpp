@@ -154,6 +154,10 @@ void Trainer::run(int iterations) {
         for (auto& t : threads) t.join();
 
         completed += batch;
+        // Deliberately adds the full batch even if SIGINT cut it short
+        // (mirrors `completed`): the counter may over-count by up to one
+        // train_interval per interrupt — negligible as a linear-CFR weight
+        // base, and an exact count isn't recoverable from the workers.
         total_iters_ += batch;
 
         if (!g_interrupted) {
