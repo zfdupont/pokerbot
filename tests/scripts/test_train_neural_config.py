@@ -104,6 +104,11 @@ def test_parse_bb100_returns_none_on_garbage(train_neural):
     assert train_neural.parse_bb100("") is None
 
 
+def test_parse_bb100_integer_value(train_neural):
+    assert train_neural.parse_bb100(
+        EVAL_OUTPUT.replace("-46.7", "3")) == pytest.approx(3.0)
+
+
 def _fake_ckpt(tmp_path, name="checkpoint.pt", content=b"weights"):
     p = tmp_path / name
     p.write_bytes(content)

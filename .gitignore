@@ -178,3 +178,9 @@ third_party/pybind11/
 
 # Buck2 local config (machine-specific, never commit)
 .buckconfig.local
+
+# Neural CFR checkpoints (large binaries)
+neural_cfr/checkpoints/
+
+# IDE
+.vscode/

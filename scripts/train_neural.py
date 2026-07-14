@@ -140,6 +140,7 @@ def update_best(bb100: float, ckpt_path: str, total_iters: int,
 
     Replaces on strict improvement only (bounds winner's-curse churn).
     Returns True if the best checkpoint was replaced.
+    Both files are replaced atomically; a crash between them leaves at worst an older sidecar, which a later eval self-heals by re-copying.
     """
     ckpt_dir = os.path.dirname(os.path.abspath(ckpt_path))
     sidecar = os.path.join(ckpt_dir, "best_checkpoint.json")
@@ -147,8 +148,12 @@ def update_best(bb100: float, ckpt_path: str, total_iters: int,
         with open(sidecar) as f:
             if bb100 <= json.load(f)["bb100"]:
                 return False
-    shutil.copy2(ckpt_path, os.path.join(ckpt_dir, "best_checkpoint.pt"))
-    with open(sidecar, "w") as f:
+    best_pt = os.path.join(ckpt_dir, "best_checkpoint.pt")
+    tmp_pt = best_pt + ".tmp"
+    shutil.copy2(ckpt_path, tmp_pt)
+    os.replace(tmp_pt, best_pt)          # atomic: never a torn .pt
+    tmp_json = sidecar + ".tmp"
+    with open(tmp_json, "w") as f:
         json.dump({
             "bb100": bb100,
             "total_iters": total_iters,
@@ -156,6 +161,7 @@ def update_best(bb100: float, ckpt_path: str, total_iters: int,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "source_checkpoint": os.path.abspath(ckpt_path),
         }, f, indent=2)
+    os.replace(tmp_json, sidecar)        # atomic: never a torn sidecar
     return True
 
 
