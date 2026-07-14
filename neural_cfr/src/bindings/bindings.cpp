@@ -223,7 +223,9 @@ PYBIND11_MODULE(neural_cfr, m) {
         .def("train_strategy", &Trainer::train_strategy, py::arg("sgd_steps") = -1,
              "Retrain the strategy net on M_pi (called automatically by checkpoint)")
         .def("checkpoint",     &Trainer::checkpoint,     py::arg("path"))
-        .def("load",           &Trainer::load,           py::arg("path"));
+        .def("load",           &Trainer::load,           py::arg("path"))
+        .def("total_iterations", &Trainer::total_iterations,
+             "Cumulative traversal-pair count (persists across checkpoints)");
 
     py::class_<Strategy>(m, "Strategy")
         .def(py::init<const std::string&>(), py::arg("checkpoint_path"))

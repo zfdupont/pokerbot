@@ -43,6 +43,11 @@ public:
     void checkpoint(const std::string& path);
     void load(const std::string& path);
 
+    // Cumulative traversal-pair count across all run() calls; persisted in
+    // checkpoints ("meta" sub-archive) so linear-CFR weights stay globally
+    // monotonic across chunks and resumes.
+    int64_t total_iterations() const { return total_iters_; }
+
 private:
     MLP adv0_, adv1_, strat_;
     ReservoirBuffer<BufferEntry> mv0_, mv1_, mpi_;
@@ -54,6 +59,7 @@ private:
     float  epsilon_;
     int    sgd_steps_;
     bool   reinit_adv_;
+    int64_t total_iters_ = 0;
 
     // One SGD mini-batch. mode: "advantage" = weighted MSE,
     // "strategy" = weighted cross-entropy.

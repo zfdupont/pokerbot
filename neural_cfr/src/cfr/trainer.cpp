@@ -138,7 +138,7 @@ void Trainer::run(int iterations) {
             std::mt19937 rng{std::random_device{}() + (unsigned)thread_id};
             for (int index = next.fetch_add(1); index < batch; index = next.fetch_add(1)) {
                 if (g_interrupted) break;
-                int global_iter = completed + index + 1;
+                int global_iter = (int)(total_iters_ + index + 1);
 
                 auto s0 = deal_heads_up(STARTING_STACK, DEFAULT_BIG_BLIND, rng);
                 external_sample(s0, 0, adv0_, adv1_, strat_, mv0_, mpi_, global_iter, rng, epsilon_);
@@ -154,6 +154,7 @@ void Trainer::run(int iterations) {
         for (auto& t : threads) t.join();
 
         completed += batch;
+        total_iters_ += batch;
 
         if (!g_interrupted) {
             // Training event per CFR iteration: from-scratch retrain of the
@@ -192,6 +193,9 @@ void Trainer::checkpoint(const std::string& path) {
     root.write("adv0", a0);
     root.write("adv1", a1);
     root.write("strat", s);
+    torch::serialize::OutputArchive meta;
+    meta.write("total_iters", torch::tensor((int64_t)total_iters_));
+    root.write("meta", meta);
     root.save_to(path);
     std::cout << "Checkpoint saved to " << path << "\n";
 }
@@ -205,5 +209,14 @@ void Trainer::load(const std::string& path) {
     torch::serialize::InputArchive a0, a1, s;
     root.read("adv0", a0); root.read("adv1", a1); root.read("strat", s);
     adv0_.load(a0); adv1_.load(a1); strat_.load(s);
+    try {
+        torch::serialize::InputArchive meta;
+        root.read("meta", meta);
+        torch::Tensor t;
+        meta.read("total_iters", t);
+        total_iters_ = t.item<int64_t>();
+    } catch (const std::exception&) {
+        total_iters_ = 0;  // legacy checkpoint without meta
+    }
     std::cout << "Checkpoint loaded from " << path << "\n";
 }
