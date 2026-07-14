@@ -22,8 +22,11 @@ import argparse
 import ctypes
 import json
 import os
+import re
+import shutil
 import subprocess
 import sys
+from datetime import datetime, timezone
 
 try:
     import tomllib
@@ -80,6 +83,9 @@ BUILTIN_DEFAULTS = {
     "epsilon":             0.06,
     "eval_interval":       None,
     "eval_hands":          500,
+    "selection_enabled":            False,
+    "selection_hands":              10_000,
+    "selection_tabular_checkpoint": "",
 }
 
 
@@ -117,6 +123,40 @@ def write_config_snapshot(cfg: dict, checkpoint_path: str) -> None:
         lines.append(f"{key} = {rendered}")
     with open(checkpoint_path + ".config.toml", "w") as f:
         f.write("\n".join(lines) + "\n")
+
+
+_BB100_RE = re.compile(r"Neural win rate\s*:\s*([+-]?\d+(?:\.\d+)?)\s*BB/100")
+
+
+def parse_bb100(text: str) -> "float | None":
+    """Extract the BB/100 win rate from eval_neural_vs_tabular.py output."""
+    m = _BB100_RE.search(text)
+    return float(m.group(1)) if m else None
+
+
+def update_best(bb100: float, ckpt_path: str, total_iters: int,
+                hands: int) -> bool:
+    """Keep best_checkpoint.pt + sidecar next to ckpt_path.
+
+    Replaces on strict improvement only (bounds winner's-curse churn).
+    Returns True if the best checkpoint was replaced.
+    """
+    ckpt_dir = os.path.dirname(os.path.abspath(ckpt_path))
+    sidecar = os.path.join(ckpt_dir, "best_checkpoint.json")
+    if os.path.exists(sidecar):
+        with open(sidecar) as f:
+            if bb100 <= json.load(f)["bb100"]:
+                return False
+    shutil.copy2(ckpt_path, os.path.join(ckpt_dir, "best_checkpoint.pt"))
+    with open(sidecar, "w") as f:
+        json.dump({
+            "bb100": bb100,
+            "total_iters": total_iters,
+            "hands": hands,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "source_checkpoint": os.path.abspath(ckpt_path),
+        }, f, indent=2)
+    return True
 
 
 def main() -> None:
@@ -158,6 +198,13 @@ def main() -> None:
                         help="Run win-rate eval every N iterations (default: off)")
     parser.add_argument("--eval-hands",           type=int,   default=None,
                         help="Hands per eval run (default: 500)")
+    parser.add_argument("--selection-enabled", action=argparse.BooleanOptionalAction,
+                        default=None,
+                        help="Track best_checkpoint.pt by vs-tabular eval after each save (default: off)")
+    parser.add_argument("--selection-hands", type=int, default=None,
+                        help="Hands per selection eval (default: 10000)")
+    parser.add_argument("--selection-tabular-checkpoint", type=str, default=None,
+                        help="Tabular checkpoint for selection evals (default: auto-detect)")
     parser.add_argument("--config",     type=str, default=None,
                         help="TOML config file (default: neural_cfr/configs/default.toml if present)")
     parser.add_argument("--sgd-steps",  type=int, default=None,
