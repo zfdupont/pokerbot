@@ -20,6 +20,7 @@ import logging
 import os
 import subprocess
 import sys
+import uuid
 
 import numpy as np
 import websockets
@@ -181,7 +182,7 @@ class HandTracker:
         abstract = np.random.choice(abstract_legal, p=probs)
         log.info(
             f"{'Neural' if not isinstance(strategy, RegretTable) else 'Tabular'} CFR: "
-            f"street={self.street} pos={self.my_position} raises={self.raises_per_street} "
+            f"street={self.street} pos={self.my_position} stack={self.my_stack:.0f} raises={self.raises_per_street} "
             f"→ {abstract} | "
             + " ".join(f"{a}:{p:.2f}" for a, p in zip(abstract_legal, probs.tolist()))
         )
@@ -227,7 +228,15 @@ class HandTracker:
         # Mask to OpenPoker's legal actions and renormalize
         raw = np.array([probs_dict.get(a, 0.0) for a in abstract_legal], dtype=float)
         total = raw.sum()
-        return raw / total if total > 0 else np.ones(len(abstract_legal)) / len(abstract_legal)
+        if total <= 0:
+            return np.ones(len(abstract_legal)) / len(abstract_legal)
+        probs = raw / total
+        # Variance guard: don't realize low-probability branches. Equilibrium
+        # mixing frequencies assume an equilibrium opponent; against a field
+        # that calls them down, sampled tail all-ins are pure spew. With <= 6
+        # actions the max prob is always >= 1/6 > 0.15, so this never empties.
+        probs[probs < 0.15] = 0.0
+        return probs / probs.sum()
 
     def _translate(self, abstract: str, valid: dict, to_call_chips: float,
                    pot: float, current_bet_chips: float) -> dict:
@@ -262,6 +271,20 @@ class HandTracker:
             {"action": "check"} if "check" in valid else {"action": "fold"}
         )
 
+    def should_leave_table(self, buy_in: float) -> bool:
+        """Decide whether to bank the current stack and re-sit fresh.
+
+        The net was trained at exactly 100BB effective (= buy_in chips here);
+        the further self.my_stack drifts from buy_in, the further its inputs go
+        off-distribution. Above 2x buy_in the normalized stack feature exceeds
+        the maximum value ever seen in training. Called once per hand_result.
+        self.my_stack is the stack seen on our most recent turn — it may lag
+        by one hand, and is 0.0 if we haven't acted since (re)joining.
+        Leaving costs nothing score-wise (chips return to the balance), but
+        each re-sit spends a few hands' worth of time in the lobby queue.
+        """
+        return self.my_stack > 5*buy_in
+
     def _update_committed(self, action: dict, to_call_chips: float) -> None:
         a = action.get("action")
         if a == "call":
@@ -275,59 +298,73 @@ class HandTracker:
 async def run(api_key: str, strategy, buy_in: int) -> None:
     headers = {"Authorization": f"Bearer {api_key}"}
 
-    async with websockets.connect(WS_URL, additional_headers=headers) as ws:
-        log.info(f"Connected to {WS_URL}")
-        tracker = HandTracker()
+    # connect() as an async iterator yields a fresh connection whenever the
+    # previous one drops, with exponential backoff between attempts.
+    async for ws in websockets.connect(WS_URL, additional_headers=headers):
+        try:
+            log.info(f"Connected to {WS_URL}")
+            tracker = HandTracker()
 
-        await ws.send(json.dumps({"type": "join_lobby", "buy_in": buy_in}))
-        log.info(f"Sent join_lobby (buy_in={buy_in})")
+            await ws.send(json.dumps({"type": "join_lobby", "buy_in": buy_in}))
+            log.info(f"Sent join_lobby (buy_in={buy_in})")
+            await ws.send(json.dumps({"type": "set_auto_rebuy", "enabled": True}))
 
-        async for raw in ws:
-            msg   = json.loads(raw)
-            mtype = msg.get("type", "")
-            log.debug(f"← {mtype}: {json.dumps(msg)[:300]}")
+            async for raw in ws:
+                msg   = json.loads(raw)
+                mtype = msg.get("type", "")
+                log.debug(f"← {mtype}: {json.dumps(msg)[:300]}")
 
-            if mtype == "connected":
-                log.info(f"Authenticated: {msg}")
-            elif mtype == "hand_start":
-                tracker.on_hand_start(msg)
-            elif mtype == "hole_cards":
-                tracker.on_hole_cards(msg)
-            elif mtype == "community_cards":
-                tracker.on_community_cards(msg)
-            elif mtype == "player_action":
-                tracker.on_player_action(msg)
-            elif mtype == "your_turn":
-                if not tracker.hole_cards:
-                    log.warning("your_turn with no hole cards — folding")
-                    action = {"action": "fold"}
-                else:
-                    action = tracker.decide(msg, strategy, buy_in)
+                if mtype == "connected":
+                    log.info(f"Authenticated: {msg}")
+                elif mtype == "hand_start":
+                    tracker.on_hand_start(msg)
+                elif mtype == "hole_cards":
+                    tracker.on_hole_cards(msg)
+                elif mtype == "community_cards":
+                    tracker.on_community_cards(msg)
+                elif mtype == "player_action":
+                    tracker.on_player_action(msg)
+                elif mtype == "your_turn":
+                    if not tracker.hole_cards:
+                        log.warning("your_turn with no hole cards — folding")
+                        action = {"action": "fold"}
+                    else:
+                        action = tracker.decide(msg, strategy, buy_in)
 
-                response = {
-                    "type":             "action",
-                    "hand_id":          msg.get("hand_id"),
-                    "turn_token":       msg.get("turn_token"),
-                    "client_action_id": f"cfr-{id(msg)}",
-                    **action,
-                }
-                log.info(f"→ {action}")
-                await ws.send(json.dumps(response))
+                    response = {
+                        "type":             "action",
+                        "hand_id":          msg.get("hand_id"),
+                        "turn_token":       msg.get("turn_token"),
+                        "client_action_id": f"cfr-{msg.get('turn_token') or uuid.uuid4().hex}",
+                        **action,
+                    }
+                    log.info(f"→ {action}")
+                    await ws.send(json.dumps(response))
 
-            elif mtype == "action_rejected":
-                log.error(f"Action rejected: {msg}")
-            elif mtype == "hand_result":
-                winners = [w.get("name") for w in msg.get("winners", [])]
-                log.info(f"Hand result: winners={winners} pot={msg.get('pot')}")
-            elif mtype == "busted":
-                log.warning("Busted! Waiting for auto-rebuy or table close.")
-            elif mtype == "table_closed":
-                log.info("Table closed — rejoining lobby")
-                await ws.send(json.dumps({"type": "join_lobby", "buy_in": buy_in}))
-            elif mtype == "error":
-                log.error(f"Server error: {msg}")
-            elif mtype:
-                log.debug(f"Ignored: {mtype}")
+                elif mtype == "action_rejected":
+                    log.error(f"Action rejected: {msg}")
+                elif mtype == "hand_result":
+                    winners = [w.get("name") for w in msg.get("winners", [])]
+                    log.info(f"Hand result: winners={winners} pot={msg.get('pot')}")
+                    if tracker.should_leave_table(buy_in):
+                        log.info(f"Stack {tracker.my_stack:.0f} outside comfort band "
+                                 f"— banking it and re-sitting at {buy_in}")
+                        await ws.send(json.dumps({"type": "leave_table"}))
+                        tracker.my_stack = 0.0
+                        await ws.send(json.dumps({"type": "join_lobby", "buy_in": buy_in}))
+                elif mtype == "busted":
+                    log.warning("Busted — re-entering lobby from balance")
+                    await ws.send(json.dumps({"type": "join_lobby", "buy_in": buy_in}))
+                elif mtype == "table_closed":
+                    log.info("Table closed — rejoining lobby")
+                    await ws.send(json.dumps({"type": "join_lobby", "buy_in": buy_in}))
+                elif mtype == "error":
+                    log.error(f"Server error: {msg}")
+                elif mtype:
+                    log.debug(f"Ignored: {mtype}")
+        except websockets.ConnectionClosed:
+            log.warning("Connection lost — reconnecting")
+            continue
 
 
 def main() -> None:
