@@ -33,7 +33,7 @@ Then read this file fully before doing anything else in this session.
 - Live N-player Texas Hold'em engine (`game/poker.py`) with pluggable agents and side-pot handling
 - Tabular MCCFR pipeline (`cfr/`) trained to 9.04M iterations — 574 mbb/h within-abstraction exploitability, 7,877 infosets
 - C++ Deep CFR subsystem (`neural_cfr/`, libtorch + pybind11 + Buck2) with multithreaded traversal and ε-greedy opponent exploration
-- Neural CFR correctness fixes (paper-faithful training regime, MLP reset, TOML config, inference parity): implemented and merged into `feature/neural-cfr`; acceptance retrain pending
+- Neural CFR correctness fixes (paper-faithful training regime, MLP reset, TOML config, inference parity): validated by from-scratch acceptance retrain (2026-07-14/15, 5M iters, ~20h) — best checkpoint **+36.4 BB/100 vs tabular @ 4.5M iters** (10k-hand eval), first neural win over the 9.04M-iter tabular baseline; `best_checkpoint.pt` selection and global linear-CFR iteration counter both worked end-to-end
 - Tooling: interactive play, range charts, OpenSpiel head-to-head eval, openpoker.ai WebSocket deployment (auto-detects `.pt`/`.pkl`)
 - ~82-test pytest suite with fast-mode conftests
 
