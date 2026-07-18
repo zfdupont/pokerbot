@@ -2,6 +2,8 @@
 #include <pybind11/stl.h>
 #include "game/safe_eval.h"
 #include "vocab/vocab.h"
+#include "blueprint/game.h"
+#include "blueprint/kuhn.h"
 
 namespace py = pybind11;
 
@@ -39,4 +41,25 @@ PYBIND11_MODULE(sixmax, m) {
         .def("target_bb", &sixmax::ActionVocab::target_bb)
         .def("nearest", &sixmax::ActionVocab::nearest)
         .def("hash", &sixmax::ActionVocab::hash);
+    // --- MCCFR game interface (Task 1) ---
+    py::class_<sixmax::GameState>(m, "GameState")
+        .def("is_terminal", &sixmax::GameState::is_terminal)
+        .def("current_player", &sixmax::GameState::current_player)
+        .def("legal_mask", [](const sixmax::GameState& s) {
+            std::vector<uint8_t> mask;
+            s.legal_mask(mask);
+            return std::vector<int>(mask.begin(), mask.end());
+        })
+        .def("infoset_key", &sixmax::GameState::infoset_key)
+        .def("apply", &sixmax::GameState::apply)
+        .def("utility", &sixmax::GameState::utility);
+    py::class_<sixmax::Game>(m, "Game")
+        .def("num_players", &sixmax::Game::num_players)
+        .def("num_actions", &sixmax::Game::num_actions);
+    py::class_<sixmax::KuhnState, sixmax::GameState>(m, "KuhnState")
+        .def(py::init<int, int>(), py::arg("card0"), py::arg("card1"));
+    py::class_<sixmax::KuhnGame, sixmax::Game>(m, "KuhnGame")
+        .def(py::init<>());
+    m.def("kuhn_infoset_key", &sixmax::KuhnState::key_for,
+          py::arg("card"), py::arg("history_code"));
 }
