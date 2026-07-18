@@ -39,6 +39,7 @@ Then read this file fully before doing anything else in this session.
 - ~119-test pytest suite with fast-mode conftests
 
 **Not yet built:**
+- Six-max Phases 1–3: 6-max engine + MCCFR blueprint, depth-limited search with RangeTracker, batched-ReBeL value net (spec + Phase 0 plan in `docs/superpowers/`)
 - 169-hand exact preflop abstraction (documented as the largest single quality win for tabular)
 - Suit-texture-aware board abstraction (flush draws / monotone boards currently bucket like rainbow)
 - Full 7-card lookup table for `util/util.py` (fallback lacks kicker discrimination)
@@ -60,6 +61,7 @@ Load the relevant file based on the current task. Always load `context/architect
 | Setting up or running the project | `context/setup.md` |
 | Tabular CFR: abstraction, RegretTable, exploitability | `context/cfr-training.md` |
 | Neural CFR: C++ code, encodings, training, checkpoints | `context/neural-cfr.md` |
+| Six-max subsystem: vocab, engine, blueprint, search | `context/architecture.md` + `docs/superpowers/specs/2026-07-17-sixmax-search-design.md` |
 | Any specific task | Check `patterns/INDEX.md` for a matching pattern |
 
 ## Behavioural Contract

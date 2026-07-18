@@ -89,3 +89,11 @@ last_updated: 2026-07-18
 **Decision:** Corrected stale test count in stack.md (2026-07-18)
 **Context:** stack.md still said `~116 tests` after the ROUTER.md fix. Sweep found it; corrected to `~119 tests`.
 **Consequences:** `.mex/context/stack.md` now matches ROUTER.md and CLAUDE.md. All three scaffold locations agree: 119 tests.
+
+## Action vocabulary is config-defined in sixmax (2026-07-18)
+
+The fixed 6-action vocabulary is scoped to the heads-up pipelines. `sixmax/` treats the action set as a first-class run parameter (TOML `[actions.*]`, BB/pot units, canonical order = config order) because vocabulary changes invalidate all trained artifacts — so artifacts embed a vocab hash and loaders refuse mismatches. Growing the grid later is config + retrain, not a rewrite.
+
+## Boundary rescale rule corrected to big-blind division (2026-07-18)
+
+The documented `their_stack/100` rescale was only correct at exactly 100BB and misplayed at other buy-ins; the rule is: divide every chip input by the table's big blind (training frame has bb=1). Fixed in `scripts/openpoker_bot.py`; scaffold references corrected in conventions.md, neural-cfr.md, patterns/eval-checkpoint.md.

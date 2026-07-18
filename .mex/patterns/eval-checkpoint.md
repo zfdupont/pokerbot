@@ -14,7 +14,7 @@ edges:
     condition: for the chip-scaling rule when evaluating .pt checkpoints
   - target: patterns/debug-bot-misplay.md
     condition: when eval results look absurd (large negative win rate)
-last_updated: 2026-07-07
+last_updated: 2026-07-18
 ---
 
 # Evaluate a Checkpoint
@@ -33,7 +33,7 @@ last_updated: 2026-07-07
 ## Gotchas
 
 - **OpenSpiel action 1 is ambiguous:** it means "check" (postflop, no outstanding bet) or "call" (facing a raise). `CFRBotPolicy._is_check_action()` disambiguates using the sequences string and street — reuse it, don't re-derive.
-- **Chip scaling (neural):** OpenSpiel chip counts must be divided by `(their_stack / 100)` before hitting the net — this was a confirmed bug (commit `87317c5`), as was an inverted `to_call` computation (`2706697`).
+- **Chip scaling (neural):** OpenSpiel chip counts must be divided by the big blind before hitting the net (at OpenSpiel's fixed 100BB stacks this equals `their_stack/100`) — this was a confirmed bug (commit `87317c5`), as was an inverted `to_call` computation (`2706697`).
 - `CFRBotPolicy` parses OpenSpiel info-state strings to rebuild our `InfoSet` on the fly — format changes on OpenSpiel's side break parsing silently.
 - OpenSpiel's `pokerkit_wrapper` prints on import; the suppression lives in `eval_openspiel.py` — keep new imports behind it.
 

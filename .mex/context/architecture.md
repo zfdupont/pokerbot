@@ -23,7 +23,7 @@ last_updated: 2026-07-18
 
 ## System Overview
 
-Three loosely coupled subsystems share one action vocabulary but never import each other's internals:
+Four loosely coupled subsystems never import each other's internals (the two heads-up CFR pipelines share one fixed action vocabulary; `sixmax/` defines its own via config):
 
 1. **Live game engine** — `game/poker.py:PokerGame` owns the hand lifecycle (deal, blinds, betting rounds, showdown, button rotation). It holds a `models/state.py:GameState`, delegates side-pot math to `game/pot_manager.py:PotManager`, and calls `Player.make_decision(state)`, which delegates to the injected agent's `get_action(player, state) -> (Action, amount)`.
 2. **Tabular CFR training** (`cfr/`) — self-contained External Sampling MCCFR over an abstracted heads-up game (`cfr/abstract_state.py`). Produces pickle checkpoints in `cfr/checkpoints/` that `agents/cfr_agent.py` loads to translate abstract actions into concrete `(Action, amount)` for live play.

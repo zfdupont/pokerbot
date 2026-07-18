@@ -15,7 +15,7 @@ edges:
     condition: when a convention exists because of a past bug or design decision
   - target: patterns/add-agent.md
     condition: when applying the engine↔agent boundary to a new agent
-last_updated: 2026-07-07
+last_updated: 2026-07-18
 ---
 
 # Conventions
@@ -37,11 +37,11 @@ last_updated: 2026-07-07
 
 ## Patterns
 
-**Fixed 6-action vocabulary, mask at query time.** Both CFR pipelines use index order `0=fold 1=check 2=call 3=b0.5 4=b1.0 5=allin`. Storage is always over all 6 actions; illegal actions are masked when querying (`RegretTable` does this at query time). Never reorder or filter the vocabulary at storage time.
+**Fixed 6-action vocabulary, mask at query time (cfr/ and neural_cfr/ only).** The two heads-up pipelines use index order `0=fold 1=check 2=call 3=b0.5 4=b1.0 5=allin`. Storage is always over all 6 actions; illegal actions are masked when querying (`RegretTable` does this at query time). Never reorder or filter the vocabulary at storage time. `sixmax/` instead uses a **config-defined ActionVocab** (order = config order, BB/pot units, checkpoint embeds the vocab hash and loaders refuse mismatches); the masking rule generalizes — legality by masking, never by reordering storage.
 
 **Checkpoint-first tooling.** Every consumer script takes `--checkpoint` and auto-detects the latest tabular checkpoint when omitted; `scripts/openpoker_bot.py` dispatches on extension (`.pt` → neural, `.pkl` → tabular). New tooling should follow this.
 
-**Chip normalization at boundaries.** Neural nets were trained at `starting_stack=100, big_blind=1`. Any adapter feeding another engine's chip counts (OpenSpiel, openpoker.ai) must divide by `(their_stack / 100)` before `get_action_probs`. See the fixes in `scripts/eval_openspiel_neural.py` and `scripts/openpoker_bot.py`.
+**Chip normalization at boundaries.** Neural nets were trained at `starting_stack=100, big_blind=1`. Any adapter feeding another engine's chip counts (OpenSpiel, openpoker.ai) must divide every chip quantity by the table's **big blind** before `get_action_probs` (the training frame has `big_blind = 1`; dividing by `their_stack/100` was a bug that only coincided with the right answer at exactly 100BB — fixed in `scripts/openpoker_bot.py`).
 
 **Test-time cheapening via conftest.** `tests/conftest.py` patches `MONTE_CARLO_SAMPLES=10` globally and `tests/cfr/conftest.py` stubs `compute_exploitability` — tests must stay fast; don't add tests that run real equity rollouts at full sample counts.
 

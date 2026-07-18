@@ -21,7 +21,7 @@ edges:
     condition: when the trained bot behaves nonsensically
   - target: patterns/train-strategy.md
     condition: when running a neural training job
-last_updated: 2026-07-14
+last_updated: 2026-07-18
 ---
 
 # Neural CFR (`neural_cfr/`)
@@ -52,7 +52,7 @@ C++ Deep CFR (Brown et al. 2019). Self-contained — never imports `game/poker.p
 | 131–132 | reserved (0.0) |
 | 133 | position (player index) |
 
-**Chip-scaling rule:** training uses `starting_stack=100, big_blind=1`. Inference inputs from other engines must be divided by `(their_stack / 100)` before `get_action_probs`. At inference, pass `my_street_bet`/`opp_street_bet` for exact dim-129/130 parity; `pot` must include all street bets.
+**Chip-scaling rule:** training uses `starting_stack=100, big_blind=1`. Inference inputs from other engines must be divided by the table's **big blind** before `get_action_probs` (equals `their_stack/100` only at exactly 100BB stacks). At inference, pass `my_street_bet`/`opp_street_bet` for exact dim-129/130 parity; `pot` must include all street bets.
 
 ## Networks (`src/net/mlp.h`, constants in `trainer.h`)
 
