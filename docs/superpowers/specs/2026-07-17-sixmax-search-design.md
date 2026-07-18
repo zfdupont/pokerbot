@@ -54,6 +54,7 @@ include_allin = true   # legal jam always in the action set, incl. preflop
 bet_sizes     = [ { size = 0.33, unit = "pot" },   # enriching this later is a
                   { size = 0.75, unit = "pot" },   # config edit + A/B, not an
                   { size = 1.5,  unit = "pot" } ]  # architecture change
+include_allin = true   # a search grid without the jam cannot express stack-offs
 ```
 
 - **C++ descriptor:** `ActionVocab` built once from config; immutable per run; canonical order = config order; strategy/regret vectors sized `vocab.size()`. Betting history is encoded as vocab indices.

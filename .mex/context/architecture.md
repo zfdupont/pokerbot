@@ -39,7 +39,7 @@ Trained strategies flow outward to three consumers: `scripts/play.py` (interacti
 - **`neural_cfr/` package** — C++ Deep CFR: `src/game/` (state + hand evaluator), `src/net/` (features + MLP), `src/cfr/` (traversal + trainer), `src/bindings/` (pybind11). Never imports `game/` or `cfr/`.
 - **`agents/cfr_agent.py:CFRAgent`** — bridge from abstract strategy to live play; loads a `RegretTable` checkpoint and maps abstract actions to legal chip amounts.
 - **`scripts/openpoker_bot.py`** — WebSocket connector; `HandTracker` accumulates hole/community cards and `raises_per_street` across messages, then queries the strategy on `your_turn`.
-- **Two hand evaluators** — `models/hand.py` + `util/evaluator.py` for live showdowns; `util/util.py:hand_value` (bitwise/prime-product, fast) exclusively for CFR equity bucketing. A third, independent C++ evaluator lives in `neural_cfr/src/game/card.cpp`.
+- **Two hand evaluators** — `models/hand.py` + `util/evaluator.py` for live showdowns; `util/util.py:hand_value` (bitwise/prime-product, fast) exclusively for CFR equity bucketing. A third, independent C++ evaluator lives in `common/src/game/card.cpp` (Buck2 `//common:evaluator`; consumed by `neural_cfr` and, via the opaque `safe_eval` API, by `sixmax`).
 
 ## Module Map
 
