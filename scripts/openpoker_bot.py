@@ -191,6 +191,14 @@ class HandTracker:
         self._update_committed(action_dict, to_call_chips)
         return action_dict
 
+    def hu_position(self) -> int:
+        """Binary 0=SB/1=BB position — a heads-up-only concept.
+
+        Quarantined here per Phase 0 item 4: the sixmax path uses
+        seat-relative-to-button positions and must never consume this.
+        """
+        return self.my_position
+
     def _decide_tabular(self, table: RegretTable, to_call_bb: float,
                         pot_bb: float, stack_bb: float,
                         abstract_legal: list[str]) -> np.ndarray:
@@ -208,7 +216,9 @@ class HandTracker:
 
     def _decide_neural(self, strategy, to_call_chips: float, pot: float,
                        buy_in: int, abstract_legal: list[str]) -> np.ndarray:
-        scale      = buy_in / 100.0   # normalize to training scale (stack=100)
+        # Training frame is big_blind == 1: dividing by the table's big blind
+        # is the whole rescale. (buy_in/100 was only correct at exactly 100BB.)
+        scale      = float(self.big_blind)
         hole_ints  = [_card_to_int(c) for c in self.hole_cards]
         board_ints = [_card_to_int(c) for c in self.community_cards]
 
@@ -220,7 +230,7 @@ class HandTracker:
             self.my_stack / scale,
             to_call_chips / scale,
             self.raises_per_street,
-            self.my_position,
+            self.hu_position(),
             my_street_bet  = self.my_committed / scale,
             opp_street_bet = (self.my_committed + to_call_chips) / scale,
         )
