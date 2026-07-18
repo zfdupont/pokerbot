@@ -18,6 +18,7 @@ import ctypes
 import json
 import logging
 import os
+import signal
 import subprocess
 import sys
 import uuid
@@ -305,6 +306,23 @@ class HandTracker:
             self.my_committed += self.my_stack
 
 
+async def graceful_shutdown(ws) -> None:
+    """Bank the table stack before dying: leave_table, then close.
+
+    Best-effort — errors are swallowed because this runs on the way out."""
+    try:
+        await ws.send(json.dumps({"type": "leave_table"}))
+        await ws.close()
+    except Exception:
+        pass
+
+
+async def _shutdown_and_exit(ws) -> None:
+    log.info("Signal received — leaving table and shutting down")
+    await graceful_shutdown(ws)
+    sys.exit(0)
+
+
 async def run(api_key: str, strategy, buy_in: int) -> None:
     headers = {"Authorization": f"Bearer {api_key}"}
 
@@ -314,6 +332,11 @@ async def run(api_key: str, strategy, buy_in: int) -> None:
         try:
             log.info(f"Connected to {WS_URL}")
             tracker = HandTracker()
+
+            loop = asyncio.get_running_loop()
+            for sig in (signal.SIGTERM, signal.SIGINT):
+                loop.add_signal_handler(
+                    sig, lambda: asyncio.ensure_future(_shutdown_and_exit(ws)))
 
             await ws.send(json.dumps({"type": "join_lobby", "buy_in": buy_in}))
             log.info(f"Sent join_lobby (buy_in={buy_in})")
@@ -405,7 +428,10 @@ def main() -> None:
         level=getattr(logging, args.log_level),
         format="%(asctime)s  %(levelname)-7s  %(message)s",
         datefmt="%H:%M:%S",
+        force=True,
     )
+    sys.stdout.reconfigure(line_buffering=True)
+    sys.stderr.reconfigure(line_buffering=True)
 
     log.info(f"Loading {checkpoint} ...")
     if checkpoint.endswith(".pt"):
