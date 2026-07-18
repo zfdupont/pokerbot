@@ -5,6 +5,7 @@
 #include "blueprint/game.h"
 #include "blueprint/kuhn.h"
 #include "blueprint/mccfr.h"
+#include "engine/engine.h"
 
 namespace py = pybind11;
 
@@ -74,4 +75,70 @@ PYBIND11_MODULE(sixmax, m) {
         .def("average_strategy", &sixmax::MCCFRTrainer::average_strategy,
              py::arg("key"));
     m.def("kuhn_exact_value", &sixmax::kuhn_exact_value);
+    // --- NLHE engine (Task 3) ---
+    py::enum_<sixmax::Street>(m, "Street")
+        .value("Preflop", sixmax::Street::Preflop)
+        .value("Flop", sixmax::Street::Flop)
+        .value("Turn", sixmax::Street::Turn)
+        .value("River", sixmax::Street::River);
+    py::class_<sixmax::EngineConfig>(m, "EngineConfig")
+        .def(py::init([](int n, double stack) {
+                 return sixmax::EngineConfig{n, stack};
+             }),
+             py::arg("num_players"), py::arg("starting_stack") = 100.0)
+        .def_readonly("num_players", &sixmax::EngineConfig::num_players)
+        .def_readonly("starting_stack", &sixmax::EngineConfig::starting_stack);
+    py::class_<sixmax::HandState>(m, "HandState")
+        .def(py::init<const sixmax::EngineConfig&, int, std::vector<int>,
+                      std::vector<double>>(),
+             py::arg("cfg"), py::arg("button"), py::arg("deck"),
+             py::arg("stacks") = std::vector<double>{})
+        .def_static("deal",
+                    [](const sixmax::EngineConfig& c, int button, uint64_t seed) {
+                        std::mt19937_64 rng(seed);
+                        return sixmax::HandState::deal(c, button, rng);
+                    },
+                    py::arg("cfg"), py::arg("button"), py::arg("seed"))
+        .def("is_terminal", &sixmax::HandState::is_terminal)
+        .def("current_player", &sixmax::HandState::current_player)
+        .def("street", &sixmax::HandState::street)
+        .def("button", &sixmax::HandState::button)
+        .def("pot", &sixmax::HandState::pot)
+        .def("to_call", &sixmax::HandState::to_call)
+        .def("current_bet", &sixmax::HandState::current_bet)
+        .def("min_raise_to", &sixmax::HandState::min_raise_to)
+        .def("can_raise", &sixmax::HandState::can_raise)
+        .def("board", &sixmax::HandState::board)
+        .def("hole_cards",
+             [](const sixmax::HandState& s, int i) {
+                 auto hc = s.hole_cards(i);
+                 return std::vector<int>{hc[0], hc[1]};
+             })
+        .def("stack", [](const sixmax::HandState& s, int i) {
+            return s.player(i).stack;
+        })
+        .def("folded", [](const sixmax::HandState& s, int i) {
+            return s.player(i).folded;
+        })
+        .def("all_in", [](const sixmax::HandState& s, int i) {
+            return s.player(i).all_in;
+        })
+        .def("apply_fold", [](sixmax::HandState& s) {
+            s.apply({sixmax::EngineActionType::Fold, 0.0});
+        })
+        .def("apply_check_call", [](sixmax::HandState& s) {
+            s.apply({sixmax::EngineActionType::CheckCall, 0.0});
+        })
+        .def("apply_raise_to", [](sixmax::HandState& s, double amount) {
+            s.apply({sixmax::EngineActionType::RaiseTo, amount});
+        })
+        .def("payoffs", &sixmax::HandState::payoffs);
+    m.def("settle_pots",
+          [](const std::vector<double>& totals, const std::vector<bool>& folded,
+             const std::vector<int>& ranks) {
+              std::vector<uint8_t> f(folded.begin(), folded.end());
+              return sixmax::settle_pots(totals, f, ranks);
+          },
+          py::arg("total_bets"), py::arg("folded"), py::arg("rank_order"));
 }
+
