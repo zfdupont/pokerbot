@@ -48,6 +48,8 @@ Trained strategies flow outward to three consumers: `scripts/play.py` (interacti
 - `game/` — `poker.py` (orchestration), `pot_manager.py` (side pots)
 - `cfr/` — tabular MCCFR pipeline (see `context/cfr-training.md`)
 - `neural_cfr/` — C++ Deep CFR (see `context/neural-cfr.md`)
+- `common/` — shared C++ (Buck2 `//common:evaluator`): the 7-card evaluator (moved byte-identical from `neural_cfr`, `12 - rank` inversion intact) plus the opaque `safe_eval::HandRank` API (`beats`/`ties` only — raw inverted scores never leave `common/`)
+- `sixmax/` — six-max blueprint + search subsystem (Phase 0 so far: pybind11 module skeleton, config-defined `ActionVocab` with BB/pot units + pseudo-harmonic translation, TOML vocab loader; spec: `docs/superpowers/specs/2026-07-17-sixmax-search-design.md`). Never imports `cfr/` or `neural_cfr/`; shares C++ only via `common/`
 - `util/` — `evaluator.py` (live showdown), `util.py` + `lookup_table.py` (fast evaluator for CFR equity)
 - `scripts/` — all runnable entry points (training, play, eval, deploy)
 - `tests/` — mirrors source layout; conftests make tests fast (see `context/conventions.md`)

@@ -31,10 +31,10 @@ last_updated: 2026-07-07
 
 ## First-time Setup
 
-1. `uv sync` — installs Python deps from `pyproject.toml` (numpy, tqdm, websockets, cython, pytest).
-2. `uv run pytest tests/` — verify the Python suite passes (~82 tests, fast: conftest patches `MONTE_CARLO_SAMPLES=10`).
-3. `~/bin/buck2 build //neural_cfr:neural_cfr` — build the C++ extension (only if touching neural CFR).
-4. `mkdir -p neural_cfr/checkpoints` — checkpoint dirs are gitignored and not auto-created.
+1. `./scripts/setup_dev.sh` — idempotent one-shot setup for clones, worktrees, and cloud machines: pins/verifies Python 3.10 (extension ABI), `uv sync`, creates missing `third_party/` symlinks (worktrees don't inherit the untracked vendored deps), writes `.buckconfig.local` with the python include path, builds `//neural_cfr:neural_cfr` + `//sixmax:sixmax`, and runs the full suite. Ends with `SETUP OK`.
+2. `mkdir -p neural_cfr/checkpoints` — checkpoint dirs are gitignored and not auto-created.
+
+Manual equivalents, if you need one piece: `uv sync`; `uv run pytest tests/`; `~/bin/buck2 build //neural_cfr:neural_cfr //sixmax:sixmax`.
 
 ## Environment Variables
 
@@ -50,8 +50,9 @@ last_updated: 2026-07-07
 - `uv run python scripts/play.py [--stack 1000] [--big-blind 10]` — interactive heads-up CLI vs the bot.
 - `uv run python scripts/range_chart.py [--scenario sb-open|bb-vs-raise]` — 13×13 ANSI preflop range chart.
 - `uv run python scripts/run_simulation.py [--hands 100] [--agent simple|position|cfr]` — agent-vs-agent simulation; `python main.py` runs one demo hand at a 4-player table.
-- `uv run python scripts/openpoker_bot.py --buy-in 2000` — deploy to openpoker.ai (needs `OPENPOKER_API_KEY`).
-- `~/bin/buck2 build //neural_cfr:neural_cfr` — rebuild the C++ extension after any `neural_cfr/src/` change.
+- `./scripts/run_openpoker.sh {start|stop|status}` — managed openpoker deployment: tracks the python PID (pidfile `.openpoker.pid`), `caffeinate -w` alongside, SIGTERM sends `leave_table` before exit (banks the table stack). Env overrides: `CHECKPOINT`, `BUY_IN`. Needs `OPENPOKER_API_KEY` in `.env`.
+- `uv run python scripts/openpoker_bot.py --buy-in 2000` — raw deployment (prefer the run script).
+- `~/bin/buck2 build //neural_cfr:neural_cfr` — rebuild the C++ extension after any `neural_cfr/src/` or `common/src/` change; `//sixmax:sixmax` for the six-max module.
 
 ## Common Issues
 
