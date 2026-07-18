@@ -42,8 +42,6 @@ int ActionVocab::nearest(double bet_to_bb, const BetContext& ctx, double u) cons
     for (int i = 0; i < size(); ++i) {
         const auto& a = actions_[i];
         if (a.type != ActionType::Bet && a.type != ActionType::AllIn) continue;
-        // Skip BB-sized bets; only consider Pot-sized bets and AllIn
-        if (a.type == ActionType::Bet && a.unit == SizeUnit::BB) continue;
         double v = target_bb(i, ctx);
         if (v <= bet_to_bb && v > lo_v) { lo = i; lo_v = v; }
         if (v >= bet_to_bb && v < hi_v) { hi = i; hi_v = v; }

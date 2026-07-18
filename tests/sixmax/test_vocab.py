@@ -39,14 +39,16 @@ def test_target_bb_capped_by_stack():
 def test_nearest_is_pseudo_harmonic():
     v = spec_vocab()
     ctx = sixmax.BetContext(pot=10.0, current_bet=0.0, to_call=0.0, stack=100.0)
-    # Observed bet exactly on a grid point maps there regardless of u.
-    on_grid = 0.75 * 10.0
-    assert v.nearest(on_grid, ctx, 0.0) == 7
-    assert v.nearest(on_grid, ctx, 0.999) == 7
-    # Between 0.33x and 0.75x pot: low u -> smaller size, high u -> larger.
-    between = 0.5 * 10.0
-    assert v.nearest(between, ctx, 0.0) == 6
-    assert v.nearest(between, ctx, 0.999) == 7
+    # Observed bet exactly on a grid point maps there regardless of u —
+    # including BB-unit grid points (5.0 == the 5BB open).
+    assert v.nearest(0.75 * 10.0, ctx, 0.0) == 7
+    assert v.nearest(0.75 * 10.0, ctx, 0.999) == 7
+    assert v.nearest(5.0, ctx, 0.0) == 5
+    assert v.nearest(5.0, ctx, 0.999) == 5
+    # Between 0.75x pot (7.5) and 1.5x pot (15.0), no BB point intervenes:
+    # low u -> smaller size, high u -> larger.
+    assert v.nearest(10.0, ctx, 0.0) == 7
+    assert v.nearest(10.0, ctx, 0.999) == 8
 
 
 def test_hash_changes_with_vocab():
