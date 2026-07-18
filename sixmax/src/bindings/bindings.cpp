@@ -4,6 +4,7 @@
 #include "vocab/vocab.h"
 #include "blueprint/game.h"
 #include "blueprint/kuhn.h"
+#include "blueprint/mccfr.h"
 
 namespace py = pybind11;
 
@@ -62,4 +63,15 @@ PYBIND11_MODULE(sixmax, m) {
         .def(py::init<>());
     m.def("kuhn_infoset_key", &sixmax::KuhnState::key_for,
           py::arg("card"), py::arg("history_code"));
+    // --- MCCFR trainer (Task 2) ---
+    py::class_<sixmax::MCCFRTrainer>(m, "MCCFRTrainer")
+        .def(py::init<sixmax::Game&, uint64_t>(),
+             py::arg("game"), py::arg("seed"),
+             py::keep_alive<1, 2>())  // trainer holds Game&; keep game alive
+        .def("train", &sixmax::MCCFRTrainer::train, py::arg("iterations"))
+        .def("iterations", &sixmax::MCCFRTrainer::iterations)
+        .def("num_infosets", &sixmax::MCCFRTrainer::num_infosets)
+        .def("average_strategy", &sixmax::MCCFRTrainer::average_strategy,
+             py::arg("key"));
+    m.def("kuhn_exact_value", &sixmax::kuhn_exact_value);
 }
