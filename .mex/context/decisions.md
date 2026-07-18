@@ -16,7 +16,7 @@ edges:
     condition: when a decision concerns the C++ Deep CFR subsystem
   - target: context/cfr-training.md
     condition: when a decision concerns the tabular pipeline or its metrics
-last_updated: 2026-07-07
+last_updated: 2026-07-18
 ---
 
 # Decisions
@@ -63,6 +63,14 @@ last_updated: 2026-07-07
 **Alternatives considered:** One shared evaluator (rejected — the fast path's fallback is not precise enough for showdowns; unifying would couple sealed subsystems).
 **Consequences:** A bug fix in one evaluator does not fix the others. Precision-sensitive changes must state which path they target.
 
+### Hand evaluator extracted to `common/`; `safe_eval` API hides inverted scores
+**Date:** 2026-07-18
+**Status:** Active
+**Decision:** The 7-card hand evaluator (formerly only in `neural_cfr/src/game/`) was moved byte-identical to `common/src/game/` as Buck2 `//common:evaluator`. `sixmax` (and any future subsystem) depends on `//common:evaluator`, never on `//neural_cfr`. The opaque `safe_eval::HandRank` type exposes only `beats(other)` and `ties(other)` — raw inverted scores never cross the `common/` boundary.
+**Reasoning:** Copying the evaluator into each subsystem would create divergence; importing across subsystem boundaries would break the no-cross-import rule. `common/` is the only sanctioned sharing point. The opaque type prevents callers from accidentally comparing inverted scores directly (the bug that caused the `12 - rank` inversion fix in the first place).
+**Alternatives considered:** Duplicating into `sixmax/src/game/` (rejected — drift risk); exposing raw score as `int` (rejected — callers would inevitably write `a.score < b.score`, which is semantically wrong without knowing the inversion).
+**Consequences:** Any change to the evaluator logic lives in `common/src/game/card.cpp` and is picked up by both `neural_cfr` and `sixmax` on the next `buck2 build`. The `12 - rank` inversion invariant is now documented in `safe_eval.h` and must be preserved there.
+
 ### Neural checkpoints use named sub-archives; buffers are not serialized
 **Date:** 2026-07-02
 **Status:** Active
@@ -70,3 +78,14 @@ last_updated: 2026-07-07
 **Reasoning:** `neural_cfr.Strategy` needs to load only `"strat"` for inference; buffers (up to 2M entries each) would bloat checkpoints for little resume value.
 **Alternatives considered:** Flat archive (rejected — Strategy would drag in both advantage nets); serializing buffers (rejected — size).
 **Consequences:** `--resume` restores nets only — the first `train_interval` iterations after resume refill buffers from scratch. Loaders that expect a flat `.pt` will fail.
+
+
+---
+**Decision:** Corrected stale test count in ROUTER.md (2026-07-18)
+**Context:** ROUTER.md said ~116 tests; CLAUDE.md said ~119 tests. Verified with `uv run pytest tests/ --collect-only -q`: **119 tests collected**.
+**Consequences:** ROUTER.md line 39 updated to `~119-test`. CLAUDE.md was already correct.
+
+---
+**Decision:** Corrected stale test count in stack.md (2026-07-18)
+**Context:** stack.md still said `~116 tests` after the ROUTER.md fix. Sweep found it; corrected to `~119 tests`.
+**Consequences:** `.mex/context/stack.md` now matches ROUTER.md and CLAUDE.md. All three scaffold locations agree: 119 tests.

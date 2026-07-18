@@ -18,7 +18,7 @@ edges:
     condition: when working on the C++ Deep CFR subsystem (neural_cfr/)
   - target: patterns/INDEX.md
     condition: when starting a task — check the pattern index for a matching pattern file
-last_updated: 2026-07-07
+last_updated: 2026-07-18
 ---
 
 # Session Bootstrap
@@ -34,8 +34,9 @@ Then read this file fully before doing anything else in this session.
 - Tabular MCCFR pipeline (`cfr/`) trained to 9.04M iterations — 574 mbb/h within-abstraction exploitability, 7,877 infosets
 - C++ Deep CFR subsystem (`neural_cfr/`, libtorch + pybind11 + Buck2) with multithreaded traversal and ε-greedy opponent exploration
 - Neural CFR correctness fixes (paper-faithful training regime, MLP reset, TOML config, inference parity): validated by from-scratch acceptance retrain (2026-07-14/15, 5M iters, ~20h) — best checkpoint **+36.4 BB/100 vs tabular @ 4.5M iters** (10k-hand eval), first neural win over the 9.04M-iter tabular baseline; `best_checkpoint.pt` selection and global linear-CFR iteration counter both worked end-to-end
+- Six-max subsystem Phase 0 (`sixmax/`): pybind11 module skeleton, config-defined `ActionVocab` (BB/pot units, pseudo-harmonic translation, TOML loader, canonical ordering contract); C++ evaluator extracted into `common/` (Buck2 `//common:evaluator`) with opaque `safe_eval::HandRank` API; `scripts/setup_dev.sh` idempotent one-shot dev setup
 - Tooling: interactive play, range charts, OpenSpiel head-to-head eval, openpoker.ai WebSocket deployment (auto-detects `.pt`/`.pkl`)
-- ~82-test pytest suite with fast-mode conftests
+- ~119-test pytest suite with fast-mode conftests
 
 **Not yet built:**
 - 169-hand exact preflop abstraction (documented as the largest single quality win for tabular)

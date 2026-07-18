@@ -17,7 +17,7 @@ edges:
     condition: when running or resuming tabular training
   - target: patterns/debug-bot-misplay.md
     condition: when a trained bot behaves nonsensically after setup
-last_updated: 2026-07-07
+last_updated: 2026-07-18
 ---
 
 # Setup
@@ -25,7 +25,7 @@ last_updated: 2026-07-07
 ## Prerequisites
 
 - Python ≥3.10 with **uv** installed (all commands run through `uv run`).
-- **Buck2** at `~/bin/buck2` (user-local binary, not on PATH) — only needed for `neural_cfr/` C++ work.
+- **Buck2** at `~/bin/buck2` (user-local binary, not on PATH) — needed for both C++ extensions: `//neural_cfr:neural_cfr` and `//sixmax:sixmax`.
 - macOS (primary dev platform); libtorch and other C++ deps are vendored in `third_party/`.
 - Optional: OpenSpiel installed in the environment for `scripts/eval_openspiel*.py`.
 

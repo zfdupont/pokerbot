@@ -16,7 +16,7 @@ edges:
     condition: when working on the tabular MCCFR pipeline, abstraction, or exploitability
   - target: context/neural-cfr.md
     condition: when working on the C++ Deep CFR subsystem (neural_cfr/)
-last_updated: 2026-07-07
+last_updated: 2026-07-18
 ---
 
 # Architecture

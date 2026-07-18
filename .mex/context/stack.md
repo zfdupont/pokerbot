@@ -14,7 +14,7 @@ edges:
     condition: when understanding how to use a technology in this codebase
   - target: context/setup.md
     condition: when installing or building the stack (uv, Buck2, libtorch)
-last_updated: 2026-07-07
+last_updated: 2026-07-18
 ---
 
 # Stack
@@ -23,13 +23,13 @@ last_updated: 2026-07-07
 
 - **Python ≥3.10** — primary language for the engine, tabular CFR, agents, and all scripts (`pyproject.toml`).
 - **uv** — package manager and runner; every command is `uv run ...`. Do not use pip/venv directly.
-- **C++ (libtorch + pybind11)** — the `neural_cfr/` Deep CFR subsystem; exposed to Python as `import neural_cfr`.
-- **Buck2** (`~/bin/buck2`, not on PATH) — build system for the C++ extension; deps vendored in `third_party/` (2000+ files, do not touch).
+- **C++ (libtorch + pybind11)** — the `neural_cfr/` Deep CFR subsystem (exposed as `import neural_cfr`) and the `sixmax/` blueprint subsystem (exposed as `import sixmax`); shared C++ utilities live in `common/` (Buck2 `//common:evaluator`).
+- **Buck2** (`~/bin/buck2`, not on PATH) — build system for all C++ extensions; deps vendored in `third_party/` (2000+ files, do not touch). Three targets: `//neural_cfr:neural_cfr`, `//sixmax:sixmax`, `//common:evaluator` (library only, not imported directly by Python).
 
 ## Key Libraries
 
 - **numpy** — regret matching and strategy math in `cfr/regret_table.py`; vectorized equity estimation.
-- **pytest** (not unittest) — full suite in `tests/`, ~82 tests; `pythonpath = ["."]` set in `pyproject.toml` so imports are repo-root-relative.
+- **pytest** (not unittest) — full suite in `tests/`, ~119 tests; `pythonpath = ["."]` set in `pyproject.toml` so imports are repo-root-relative.
 - **websockets** — `scripts/openpoker_bot.py` connector to openpoker.ai.
 - **tqdm** — progress bars in the tabular trainer; the C++ trainer uses p-ranav/indicators instead.
 - **cython** — hot-path acceleration for tabular MCCFR traversal (added in the parallel-training perf pass).
