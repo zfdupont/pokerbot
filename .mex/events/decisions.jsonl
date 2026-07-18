@@ -1,0 +1,2 @@
+{"timestamp":"2026-07-18T11:41:14.849Z","kind":"decision","message":"sixmax action vocabulary is config-defined (TOML, BB/pot units, order=config order); checkpoints embed vocab hash, loaders refuse mismatches","files":[],"cwd":"."}
+{"timestamp":"2026-07-18T11:41:15.756Z","kind":"decision","message":"boundary rescale rule corrected: divide chip inputs by table big blind (their_stack/100 only coincided at 100BB); fixed in openpoker_bot.py and scaffold docs","files":[],"cwd":"."}
