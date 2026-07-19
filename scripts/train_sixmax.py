@@ -11,9 +11,13 @@ builtin defaults. The effective config is snapshotted to
 """
 import argparse
 import importlib.util
+import json
 import os
+import re
+import shutil
 import subprocess
 import sys
+from datetime import datetime, timezone
 
 try:
     import tomllib
@@ -104,7 +108,6 @@ def resolve_config(args, repo_root: str) -> dict:
 
 
 def write_config_snapshot(cfg: dict, checkpoint_path: str) -> None:
-    import json
     lines = ["# Effective config — written by train_sixmax.py", "[resolved]"]
     for key, value in sorted(cfg.items()):
         if value is None:
@@ -118,6 +121,68 @@ def write_config_snapshot(cfg: dict, checkpoint_path: str) -> None:
         lines.append(f"{key} = {rendered}")
     with open(checkpoint_path + ".config.toml", "w") as f:
         f.write("\n".join(lines) + "\n")
+
+
+_BB100_RE = re.compile(r"Blueprint A win rate:\s*([+-]?\d+(?:\.\d+)?)\s*BB/100")
+
+
+def parse_bb100(text: str) -> "float | None":
+    m = _BB100_RE.search(text)
+    return float(m.group(1)) if m else None
+
+
+def update_best(bb100: "float | None", ckpt_path: str, iterations: int) -> bool:
+    """Promote ckpt to best_checkpoint.bin. bb100=None means 'no best yet:
+    promote unconditionally'; otherwise replace on strictly positive BB/100
+    vs the current best. Atomic copy + JSON sidecar (neural_cfr pattern)."""
+    if bb100 is not None and bb100 <= 0.0:
+        return False
+    ckpt_dir = os.path.dirname(os.path.abspath(ckpt_path))
+    best = os.path.join(ckpt_dir, "best_checkpoint.bin")
+    tmp = best + ".tmp"
+    shutil.copy2(ckpt_path, tmp)
+    os.replace(tmp, best)
+    sidecar = os.path.join(ckpt_dir, "best_checkpoint.json")
+    tmp_json = sidecar + ".tmp"
+    with open(tmp_json, "w") as f:
+        json.dump({
+            "bb100_vs_previous_best": bb100,
+            "iterations": iterations,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "source_checkpoint": os.path.abspath(ckpt_path),
+        }, f, indent=2)
+    os.replace(tmp_json, sidecar)
+    return True
+
+
+def run_selection(cfg: dict, repo_root: str, trainer) -> None:
+    """Eval current checkpoint vs best; promote on strict improvement.
+    Advisory: never raises, never kills training."""
+    ckpt = cfg["checkpoint"]
+    best = os.path.join(os.path.dirname(os.path.abspath(ckpt)),
+                        "best_checkpoint.bin")
+    try:
+        if not os.path.exists(best):
+            update_best(None, ckpt, trainer.iterations())
+            print("[selection] first checkpoint promoted to best_checkpoint.bin")
+            return
+        result = subprocess.run(
+            [sys.executable,
+             os.path.join(repo_root, "scripts", "eval_sixmax.py"),
+             "--a", ckpt, "--b", best,
+             "--hands", str(cfg["selection_hands"]),
+             "--config", cfg["config_path"]],
+            capture_output=True, text=True, cwd=repo_root, timeout=3600)
+        bb100 = parse_bb100(result.stdout)
+        if result.returncode != 0 or bb100 is None:
+            print(f"[selection] eval failed (exit {result.returncode}); "
+                  f"skipping. stderr tail: {result.stderr[-300:]}")
+            return
+        replaced = update_best(bb100, ckpt, trainer.iterations())
+        print(f"[selection] {bb100:+.2f} BB/100 vs best — "
+              f"{'NEW BEST' if replaced else 'kept existing best'}")
+    except Exception as e:  # noqa: BLE001 — advisory path, never fatal
+        print(f"[selection] skipped ({type(e).__name__}: {e})")
 
 
 def main() -> None:
@@ -136,6 +201,11 @@ def main() -> None:
                         dest="checkpoint_interval")
     parser.add_argument("--resume", type=str, default=None)
     parser.add_argument("--seed", type=int, default=None)
+    parser.add_argument("--selection-enabled",
+                        action=argparse.BooleanOptionalAction, default=None,
+                        dest="selection_enabled")
+    parser.add_argument("--selection-hands", type=int, default=None,
+                        dest="selection_hands")
     args = parser.parse_args()
 
     cfg = resolve_config(args, repo_root)
@@ -175,6 +245,8 @@ def main() -> None:
         completed += chunk
         trainer.save(cfg["checkpoint"], vocab, engine_cfg, abstraction)
         write_config_snapshot(cfg, cfg["checkpoint"])
+        if cfg["selection_enabled"]:
+            run_selection(cfg, repo_root, trainer)
         print(f"[{completed:,}/{cfg['iterations']:,}] "
               f"{trainer.num_infosets():,} infosets — saved {cfg['checkpoint']}")
     print(f"Done: {trainer.iterations():,} total iterations, "
