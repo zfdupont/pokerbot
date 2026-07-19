@@ -14,3 +14,22 @@ bet_sizes     = [ { size = 0.33, unit = "pot" },   # enriching this later is a
                   { size = 0.75, unit = "pot" },   # config edit + A/B, not an
                   { size = 1.5,  unit = "pot" } ]  # architecture change
 include_allin = true   # a search grid without the jam cannot express stack-offs
+
+[abstraction]
+flop_buckets = 50
+turn_buckets = 50
+river_buckets = 20
+equity_rollouts = 100
+quantile_samples = 10000
+seed = 20260719
+
+[train.blueprint]
+num_players = 6
+starting_stack = 100.0
+iterations = 100000
+num_threads = 0          # 0 = hardware_concurrency
+checkpoint_interval = 0  # 0 = save at the end only
+checkpoint = "sixmax/checkpoints/blueprint.bin"
+seed = 7
+selection_enabled = false
+selection_hands = 2000

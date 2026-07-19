@@ -182,5 +182,8 @@ third_party/pybind11/
 # Neural CFR checkpoints (large binaries)
 neural_cfr/checkpoints/
 
+# Sixmax blueprint checkpoints (large binaries)
+sixmax/checkpoints/
+
 # IDE
 .vscode/
