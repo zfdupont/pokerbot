@@ -1269,6 +1269,7 @@ def _python_payouts(contribs, folded, ranks):
     pm = PotManager()
     m = max(contribs)
     for p, c, f in zip(players, contribs, folded):
+        p.stack -= c  # real engine deducts during betting; contribute() only records
         if not f and c < m:
             p.is_all_in = True
         pm.contribute(p, c)
