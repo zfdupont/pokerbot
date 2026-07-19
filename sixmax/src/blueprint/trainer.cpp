@@ -136,8 +136,11 @@ void BlueprintTrainer::import_table(
         std::lock_guard<std::mutex> lk(sh.mu);
         sh.map.clear();
     }
-    for (auto& [k, v] : table)
-        shards_[shard_of(k)].map.emplace(k, std::move(v));
+    for (auto& [k, v] : table) {
+        Shard& sh = shards_[shard_of(k)];
+        std::lock_guard<std::mutex> lk(sh.mu);
+        sh.map.emplace(k, std::move(v));
+    }
     iter_.store(iterations, std::memory_order_relaxed);
 }
 
