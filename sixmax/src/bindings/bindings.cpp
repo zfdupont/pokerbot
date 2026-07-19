@@ -5,6 +5,7 @@
 #include "blueprint/game.h"
 #include "blueprint/kuhn.h"
 #include "blueprint/mccfr.h"
+#include "blueprint/trainer.h"
 #include "engine/engine.h"
 #include "blueprint/engine_game.h"
 #include "abstraction/abstraction.h"
@@ -212,4 +213,40 @@ PYBIND11_MODULE(sixmax, m) {
         .def("num_buckets", &sixmax::Abstraction::num_buckets)
         .def("edges", &sixmax::Abstraction::edges)
         .def("hash", &sixmax::Abstraction::hash);
+    // --- Multithreaded blueprint trainer (Phase 1b Task 3) ---
+    py::class_<sixmax::BlueprintTrainer>(m, "BlueprintTrainer")
+        .def(py::init([](const sixmax::EngineConfig& cfg,
+                         const sixmax::ActionVocab* vocab,
+                         const sixmax::Abstraction* abstraction,
+                         int num_threads, uint64_t seed) {
+                 sixmax::GameFactory f = [cfg, vocab, abstraction]() {
+                     return std::make_unique<sixmax::EngineGame>(cfg, vocab,
+                                                                 abstraction);
+                 };
+                 return new sixmax::BlueprintTrainer(
+                     std::move(f),
+                     sixmax::TrainerConfig{num_threads, seed});
+             }),
+             py::arg("cfg"), py::arg("vocab"), py::arg("abstraction"),
+             py::arg("num_threads") = 1, py::arg("seed") = 1,
+             py::keep_alive<1, 3>(),   // trainer's factory holds vocab*
+             py::keep_alive<1, 4>())   // trainer's factory holds abstraction*
+        .def_static("kuhn", [](int num_threads, uint64_t seed) {
+            sixmax::GameFactory f = []() {
+                return std::make_unique<sixmax::KuhnGame>();
+            };
+            return new sixmax::BlueprintTrainer(
+                std::move(f), sixmax::TrainerConfig{num_threads, seed});
+        }, py::arg("num_threads") = 1, py::arg("seed") = 1)
+        .def("train", &sixmax::BlueprintTrainer::train, py::arg("iterations"),
+             py::call_guard<py::gil_scoped_release>())
+        .def("iterations", &sixmax::BlueprintTrainer::iterations)
+        .def("num_infosets", &sixmax::BlueprintTrainer::num_infosets)
+        .def("average_strategy", &sixmax::BlueprintTrainer::average_strategy,
+             py::arg("key"))
+        .def("keys", &sixmax::BlueprintTrainer::keys);
+    m.def("blueprint_kuhn_value", [](const sixmax::BlueprintTrainer& t) {
+        return sixmax::kuhn_exact_value_lookup(
+            [&](uint64_t k) { return t.average_strategy(k); });
+    });
 }

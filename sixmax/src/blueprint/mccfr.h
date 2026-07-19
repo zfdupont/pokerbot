@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <functional>
 #include <random>
 #include <unordered_map>
 #include <vector>
@@ -11,6 +12,11 @@ struct InfosetData {
     std::vector<double> regret;
     std::vector<double> strategy_sum;
 };
+
+// Regret matching over the masked-legal actions; uniform over legal when no
+// positive regret. Shared by MCCFRTrainer and BlueprintTrainer.
+std::vector<double> regret_matched(const std::vector<double>& regret,
+                                   const std::vector<uint8_t>& mask);
 
 // External-sampling MCCFR with linear weighting: regret and strategy-sum
 // updates at iteration t are multiplied by t. Single-threaded; the
@@ -41,5 +47,10 @@ private:
 // enumerating all 6 Kuhn deals (uniform strategy where unaccumulated).
 // Test helper for the closed-form value -1/18.
 double kuhn_exact_value(const MCCFRTrainer& t);
+
+// Lookup-based version: call with a function that returns the average strategy
+// for a given infoset key. Used by both MCCFRTrainer and BlueprintTrainer.
+double kuhn_exact_value_lookup(
+    const std::function<std::vector<double>(uint64_t)>& avg);
 
 }  // namespace sixmax

@@ -3,22 +3,27 @@
 
 namespace sixmax {
 
-std::vector<double> MCCFRTrainer::matched_strategy(
-        const InfosetData& d, const std::vector<uint8_t>& mask) const {
-    int n = (int)d.regret.size();
+std::vector<double> regret_matched(const std::vector<double>& regret,
+                                   const std::vector<uint8_t>& mask) {
+    int n = (int)regret.size();
     std::vector<double> sigma(n, 0.0);
     double pos = 0.0;
     for (int a = 0; a < n; ++a)
-        if (mask[a] && d.regret[a] > 0.0) pos += d.regret[a];
+        if (mask[a] && regret[a] > 0.0) pos += regret[a];
     if (pos > 0.0) {
         for (int a = 0; a < n; ++a)
-            if (mask[a] && d.regret[a] > 0.0) sigma[a] = d.regret[a] / pos;
+            if (mask[a] && regret[a] > 0.0) sigma[a] = regret[a] / pos;
     } else {
         int legal = 0;
         for (int a = 0; a < n; ++a) legal += mask[a] ? 1 : 0;
         for (int a = 0; a < n; ++a) if (mask[a]) sigma[a] = 1.0 / legal;
     }
     return sigma;
+}
+
+std::vector<double> MCCFRTrainer::matched_strategy(
+        const InfosetData& d, const std::vector<uint8_t>& mask) const {
+    return regret_matched(d.regret, mask);
 }
 
 void MCCFRTrainer::train(uint64_t iterations) {
@@ -87,27 +92,34 @@ std::vector<double> MCCFRTrainer::average_strategy(uint64_t key) const {
 }
 
 namespace {
-double kuhn_ev_p0(const MCCFRTrainer& t, const KuhnState& s) {
+double kuhn_ev_p0(const std::function<std::vector<double>(uint64_t)>& avg,
+                  const KuhnState& s) {
     if (s.is_terminal()) return s.utility(0);
-    std::vector<double> sigma = t.average_strategy(s.infoset_key());
+    std::vector<double> sigma = avg(s.infoset_key());
     if (sigma.empty()) sigma = {0.5, 0.5};
     double ev = 0.0;
     for (int a = 0; a < 2; ++a) {
         if (sigma[a] <= 0.0) continue;
         KuhnState child = s;
         child.apply(a);
-        ev += sigma[a] * kuhn_ev_p0(t, child);
+        ev += sigma[a] * kuhn_ev_p0(avg, child);
     }
     return ev;
 }
 }  // namespace
 
-double kuhn_exact_value(const MCCFRTrainer& t) {
+double kuhn_exact_value_lookup(
+        const std::function<std::vector<double>(uint64_t)>& avg) {
     double total = 0.0;
     for (int c0 = 0; c0 < 3; ++c0)
         for (int c1 = 0; c1 < 3; ++c1)
-            if (c0 != c1) total += kuhn_ev_p0(t, KuhnState(c0, c1));
+            if (c0 != c1) total += kuhn_ev_p0(avg, KuhnState(c0, c1));
     return total / 6.0;
+}
+
+double kuhn_exact_value(const MCCFRTrainer& t) {
+    return kuhn_exact_value_lookup(
+        [&](uint64_t k) { return t.average_strategy(k); });
 }
 
 }  // namespace sixmax
