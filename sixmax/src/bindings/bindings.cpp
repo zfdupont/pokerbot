@@ -6,6 +6,7 @@
 #include "blueprint/kuhn.h"
 #include "blueprint/mccfr.h"
 #include "engine/engine.h"
+#include "blueprint/engine_game.h"
 
 namespace py = pybind11;
 
@@ -35,7 +36,11 @@ PYBIND11_MODULE(sixmax, m) {
         .def(py::init([](double pot, double current_bet, double to_call, double stack) {
             return sixmax::BetContext{pot, current_bet, to_call, stack};
         }), py::kw_only(), py::arg("pot"), py::arg("current_bet"),
-            py::arg("to_call"), py::arg("stack"));
+            py::arg("to_call"), py::arg("stack"))
+        .def_readonly("pot", &sixmax::BetContext::pot)
+        .def_readonly("current_bet", &sixmax::BetContext::current_bet)
+        .def_readonly("to_call", &sixmax::BetContext::to_call)
+        .def_readonly("stack", &sixmax::BetContext::stack);
     py::class_<sixmax::ActionVocab>(m, "ActionVocab")
         .def(py::init<std::vector<sixmax::AbstractAction>>())
         .def("size", &sixmax::ActionVocab::size)
@@ -140,5 +145,27 @@ PYBIND11_MODULE(sixmax, m) {
               return sixmax::settle_pots(totals, f, ranks);
           },
           py::arg("total_bets"), py::arg("folded"), py::arg("rank_order"));
+    // --- Engine <-> vocab bridge (Task 5) ---
+    py::class_<sixmax::EngineGameState, sixmax::GameState>(m, "EngineGameState")
+        .def(py::init([](const sixmax::EngineConfig& cfg, int button,
+                         std::vector<int> deck, const sixmax::ActionVocab* v,
+                         std::vector<double> stacks) {
+                 return sixmax::EngineGameState(
+                     sixmax::HandState(cfg, button, std::move(deck),
+                                       std::move(stacks)),
+                     v);
+             }),
+             py::arg("cfg"), py::arg("button"), py::arg("deck"),
+             py::arg("vocab"), py::arg("stacks") = std::vector<double>{},
+             py::keep_alive<1, 5>())  // state holds ActionVocab*
+        .def("bet_context", &sixmax::EngineGameState::bet_context);
+    py::class_<sixmax::EngineGame, sixmax::Game>(m, "EngineGame")
+        .def(py::init<sixmax::EngineConfig, const sixmax::ActionVocab*>(),
+             py::arg("cfg"), py::arg("vocab"),
+             py::keep_alive<1, 3>())  // game holds ActionVocab*
+        .def("new_hand", [](sixmax::EngineGame& g, uint64_t seed) {
+            std::mt19937_64 rng(seed);
+            return g.new_hand(rng);
+        }, py::arg("seed"));
 }
 
