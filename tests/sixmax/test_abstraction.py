@@ -71,3 +71,13 @@ def test_abstraction_edges_sorted_and_hash_stable():
     assert a1.hash() != a3.hash()
     for street_edges in a1.edges():
         assert street_edges == sorted(street_edges)
+
+
+def test_bucket_rejects_bad_board_size():
+    import pytest
+    abs_ = sixmax.Abstraction(**TINY)
+    hole = [card(14, 3), card(14, 1)]
+    with pytest.raises(ValueError):
+        abs_.bucket(hole, [])                     # preflop is not bucketed
+    with pytest.raises(ValueError):
+        abs_.bucket(hole, [card(2, 0), card(3, 0)])

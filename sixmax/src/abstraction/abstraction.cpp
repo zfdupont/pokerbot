@@ -1,6 +1,7 @@
 #include "abstraction/abstraction.h"
 #include <algorithm>
 #include <random>
+#include <stdexcept>
 #include "game/safe_eval.h"
 
 namespace sixmax {
@@ -106,7 +107,14 @@ Abstraction::Abstraction(const AbstractionConfig& cfg,
 
 int Abstraction::bucket(const std::array<int, 2>& hole,
                         const std::vector<int>& board) const {
+    if (board.size() < 3 || board.size() > 5)
+        throw std::invalid_argument(
+            "Abstraction::bucket: board must have 3, 4, or 5 cards");
     const int s = (int)board.size() - 3;  // 0=flop 1=turn 2=river
+    // Salt MUST be cfg_.seed — the same salt used when sampling the quantile
+    // edges in the constructor. Lookup-time equity estimates and the edge
+    // distribution must come from the same estimator, or percentile buckets
+    // would be calibrated against a different distribution than the lookups.
     double eq = hand_equity(hole, board, cfg_.equity_rollouts, cfg_.seed);
     const auto& e = edges_[s];
     return (int)(std::upper_bound(e.begin(), e.end(), eq) - e.begin());
