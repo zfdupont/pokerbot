@@ -7,6 +7,7 @@
 #include "blueprint/mccfr.h"
 #include "engine/engine.h"
 #include "blueprint/engine_game.h"
+#include "abstraction/abstraction.h"
 
 namespace py = pybind11;
 
@@ -168,4 +169,40 @@ PYBIND11_MODULE(sixmax, m) {
             return g.new_hand(rng);
         }, py::arg("seed"),
            py::keep_alive<0, 1>());  // returned state holds vocab* owned by game
+    // --- Card abstraction (Phase 1b Task 1) ---
+    m.def("preflop_class", [](const std::vector<int>& hole) {
+        if (hole.size() != 2) throw py::value_error("expects 2 cards");
+        return sixmax::preflop_class({hole[0], hole[1]});
+    });
+    m.def("hand_equity",
+          [](const std::vector<int>& hole, const std::vector<int>& board,
+             int rollouts, uint64_t salt) {
+              if (hole.size() != 2) throw py::value_error("expects 2 cards");
+              return sixmax::hand_equity({hole[0], hole[1]}, board, rollouts,
+                                         salt);
+          },
+          py::arg("hole"), py::arg("board"), py::arg("rollouts"),
+          py::arg("salt"));
+    py::class_<sixmax::Abstraction>(m, "Abstraction")
+        .def(py::init([](int flop_buckets, int turn_buckets, int river_buckets,
+                         int equity_rollouts, int quantile_samples,
+                         uint64_t seed) {
+                 return sixmax::Abstraction(sixmax::AbstractionConfig{
+                     flop_buckets, turn_buckets, river_buckets,
+                     equity_rollouts, quantile_samples, seed});
+             }),
+             py::kw_only(), py::arg("flop_buckets") = 50,
+             py::arg("turn_buckets") = 50, py::arg("river_buckets") = 20,
+             py::arg("equity_rollouts") = 100,
+             py::arg("quantile_samples") = 10000,
+             py::arg("seed") = 20260719)
+        .def("bucket",
+             [](const sixmax::Abstraction& a, const std::vector<int>& hole,
+                const std::vector<int>& board) {
+                 if (hole.size() != 2) throw py::value_error("expects 2 cards");
+                 return a.bucket({hole[0], hole[1]}, board);
+             })
+        .def("num_buckets", &sixmax::Abstraction::num_buckets)
+        .def("edges", &sixmax::Abstraction::edges)
+        .def("hash", &sixmax::Abstraction::hash);
 }

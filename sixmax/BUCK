@@ -4,7 +4,7 @@ cxx_library(
     name = "sixmax",
     srcs = ["src/bindings/bindings.cpp", "src/vocab/vocab.cpp",
             "src/blueprint/kuhn.cpp", "src/blueprint/mccfr.cpp",
-            "src/engine/engine.cpp", "src/blueprint/engine_game.cpp"],
+            "src/engine/engine.cpp", "src/blueprint/engine_game.cpp", "src/abstraction/abstraction.cpp"],
     headers = glob(["src/**/*.h"]),
     header_namespace = "",
     compiler_flags = ["-std=c++17", "-O2"] +
