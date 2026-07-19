@@ -18,7 +18,7 @@ edges:
     condition: when working on the C++ Deep CFR subsystem (neural_cfr/)
   - target: patterns/INDEX.md
     condition: when starting a task — check the pattern index for a matching pattern file
-last_updated: 2026-07-18
+last_updated: 2026-07-19
 ---
 
 # Session Bootstrap
@@ -35,11 +35,12 @@ Then read this file fully before doing anything else in this session.
 - C++ Deep CFR subsystem (`neural_cfr/`, libtorch + pybind11 + Buck2) with multithreaded traversal and ε-greedy opponent exploration
 - Neural CFR correctness fixes (paper-faithful training regime, MLP reset, TOML config, inference parity): validated by from-scratch acceptance retrain (2026-07-14/15, 5M iters, ~20h) — best checkpoint **+36.4 BB/100 vs tabular @ 4.5M iters** (10k-hand eval), first neural win over the 9.04M-iter tabular baseline; `best_checkpoint.pt` selection and global linear-CFR iteration counter both worked end-to-end
 - Six-max subsystem Phase 0 (`sixmax/`): pybind11 module skeleton, config-defined `ActionVocab` (BB/pot units, pseudo-harmonic translation, TOML loader, canonical ordering contract); C++ evaluator extracted into `common/` (Buck2 `//common:evaluator`) with opaque `safe_eval::HandRank` API; `scripts/setup_dev.sh` idempotent one-shot dev setup
+- Six-max Phase 1a solver core (`sixmax/src/blueprint/` + `sixmax/src/engine/`, merged 2026-07-19 at `99d6203`): abstract `GameState`/`Game` interface, external-sampling MCCFR with linear weighting (gated on Kuhn −1/18 ±0.01), 2–6 player NLHE engine (doubles, SB 0.5/BB 1.0/stack 100) with side-pot settlement property-tested against the Python `PotManager` oracle (300 scenarios), and `EngineGame` — the vocab-masked bridge with a naive exact infoset keyer (Phase 1b replaces it)
 - Tooling: interactive play, range charts, OpenSpiel head-to-head eval, openpoker.ai WebSocket deployment (auto-detects `.pt`/`.pkl`)
-- ~119-test pytest suite with fast-mode conftests
+- 151-test pytest suite with fast-mode conftests
 
 **Not yet built:**
-- Six-max Phases 1–3: 6-max engine + MCCFR blueprint, depth-limited search with RangeTracker, batched-ReBeL value net (spec + Phase 0 plan in `docs/superpowers/`)
+- Six-max Phase 1b (blueprint pipeline: card/history abstraction replacing the naive keyer, multithreaded training, checkpoints w/ vocab hash, a training entry point in `scripts/`, eval harness — plan not yet written; known seams: `EngineGame::new_hand` mutates `button_` so use per-thread instances, `MCCFRTrainer` needs a table accessor for checkpoints, `setup_dev.sh` should create/verify the `third_party/pybind11/include` symlink) and Phases 2–3: depth-limited search with RangeTracker, batched-ReBeL value net (spec in `docs/superpowers/`)
 - 169-hand exact preflop abstraction (documented as the largest single quality win for tabular)
 - Suit-texture-aware board abstraction (flush draws / monotone boards currently bucket like rainbow)
 - Full 7-card lookup table for `util/util.py` (fallback lacks kicker discrimination)

@@ -16,7 +16,7 @@ edges:
     condition: when working on the tabular MCCFR pipeline, abstraction, or exploitability
   - target: context/neural-cfr.md
     condition: when working on the C++ Deep CFR subsystem (neural_cfr/)
-last_updated: 2026-07-18
+last_updated: 2026-07-19
 ---
 
 # Architecture
@@ -49,7 +49,11 @@ Trained strategies flow outward to three consumers: `scripts/play.py` (interacti
 - `cfr/` — tabular MCCFR pipeline (see `context/cfr-training.md`)
 - `neural_cfr/` — C++ Deep CFR (see `context/neural-cfr.md`)
 - `common/` — shared C++ (Buck2 `//common:evaluator`): the 7-card evaluator (moved byte-identical from `neural_cfr`, `12 - rank` inversion intact) plus the opaque `safe_eval::HandRank` API (`beats`/`ties` only — raw inverted scores never leave `common/`)
-- `sixmax/` — six-max blueprint + search subsystem (Phase 0 so far: pybind11 module skeleton, config-defined `ActionVocab` with BB/pot units + pseudo-harmonic translation, TOML vocab loader; spec: `docs/superpowers/specs/2026-07-17-sixmax-search-design.md`). Never imports `cfr/` or `neural_cfr/`; shares C++ only via `common/`
+- `sixmax/` — six-max blueprint + search subsystem (spec: `docs/superpowers/specs/2026-07-17-sixmax-search-design.md`). Never imports `cfr/` or `neural_cfr/`; shares C++ only via `common/`. Layout after Phase 1a (merged 2026-07-19):
+  - `src/vocab/` — config-defined `ActionVocab` (BB/pot units, pseudo-harmonic translation, FNV-1a hash); TOML loader in `sixmax/vocab_config.py`
+  - `src/blueprint/` — `game.h` abstract `GameState`/`Game` solver interface; `kuhn.{h,cpp}` frozen Kuhn validation fixture; `mccfr.{h,cpp}` external-sampling MCCFR with linear weighting (gated on Kuhn −1/18 ±0.01); `engine_game.{h,cpp}` vocab-masked bridge over the engine — owns all action legality (BB-unit opens only in unopened preflop pots, Pot-unit elsewhere, bet targets in [min_raise_to, all-in), jam entry owns stack-offs); its naive exact infoset keyer is a Phase 1b placeholder
+  - `src/engine/engine.{h,cpp}` — 2–6 player NLHE engine in the BB chip frame (doubles, SB 0.5, BB 1.0, stack 100, eps 1e-9); contribution-level side-pot settlement (`settle_pots`) property-tested against the Python `PotManager` oracle; the engine trusts callers on action legality (debug assert only — legality lives in the bridge mask)
+  - `src/bindings/bindings.cpp` — pybind11 surface; `tests/sixmax/conftest.py` buck2-builds and force-loads the `.so` as `sys.modules["sixmax"]`
 - `util/` — `evaluator.py` (live showdown), `util.py` + `lookup_table.py` (fast evaluator for CFR equity)
 - `scripts/` — all runnable entry points (training, play, eval, deploy)
 - `tests/` — mirrors source layout; conftests make tests fast (see `context/conventions.md`)

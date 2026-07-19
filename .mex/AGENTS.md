@@ -1,13 +1,13 @@
 ---
 name: agents
 description: Always-loaded project anchor. Read this first. Contains project identity, non-negotiables, commands, and pointer to ROUTER.md for full context.
-last_updated: 2026-07-18
+last_updated: 2026-07-19
 ---
 
 # pokerbot
 
 ## What This Is
-A Python Texas Hold'em simulator with pluggable agents, plus self-contained CFR training pipelines — tabular MCCFR (`cfr/`) and C++ Deep CFR (`neural_cfr/`), both heads-up — and a six-max blueprint+search subsystem under construction (`sixmax/`, Phase 0 complete). Strategies deploy to openpoker.ai.
+A Python Texas Hold'em simulator with pluggable agents, plus self-contained CFR training pipelines — tabular MCCFR (`cfr/`) and C++ Deep CFR (`neural_cfr/`), both heads-up — and a six-max blueprint+search subsystem under construction (`sixmax/`, Phase 1a solver core complete). Strategies deploy to openpoker.ai.
 
 ## Non-Negotiables
 - `cfr/`, `neural_cfr/`, and `sixmax/` never import `game/poker.py` or each other — bridging lives only in `agents/cfr_agent.py` and `scripts/`; shared C++ lives only in `common/`.

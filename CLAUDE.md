@@ -41,7 +41,7 @@ Always edit  Non-Negotiables after modifying any of these. Condensed from `.mex/
 ## Quick Commands
 
 ```bash
-uv run pytest tests/                                    # full suite (~119 tests)
+uv run pytest tests/                                    # full suite (151 tests)
 uv run python scripts/train_cfr.py                      # tabular training
 uv run python scripts/train_neural.py --config neural_cfr/configs/default.toml --checkpoint neural_cfr/checkpoints/checkpoint.pt
 uv run python scripts/eval_openspiel.py --hands 2000    # head-to-head eval (BB/100)

@@ -17,7 +17,7 @@ edges:
     condition: when running or resuming tabular training
   - target: patterns/debug-bot-misplay.md
     condition: when a trained bot behaves nonsensically after setup
-last_updated: 2026-07-18
+last_updated: 2026-07-19
 ---
 
 # Setup
@@ -63,3 +63,5 @@ Manual equivalents, if you need one piece: `uv sync`; `uv run pytest tests/`; `~
 **Slow tests:** you're bypassing the conftests. `tests/conftest.py` sets `MONTE_CARLO_SAMPLES=10`; run tests via pytest from the repo root so `pythonpath = ["."]` and the patches apply.
 
 **`buck2: command not found`:** it's at `~/bin/buck2`, not on PATH.
+
+**`pybind11/pybind11.h not found` when building `//sixmax` or `//neural_cfr`:** `third_party/pybind11/include` is a machine-local symlink that rots when the Python env it points at is rebuilt. Repoint it at the pyenv 3.10 site-packages copy (currently `~/.pyenv/versions/3.10.10/lib/python3.10/site-packages/pybind11/include`). `setup_dev.sh` does not yet create/verify this symlink — hardening deferred to Phase 1b.
