@@ -8,9 +8,10 @@ namespace sixmax {
 
 // Adapts HandState + ActionVocab to the MCCFR Game interface. Legality is
 // masking only — vocab order is never filtered or reordered. infoset_key()
-// is a NAIVE exact-information hash (hole cards + board + action history);
-// Phase 1b replaces it with the card/history abstraction. Everything else
-// here (masking, translation) is final.
+// delegates to abstract_key() (bit-packed card/history abstraction) when an
+// Abstraction is attached; otherwise it falls back to a NAIVE exact-information
+// FNV-1a hash (hole cards + board + action history). Everything else here
+// (masking, translation) is final.
 class EngineGameState : public GameState {
 public:
     EngineGameState(HandState hand, const ActionVocab* vocab,
