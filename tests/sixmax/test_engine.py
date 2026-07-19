@@ -123,6 +123,23 @@ def test_settle_pots_folded_max_contributor_gets_nothing():
     assert got == [0.0, 0.0, 180.0]
 
 
+def test_bb_option_three_players():
+    """BB retains the option to raise even when button + SB have limped in."""
+    cfg = sixmax.EngineConfig(num_players=3)
+    # button=0 => SB=1, BB=2, UTG=0 opens preflop
+    deck = AA + KK + QQ + DRY_BOARD
+    deck += [c for c in range(52) if c not in deck]
+    s = sixmax.HandState(cfg, 0, deck)
+    assert s.current_player() == 0        # UTG acts first 3-handed
+    s.apply_check_call()                  # UTG calls 1.0
+    s.apply_check_call()                  # SB calls 0.5 more
+    assert not s.is_terminal()            # hand not over — BB still has option
+    assert s.current_player() == 2        # BB is next
+    s.apply_check_call()                  # BB checks (takes the option)
+    assert s.street() == sixmax.Street.Flop
+    assert len(s.board()) == 3            # flop was dealt
+
+
 def test_deal_is_seed_deterministic():
     cfg = sixmax.EngineConfig(num_players=6)
     a = sixmax.HandState.deal(cfg, 2, 99)

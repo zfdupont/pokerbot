@@ -36,6 +36,9 @@ void EngineGameState::legal_mask(std::vector<uint8_t>& mask) const {
             case ActionType::Bet: {
                 if (!hand_.can_raise() || !size_class_ok(a)) break;
                 double t = vocab_->target_bb(i, ctx);
+                // ctx.stack is the all-in TARGET (street_bet + remaining chips),
+                // not the player's remaining chips; t < ctx.stack guards that
+                // this Bet entry does not collapse into the AllIn entry.
                 mask[i] = (t >= hand_.min_raise_to() - kChipEps &&
                            t < ctx.stack - kChipEps)
                               ? 1
@@ -61,6 +64,8 @@ uint64_t EngineGameState::infoset_key() const {
     auto hc = hand_.hole_cards(p);
     mix((uint64_t)std::min(hc[0], hc[1]));
     mix((uint64_t)std::max(hc[0], hc[1]));
+    // +64 shifts board-card codes out of the hole-card 0–51 range, preventing
+    // hash collisions between a board card and a hole card with the same code.
     for (int c : hand_.board()) mix((uint64_t)(c + 64));
     mix(0xFFFFull);  // separator: board cards vs action history
     for (int a : history_) mix((uint64_t)(a + 128));

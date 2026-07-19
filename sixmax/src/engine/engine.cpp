@@ -157,6 +157,9 @@ void HandState::apply(const EngineAction& a) {
             break;
         case EngineActionType::RaiseTo: {
             double target = std::min(a.amount, p.street_bet + p.stack);
+            // Must meet min-raise OR be a short jam (all-in below min-raise is legal).
+            assert(target >= min_raise_to() - kChipEps ||
+                   target >= p.street_bet + p.stack - kChipEps);
             assert(target > current_bet_ + kChipEps);
             double raise_size = target - current_bet_;
             if (raise_size > last_raise_ - kChipEps) last_raise_ = raise_size;

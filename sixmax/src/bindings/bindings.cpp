@@ -166,6 +166,6 @@ PYBIND11_MODULE(sixmax, m) {
         .def("new_hand", [](sixmax::EngineGame& g, uint64_t seed) {
             std::mt19937_64 rng(seed);
             return g.new_hand(rng);
-        }, py::arg("seed"));
+        }, py::arg("seed"),
+           py::keep_alive<0, 1>());  // returned state holds vocab* owned by game
 }
-
