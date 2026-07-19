@@ -47,6 +47,9 @@ public:
     // with different abstractions can evaluate the same public state.
     std::vector<double> probs_for(const EngineGameState& s) const;
     uint64_t iterations() const { return iterations_; }
+    // Count of QUERYABLE infosets (those with a positive strategy_sum, hence a
+    // normalized policy). Stored entries never visited as an opponent are
+    // dropped at load, so this can be < the trainer's num_infosets().
     size_t num_infosets() const { return probs_.size(); }
     int num_players() const { return num_players_; }
     const Abstraction& abstraction() const { return abs_; }

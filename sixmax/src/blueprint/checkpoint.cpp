@@ -69,10 +69,15 @@ void save_blueprint(const std::string& path, const BlueprintMeta& meta,
             o.write(reinterpret_cast<const char*>(d.strategy_sum.data()),
                     (std::streamsize)(meta.action_dim * sizeof(double)));
         }
-        if (!o) throw std::runtime_error("write failed: " + tmp);
+        if (!o) {
+            std::remove(tmp.c_str());  // never leave an orphaned partial
+            throw std::runtime_error("write failed: " + tmp);
+        }
     }
-    if (std::rename(tmp.c_str(), path.c_str()) != 0)
+    if (std::rename(tmp.c_str(), path.c_str()) != 0) {
+        std::remove(tmp.c_str());
         throw std::runtime_error("atomic rename failed: " + path);
+    }
 }
 
 LoadedBlueprint load_blueprint(const std::string& path,
