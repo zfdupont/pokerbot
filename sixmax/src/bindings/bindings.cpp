@@ -150,25 +150,32 @@ PYBIND11_MODULE(sixmax, m) {
     py::class_<sixmax::EngineGameState, sixmax::GameState>(m, "EngineGameState")
         .def(py::init([](const sixmax::EngineConfig& cfg, int button,
                          std::vector<int> deck, const sixmax::ActionVocab* v,
-                         std::vector<double> stacks) {
+                         std::vector<double> stacks,
+                         const sixmax::Abstraction* abstraction) {
                  return sixmax::EngineGameState(
                      sixmax::HandState(cfg, button, std::move(deck),
                                        std::move(stacks)),
-                     v);
+                     v, abstraction);
              }),
              py::arg("cfg"), py::arg("button"), py::arg("deck"),
              py::arg("vocab"), py::arg("stacks") = std::vector<double>{},
-             py::keep_alive<1, 5>())  // state holds ActionVocab*
-        .def("bet_context", &sixmax::EngineGameState::bet_context);
+             py::arg("abstraction") = nullptr,
+             py::keep_alive<1, 5>(),   // state holds ActionVocab*
+             py::keep_alive<1, 7>())   // state holds Abstraction*
+        .def("bet_context", &sixmax::EngineGameState::bet_context)
+        .def("abstract_key", &sixmax::EngineGameState::abstract_key);
     py::class_<sixmax::EngineGame, sixmax::Game>(m, "EngineGame")
-        .def(py::init<sixmax::EngineConfig, const sixmax::ActionVocab*>(),
+        .def(py::init<sixmax::EngineConfig, const sixmax::ActionVocab*,
+                      const sixmax::Abstraction*>(),
              py::arg("cfg"), py::arg("vocab"),
-             py::keep_alive<1, 3>())  // game holds ActionVocab*
+             py::arg("abstraction") = nullptr,
+             py::keep_alive<1, 3>(),   // game holds ActionVocab*
+             py::keep_alive<1, 4>())   // game holds Abstraction*
         .def("new_hand", [](sixmax::EngineGame& g, uint64_t seed) {
             std::mt19937_64 rng(seed);
             return g.new_hand(rng);
         }, py::arg("seed"),
-           py::keep_alive<0, 1>());  // returned state holds vocab* owned by game
+           py::keep_alive<0, 1>());  // returned state holds game-owned ptrs
     // --- Card abstraction (Phase 1b Task 1) ---
     m.def("preflop_class", [](const std::vector<int>& hole) {
         if (hole.size() != 2) throw py::value_error("expects 2 cards");

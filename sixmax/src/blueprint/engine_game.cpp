@@ -53,8 +53,9 @@ void EngineGameState::legal_mask(std::vector<uint8_t>& mask) const {
 }
 
 uint64_t EngineGameState::infoset_key() const {
-    // FNV-1a over exact private+public information. Placeholder keyer:
-    // Phase 1b substitutes the 169-class/equity-bucket abstraction here.
+    if (abstraction_) return abstract_key(*abstraction_);
+    // FNV-1a over exact private+public information (naive fallback,
+    // used by tests and any vocab-only construction).
     uint64_t h = 1469598103934665603ull;
     auto mix = [&](uint64_t v) {
         h ^= v;
@@ -84,6 +85,8 @@ void EngineGameState::apply(int action) {
             break;
         case ActionType::Bet:
         case ActionType::AllIn: {
+            int st = (int)hand_.street();
+            if (raises_[st] < 3) ++raises_[st];  // capped per-street count
             double target = vocab_->target_bb(action, bet_context());
             hand_.apply({EngineActionType::RaiseTo, target});
             break;
@@ -92,10 +95,48 @@ void EngineGameState::apply(int action) {
     history_.push_back(action);
 }
 
+namespace {
+int pot_bucket(double pot) {
+    if (pot <= 7.0) return 0;
+    if (pot <= 15.0) return 1;
+    if (pot <= 40.0) return 2;
+    return 3;
+}
+}  // namespace
+
+uint64_t EngineGameState::abstract_key(const Abstraction& abs) const {
+    const int p = hand_.current_player();
+    const int n = hand_.num_players();
+    const int street = (int)hand_.street();
+    auto hole = hand_.hole_cards(p);
+    const int card = street == 0 ? preflop_class(hole)
+                                 : abs.bucket(hole, hand_.board());
+    // Canonical action-order start: preflop = seat after BB (HU: button);
+    // postflop = seat after button.
+    const int start = street == 0
+        ? (n == 2 ? hand_.button() : (hand_.button() + 3) % n)
+        : (hand_.button() + 1) % n;
+    auto order = [&](int seat) { return (seat - start + n) % n; };
+    int live = 0, after = 0;
+    for (int s = 0; s < n; ++s) {
+        if (s == p || hand_.player(s).folded) continue;
+        ++live;
+        if (!hand_.player(s).all_in && order(s) > order(p)) ++after;
+    }
+    uint64_t key = (uint64_t)card;                        // bits 0-7
+    key |= (uint64_t)street << 8;                         // bits 8-9
+    for (int st = 0; st < 4; ++st)
+        key |= (uint64_t)raises_[st] << (10 + 2 * st);    // bits 10-17
+    key |= (uint64_t)pot_bucket(hand_.pot()) << 18;       // bits 18-19
+    key |= (uint64_t)live << 20;                          // bits 20-22
+    key |= (uint64_t)after << 23;                         // bits 23-25
+    return key;
+}
+
 std::unique_ptr<GameState> EngineGame::new_hand(std::mt19937_64& rng) {
     button_ = (button_ + 1) % cfg_.num_players;
     return std::make_unique<EngineGameState>(
-        HandState::deal(cfg_, button_, rng), vocab_);
+        HandState::deal(cfg_, button_, rng), vocab_, abstraction_);
 }
 
 }  // namespace sixmax
