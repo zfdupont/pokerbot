@@ -5,7 +5,9 @@ cxx_library(
     header_namespace = "",
     compiler_flags = ["-std=c++17", "-O2"],
     exported_preprocessor_flags = ["-Ineural_cfr/src"],
-    deps = ["//third_party:libtorch", "//third_party:indicators", "//common:evaluator"],
+    deps = ["//third_party:libtorch", "//third_party:indicators"],
+    # exported so dependents (the bindings target) inherit evaluator include paths
+    exported_deps = ["//common:evaluator"],
     preferred_linkage = "static",
     visibility = ["PUBLIC"],
 )
