@@ -1,5 +1,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <fstream>
 #include "game/safe_eval.h"
 #include "vocab/vocab.h"
 #include "blueprint/game.h"
@@ -9,6 +10,7 @@
 #include "engine/engine.h"
 #include "blueprint/engine_game.h"
 #include "abstraction/abstraction.h"
+#include "blueprint/checkpoint.h"
 
 namespace py = pybind11;
 
@@ -244,9 +246,66 @@ PYBIND11_MODULE(sixmax, m) {
         .def("num_infosets", &sixmax::BlueprintTrainer::num_infosets)
         .def("average_strategy", &sixmax::BlueprintTrainer::average_strategy,
              py::arg("key"))
-        .def("keys", &sixmax::BlueprintTrainer::keys);
+        .def("keys", &sixmax::BlueprintTrainer::keys)
+        .def("save",
+             [](const sixmax::BlueprintTrainer& t, const std::string& path,
+                const sixmax::ActionVocab* vocab,
+                const sixmax::EngineConfig& cfg,
+                const sixmax::Abstraction* abstraction) {
+                 sixmax::save_blueprint(
+                     path,
+                     sixmax::BlueprintMeta{vocab->hash(), cfg.num_players,
+                                           cfg.starting_stack, vocab->size()},
+                     *abstraction, t);
+             },
+             py::arg("path"), py::arg("vocab"), py::arg("cfg"),
+             py::arg("abstraction"));
     m.def("blueprint_kuhn_value", [](const sixmax::BlueprintTrainer& t) {
         return sixmax::kuhn_exact_value_lookup(
             [&](uint64_t k) { return t.average_strategy(k); });
     });
+    // --- Blueprint checkpoints + strategy (Phase 1b Task 4) ---
+    m.def("load_abstraction", [](const std::string& path) {
+        // Peek only the abstraction block: reuse the loader with the
+        // stored hash so it cannot mismatch, then rebuild from edges.
+        auto loaded = sixmax::load_blueprint(
+            path, [&] {
+                std::ifstream i(path, std::ios::binary);
+                i.seekg(8);
+                uint64_t h;
+                i.read(reinterpret_cast<char*>(&h), sizeof h);
+                return h;
+            }());
+        return sixmax::Abstraction(loaded.abs_cfg, std::move(loaded.edges));
+    }, py::arg("path"));
+    m.def("resume_blueprint",
+          [](const std::string& path, const sixmax::EngineConfig& cfg,
+             const sixmax::ActionVocab* vocab,
+             const sixmax::Abstraction* abstraction, int num_threads,
+             uint64_t seed) {
+              auto loaded = sixmax::load_blueprint(path, vocab->hash());
+              sixmax::GameFactory f = [cfg, vocab, abstraction]() {
+                  return std::make_unique<sixmax::EngineGame>(cfg, vocab,
+                                                              abstraction);
+              };
+              auto* t = new sixmax::BlueprintTrainer(
+                  std::move(f), sixmax::TrainerConfig{num_threads, seed});
+              t->import_table(std::move(loaded.table), loaded.iterations);
+              return t;
+          },
+          py::arg("path"), py::arg("cfg"), py::arg("vocab"),
+          py::arg("abstraction"), py::arg("num_threads") = 1,
+          py::arg("seed") = 1,
+          py::keep_alive<0, 3>(),   // returned trainer holds vocab*
+          py::keep_alive<0, 4>());  // returned trainer holds abstraction*
+    py::class_<sixmax::BlueprintStrategy>(m, "BlueprintStrategy")
+        .def_static("load", &sixmax::BlueprintStrategy::load,
+                    py::arg("path"), py::arg("vocab"))
+        .def("probs", &sixmax::BlueprintStrategy::probs, py::arg("key"))
+        .def("probs_for", &sixmax::BlueprintStrategy::probs_for)
+        .def("iterations", &sixmax::BlueprintStrategy::iterations)
+        .def("num_infosets", &sixmax::BlueprintStrategy::num_infosets)
+        .def("num_players", &sixmax::BlueprintStrategy::num_players)
+        .def("abstraction", &sixmax::BlueprintStrategy::abstraction,
+             py::return_value_policy::reference_internal);
 }
