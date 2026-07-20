@@ -89,3 +89,40 @@ class TestMultiHandIntegration:
         for _ in range(10):
             game.play_hand()
         assert total_chips(game) == before
+
+
+def test_raises_per_street_is_faithful_past_two():
+    """After the uncap, raises_per_street counts the true number of raises on a
+    street *while that street is live* (old code capped at 2). Consumers read
+    the count mid-street (that is the only value they ever see), so the contract
+    is tested by what an agent observes at decision time — not the end-of-hand
+    value, which the engine's per-street reset (_reset_street_bets zeroes the
+    just-finished street when advancing) always wipes to 0.
+
+    Both players min-raise preflop while the live count is below 3, so exactly 3
+    preflop raises go in and then the action closes with a call. A later actor
+    therefore observes raises_per_street[0] == 3. On the old capped engine the
+    count sticks at 2, the `< 3` gate never closes, and the agents raise until
+    all-in — so the observed max is 2 and this test fails (assert 2 == 3)."""
+    from models.enums import Action
+    from models.player import Player
+    from game.poker import PokerGame
+
+    observed_preflop = []
+
+    class Raiser:
+        def get_action(self, player, game_state):
+            to_call = game_state.current_bet - player.current_bet
+            can_raise = player.stack > to_call + game_state.big_blind
+            if game_state.betting_round == 0:
+                observed_preflop.append(game_state.raises_per_street[0])
+                if game_state.raises_per_street[0] < 3 and can_raise:
+                    return (Action.BET,
+                            game_state.current_bet + 2 * game_state.big_blind)
+            return (Action.CALL, None) if to_call > 0 else (Action.CHECK, None)
+
+    p0, p1 = Player("a", 200, Raiser()), Player("b", 200, Raiser())
+    game = PokerGame([p0, p1], small_blind=1)
+    game.play_hand()
+    assert max(observed_preflop) == 3   # count passes 2 while the street is live
+    assert p0.stack + p1.stack == 400   # chips conserved

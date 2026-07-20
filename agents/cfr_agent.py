@@ -43,7 +43,7 @@ class CFRAgent(PokerAgent):
                 game_state.community_cards,
                 game_state.betting_round,
             ),
-            betting_history=tuple(game_state.raises_per_street),
+            betting_history=tuple(min(r, 2) for r in game_state.raises_per_street),
             stack_bucket=stack_bucket(player.stack, big_blind),
         )
 

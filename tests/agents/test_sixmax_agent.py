@@ -47,3 +47,31 @@ def test_decide_returns_legal_action(blueprint_6max_ckpt):
     assert legal[idx] == 1
     if raise_to > 0.0:
         assert raise_to >= 1.0  # a raise-to is at least the current bet
+
+
+from models.card import Card
+from models.enums import Action, Suit
+from models.player import Player
+from game.poker import PokerGame
+from agents.sixmax_agent import SixmaxAgent
+
+
+def test_sixmax_agent_plays_a_legal_hand(blueprint_hu_ckpt):
+    # bb=2, stack=200 -> exactly 100 BB, so BB rescale = /2.
+    a = SixmaxAgent(blueprint_hu_ckpt, config_toml=_TOML)
+    p0 = Player("hero", 200, agent=a)
+    p1 = Player("villain", 200, agent=a)
+    game = PokerGame([p0, p1], small_blind=1)
+    game.play_hand()  # must complete without raising
+    assert p0.stack + p1.stack == 400  # chips conserved HU
+
+
+def test_sixmax_agent_get_action_is_legal(blueprint_hu_ckpt):
+    a = SixmaxAgent(blueprint_hu_ckpt, config_toml=_TOML)
+    p0 = Player("hero", 200, agent=a)
+    p1 = Player("villain", 200, agent=a)  # Player.agent is a required arg
+    game = PokerGame([p0, p1], small_blind=1)
+    game.state.deck = game.state._create_deck()
+    game.state.deal_hole_cards()
+    action, amount = a.get_action(p0, game.state)
+    assert action in (Action.FOLD, Action.CHECK, Action.CALL, Action.BET)

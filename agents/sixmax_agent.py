@@ -12,8 +12,12 @@ translation layer.
 """
 import importlib.util
 import os
+import random
 
 import sixmax
+
+from agents.base_agent import PokerAgent
+from models.enums import Action, Suit
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -97,3 +101,110 @@ class SixmaxDeployStrategy:
         else:
             raise_to = 0.0
         return idx, raise_to
+
+
+_SUIT_TO_IDX = {Suit.CLUBS: 0, Suit.DIAMONDS: 1, Suit.HEARTS: 2, Suit.SPADES: 3}
+_DEFAULT_TOML = os.path.join(_ROOT, "sixmax", "configs", "default.toml")
+_RAISE_CAP = 3  # the sixmax abstraction's per-street raise cap (2 bits)
+
+
+def _card_to_int(card):
+    return (card.rank - 2) * 4 + _SUIT_TO_IDX[card.suit]
+
+
+class SixmaxAgent(PokerAgent):
+    """Live-engine adapter over SixmaxDeployStrategy. Computes the legal mask,
+    (live, after), and BB rescale from GameState; translates the blueprint's
+    raise-to (BB) into an engine (Action, chips).
+
+    game_state.raises_per_street is now faithful (Step 1 uncapped the engine),
+    so we clamp it to the abstraction's cap (3) here at consumption — the same
+    pattern neural_cfr uses (it clamps to 2). No observer plumbing needed."""
+
+    def __init__(self, checkpoint_path, config_toml=_DEFAULT_TOML):
+        self._deploy = SixmaxDeployStrategy.load(checkpoint_path, config_toml)
+        self._rng = random.Random()
+
+    def get_action(self, player, game_state):
+        bb = game_state.big_blind
+        players = game_state.players
+        n = len(players)
+        hero = players.index(player)
+        street = game_state.betting_round
+
+        hole = [_card_to_int(c) for c in player.hole_cards]
+        board = [_card_to_int(c) for c in game_state.community_cards]
+
+        folded = [not p.is_active for p in players]
+        all_in = [p.is_all_in for p in players]
+        live, after = canonical_live_after(n, game_state.button_pos, hero,
+                                           folded, all_in, street)
+
+        to_call_chips = game_state.current_bet - player.current_bet
+        pot_bb = game_state.pot / bb
+        current_bet_bb = game_state.current_bet / bb
+        to_call_bb = to_call_chips / bb
+        stack_bb = (player.current_bet + player.stack) / bb  # all-in target
+
+        legal = self._legal_mask(game_state, player, to_call_chips,
+                                 current_bet_bb, pot_bb, to_call_bb, stack_bb)
+
+        raises = [min(r, _RAISE_CAP) for r in game_state.raises_per_street]
+        idx, raise_to_bb = self._deploy.decide(
+            hole=hole, board=board, street=street,
+            raises_per_street=raises, pot_bb=pot_bb,
+            current_bet_bb=current_bet_bb, to_call_bb=to_call_bb,
+            stack_bb=stack_bb, live=live, after=after, legal=legal,
+            rng=self._rng)
+        return self._translate(idx, to_call_chips, raise_to_bb, bb, player)
+
+    def _legal_mask(self, game_state, player, to_call_chips, current_bet_bb,
+                    pot_bb, to_call_bb, stack_bb):
+        """Mirror EngineGameState::legal_mask on live state. Bet entries are
+        legal when their vocab target lands in [min_raise, all_in) BB."""
+        vocab = self._deploy._vocab
+        facing = to_call_chips > 1e-9
+        can_raise = player.stack > to_call_chips + 1e-9
+        street = game_state.betting_round
+        unopened_preflop = street == 0 and current_bet_bb <= 1.0 + 1e-9
+        min_raise_to_bb = (game_state.current_bet + max(
+            game_state.big_blind, to_call_chips)) / game_state.big_blind
+        ctx = sixmax.BetContext(pot=pot_bb, current_bet=current_bet_bb,
+                                to_call=to_call_bb, stack=stack_bb)
+        mask = [0] * vocab.size()
+        for i in range(vocab.size()):
+            a = vocab.at(i)
+            if a.type == sixmax.ActionType.Fold:
+                mask[i] = 1 if facing else 0
+            elif a.type == sixmax.ActionType.Check:
+                mask[i] = 0 if facing else 1
+            elif a.type == sixmax.ActionType.Call:
+                mask[i] = 1 if facing else 0
+            elif a.type == sixmax.ActionType.Bet:
+                bb_unit = a.unit == sixmax.SizeUnit.BB
+                if not can_raise or bb_unit != unopened_preflop:
+                    continue
+                t = vocab.target_bb(i, ctx)
+                mask[i] = 1 if (t >= min_raise_to_bb - 1e-9
+                                and t < stack_bb - 1e-9) else 0
+            elif a.type == sixmax.ActionType.AllIn:
+                mask[i] = 1 if can_raise else 0
+        return mask
+
+    def _translate(self, idx, to_call_chips, raise_to_bb, bb, player):
+        a = self._deploy._vocab.at(idx)
+        if a.type == sixmax.ActionType.Fold:
+            return Action.FOLD, None
+        if a.type == sixmax.ActionType.Check:
+            return Action.CHECK, None
+        if a.type == sixmax.ActionType.Call:
+            return Action.CALL, None
+        # Bet / AllIn: game/poker.py:139 treats Action.BET amount as raise-TO
+        # (the total street commitment; additional = amount - player.current_bet).
+        # This matches CFRAgent._translate, whose all-in returns
+        # stack + current_bet and whose bets cap at stack + current_bet.
+        max_to = int(round(player.current_bet + player.stack))  # all-in raise-to
+        if a.type == sixmax.ActionType.AllIn:
+            return Action.BET, max_to
+        raise_to = int(round(raise_to_bb * bb))
+        return Action.BET, max(0, min(raise_to, max_to))

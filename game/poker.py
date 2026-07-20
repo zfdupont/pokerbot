@@ -144,9 +144,7 @@ class PokerGame:
             if player.stack == 0:
                 player.is_all_in = True
             street = self.state.betting_round
-            self.state.raises_per_street[street] = min(
-                self.state.raises_per_street[street] + 1, 2
-            )
+            self.state.raises_per_street[street] += 1  # faithful; consumers cap
 
     def _determine_winners(self, pot_manager: PotManager) -> None:
         active_players = [p for p in self.state.players if p.is_active]
