@@ -1,4 +1,5 @@
 #include "blueprint/engine_game.h"
+#include "abstraction/abstract_key.h"
 
 namespace sixmax {
 
@@ -95,15 +96,6 @@ void EngineGameState::apply(int action) {
     history_.push_back(action);
 }
 
-namespace {
-int pot_bucket(double pot) {
-    if (pot <= 7.0) return 0;
-    if (pot <= 15.0) return 1;
-    if (pot <= 40.0) return 2;
-    return 3;
-}
-}  // namespace
-
 uint64_t EngineGameState::abstract_key(const Abstraction& abs) const {
     const int p = hand_.current_player();
     const int n = hand_.num_players();
@@ -123,13 +115,8 @@ uint64_t EngineGameState::abstract_key(const Abstraction& abs) const {
         ++live;
         if (!hand_.player(s).all_in && order(s) > order(p)) ++after;
     }
-    uint64_t key = (uint64_t)card;                        // bits 0-7
-    key |= (uint64_t)street << 8;                         // bits 8-9
-    for (int st = 0; st < 4; ++st)
-        key |= (uint64_t)raises_[st] << (10 + 2 * st);    // bits 10-17
-    key |= (uint64_t)pot_bucket(hand_.pot()) << 18;       // bits 18-19
-    key |= (uint64_t)live << 20;                          // bits 20-22
-    key |= (uint64_t)after << 23;                         // bits 23-25
+    uint64_t key = pack_abstract_key((int)card, street, raises_,
+                                     hand_.pot(), live, after);
     return key;
 }
 

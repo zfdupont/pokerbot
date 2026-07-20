@@ -10,6 +10,7 @@
 #include "engine/engine.h"
 #include "blueprint/engine_game.h"
 #include "abstraction/abstraction.h"
+#include "abstraction/abstract_key.h"
 #include "blueprint/checkpoint.h"
 
 namespace py = pybind11;
@@ -184,6 +185,19 @@ PYBIND11_MODULE(sixmax, m) {
         if (hole.size() != 2) throw py::value_error("expects 2 cards");
         return sixmax::preflop_class({hole[0], hole[1]});
     });
+    m.def("pot_bucket", &sixmax::pot_bucket, py::arg("pot_bb"));
+    m.def("pack_abstract_key",
+          [](int card, int street, const std::vector<int>& raises,
+             double pot_bb, int live, int after) {
+              if (raises.size() != 4)
+                  throw py::value_error("raises must have length 4");
+              std::array<uint8_t, 4> r{(uint8_t)raises[0], (uint8_t)raises[1],
+                                       (uint8_t)raises[2], (uint8_t)raises[3]};
+              return sixmax::pack_abstract_key(card, street, r, pot_bb, live,
+                                               after);
+          },
+          py::arg("card"), py::arg("street"), py::arg("raises"),
+          py::arg("pot_bb"), py::arg("live"), py::arg("after"));
     m.def("hand_equity",
           [](const std::vector<int>& hole, const std::vector<int>& board,
              int rollouts, uint64_t salt) {
