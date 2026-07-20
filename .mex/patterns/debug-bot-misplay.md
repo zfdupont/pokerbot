@@ -15,7 +15,7 @@ edges:
     condition: to reproduce the misplay in a controlled OpenSpiel match
   - target: patterns/deploy-openpoker.md
     condition: when the misplay is observed on openpoker.ai specifically
-last_updated: 2026-07-07
+last_updated: 2026-07-19
 ---
 
 # Debug Bot Misplay

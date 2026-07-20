@@ -46,6 +46,8 @@ Manual equivalents, if you need one piece: `uv sync`; `uv run pytest tests/`; `~
 - `uv run pytest tests/` — full test suite; single test: `uv run pytest tests/path/test_file.py::ClassName::test_name -v`.
 - `uv run python scripts/train_cfr.py --iterations 1000000` — tabular training; `--resume cfr/checkpoints/checkpoint_XXXXXXXX.pkl` to continue.
 - `uv run python scripts/train_neural.py --iterations 5_000_000 --checkpoint neural_cfr/checkpoints/checkpoint.pt` — neural training (add `--resume` to continue).
+- `uv run python scripts/train_sixmax.py` — six-max blueprint training (`[abstraction]` + `[train.blueprint]` in `sixmax/configs/default.toml`; CLI overrides; `--resume PATH` restores table + iteration counter; `--selection-enabled` maintains `best_checkpoint.bin` via A/B vs previous best).
+- `uv run python scripts/eval_sixmax.py --a CKPT [--b CKPT|uniform] --hands 500` — duplicate-deal seat-rotated A/B eval; prints `Blueprint A win rate: ±X.XX BB/100`.
 - `uv run python scripts/eval_openspiel.py --hands 2000` — head-to-head eval (BB/100); `eval_openspiel_neural.py` for `.pt` checkpoints.
 - `uv run python scripts/play.py [--stack 1000] [--big-blind 10]` — interactive heads-up CLI vs the bot.
 - `uv run python scripts/range_chart.py [--scenario sb-open|bb-vs-raise]` — 13×13 ANSI preflop range chart.
@@ -64,4 +66,4 @@ Manual equivalents, if you need one piece: `uv sync`; `uv run pytest tests/`; `~
 
 **`buck2: command not found`:** it's at `~/bin/buck2`, not on PATH.
 
-**`pybind11/pybind11.h not found` when building `//sixmax` or `//neural_cfr`:** `third_party/pybind11/include` is a machine-local symlink that rots when the Python env it points at is rebuilt. Repoint it at the pyenv 3.10 site-packages copy (currently `~/.pyenv/versions/3.10.10/lib/python3.10/site-packages/pybind11/include`). `setup_dev.sh` does not yet create/verify this symlink — hardening deferred to Phase 1b.
+**`pybind11/pybind11.h not found` when building `//sixmax` or `//neural_cfr`:** `third_party/pybind11/include` is a machine-local symlink that rots when the Python env it points at is rebuilt. Run `./scripts/setup_dev.sh` — since Phase 1b it detects dead third_party symlinks and repoints `pybind11/include` at the venv's pybind11 package automatically.

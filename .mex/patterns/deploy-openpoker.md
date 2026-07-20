@@ -13,7 +13,7 @@ edges:
     condition: for the OPENPOKER_API_KEY environment variable
   - target: patterns/debug-bot-misplay.md
     condition: when the deployed bot makes nonsensical decisions
-last_updated: 2026-07-07
+last_updated: 2026-07-19
 ---
 
 # Deploy to openpoker.ai

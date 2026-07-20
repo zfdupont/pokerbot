@@ -11,7 +11,7 @@ edges:
     condition: for the engine↔agent boundary rules and naming conventions
   - target: context/architecture.md
     condition: to understand how PokerGame drives agents
-last_updated: 2026-07-07
+last_updated: 2026-07-19
 ---
 
 # Add a New Agent

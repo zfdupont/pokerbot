@@ -14,7 +14,7 @@ edges:
     condition: for neural training algorithm, constants, and checkpoint format
   - target: patterns/eval-checkpoint.md
     condition: after training, to measure the result
-last_updated: 2026-07-07
+last_updated: 2026-07-19
 ---
 
 # Train a Strategy

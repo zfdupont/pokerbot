@@ -18,7 +18,7 @@ edges:
     condition: when comparing with or porting concepts to the neural pipeline
   - target: patterns/train-strategy.md
     condition: when actually running a training job
-last_updated: 2026-07-07
+last_updated: 2026-07-19
 ---
 
 # Tabular CFR Training (`cfr/`)

@@ -37,7 +37,7 @@ triggers:
 edges:
   - target: "[related file path, e.g. context/conventions.md]"
     condition: "[when to follow this edge]"
-last_updated: [YYYY-MM-DD]
+last_updated: 2026-07-19
 ---
 
 # [Pattern Name]
@@ -77,7 +77,7 @@ triggers:
 edges:
   - target: "[related file path]"
     condition: "[when to follow this edge]"
-last_updated: [YYYY-MM-DD]
+last_updated: 2026-07-19
 ---
 
 # [Pattern Name]
