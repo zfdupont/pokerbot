@@ -18,7 +18,7 @@ edges:
     condition: when working on the C++ Deep CFR subsystem (neural_cfr/)
   - target: patterns/INDEX.md
     condition: when starting a task — check the pattern index for a matching pattern file
-last_updated: 2026-07-19
+last_updated: 2026-07-20
 ---
 
 # Session Bootstrap
@@ -37,11 +37,12 @@ Then read this file fully before doing anything else in this session.
 - Six-max subsystem Phase 0 (`sixmax/`): pybind11 module skeleton, config-defined `ActionVocab` (BB/pot units, pseudo-harmonic translation, TOML loader, canonical ordering contract); C++ evaluator extracted into `common/` (Buck2 `//common:evaluator`) with opaque `safe_eval::HandRank` API; `scripts/setup_dev.sh` idempotent one-shot dev setup
 - Six-max Phase 1a solver core (`sixmax/src/blueprint/` + `sixmax/src/engine/`, merged 2026-07-19 at `99d6203`): abstract `GameState`/`Game` interface, external-sampling MCCFR with linear weighting (gated on Kuhn −1/18 ±0.01), 2–6 player NLHE engine (doubles, SB 0.5/BB 1.0/stack 100) with side-pot settlement property-tested against the Python `PotManager` oracle (300 scenarios), and `EngineGame` — the vocab-masked bridge (naive exact keyer remains the no-abstraction default)
 - Six-max Phase 1b blueprint pipeline (merged 2026-07-19 at `3c670d6`): card abstraction (`sixmax/src/abstraction/` — lossless 169 preflop classes, deterministic MC equity-percentile buckets 50/50/20 seeded per (hole,board,salt)); bit-packed abstraction infoset keys (card/street/raise-counts≤3/pot-bucket/live_opps/after — table-size-agnostic: MP 6-handed ≡ UTG 5-handed); multithreaded `BlueprintTrainer` (64-shard table, atomic linear-CFR counter, passes the Kuhn gate 1- and 4-threaded); self-describing binary checkpoints (magic SIXBP001, embeds vocab hash + abstraction edges, loaders refuse mismatches) + `BlueprintStrategy` loader; `scripts/train_sixmax.py` (CLI>TOML>builtin, chunked saves, best-checkpoint selection) and `scripts/eval_sixmax.py` (duplicate-deal seat-rotated A/B, BB/100)
-- Tooling: interactive play, range charts, OpenSpiel head-to-head eval, openpoker.ai WebSocket deployment (auto-detects `.pt`/`.pkl`)
+- Six-max Phase 1c deployment (merged 2026-07-20): host-agnostic `SixmaxDeployStrategy` bridge (`agents/sixmax_agent.py`) reconstructs the trainer's infoset key from public state via the shared C++ `pack_abstract_key` (extracted so bridge and trainer cannot drift), re-masks to legal actions, samples, and translates the chosen vocab index to a raise-to (BB) through `ActionVocab`; `SixmaxAgent(PokerAgent)` and `NeuralAgent(PokerAgent)` (`agents/neural_agent.py`) adapt the blueprint and neural strategies to the live `game/poker.py` engine; `scripts/eval_hu_sanity.py` runs duplicate-deal HU-mode evals (blueprint vs frozen tabular/neural, BB/100); `scripts/openpoker_bot.py` auto-detects `.bin` → `SixmaxHandTracker`. `game/poker.py`'s `raises_per_street` is now faithful (uncapped) — each consumer applies its own cap (tabular 2, sixmax 3, neural 2)
+- Tooling: interactive play, range charts, OpenSpiel head-to-head eval, openpoker.ai WebSocket deployment (auto-detects `.pt`/`.pkl`/`.bin`)
 - 178-test pytest suite with fast-mode conftests
 
 **Not yet built:**
-- Six-max Phase 1c (deployment: openpoker strategy loader over `BlueprintStrategy`, off-tree bet translation via `ActionVocab::nearest`, HU-mode sanity evals vs the frozen tabular/neural bots — plan not yet written) and Phases 2–3: depth-limited search with RangeTracker, batched-ReBeL value net (spec in `docs/superpowers/`)
+- Six-max Phases 2–3: depth-limited search with RangeTracker, batched-ReBeL value net (spec in `docs/superpowers/`)
 - A real 6-max blueprint training run (the pipeline is ready; no full-scale run yet — dev-scale smoke runs only)
 - 169-hand exact preflop abstraction (documented as the largest single quality win for tabular)
 - Suit-texture-aware board abstraction (flush draws / monotone boards currently bucket like rainbow)

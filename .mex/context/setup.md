@@ -17,7 +17,7 @@ edges:
     condition: when running or resuming tabular training
   - target: patterns/debug-bot-misplay.md
     condition: when a trained bot behaves nonsensically after setup
-last_updated: 2026-07-19
+last_updated: 2026-07-20
 ---
 
 # Setup
@@ -48,6 +48,8 @@ Manual equivalents, if you need one piece: `uv sync`; `uv run pytest tests/`; `~
 - `uv run python scripts/train_neural.py --iterations 5_000_000 --checkpoint neural_cfr/checkpoints/checkpoint.pt` — neural training (add `--resume` to continue).
 - `uv run python scripts/train_sixmax.py` — six-max blueprint training (`[abstraction]` + `[train.blueprint]` in `sixmax/configs/default.toml`; CLI overrides; `--resume PATH` restores table + iteration counter; `--selection-enabled` maintains `best_checkpoint.bin` via A/B vs previous best).
 - `uv run python scripts/eval_sixmax.py --a CKPT [--b CKPT|uniform] --hands 500` — duplicate-deal seat-rotated A/B eval; prints `Blueprint A win rate: ±X.XX BB/100`.
+- `uv run python scripts/eval_hu_sanity.py --blueprint sixmax/checkpoints/blueprint_hu.bin --tabular cfr/checkpoints/checkpoint_09040000.pkl --neural neural_cfr/checkpoints/checkpoint.pt` — HU-mode sanity eval: the six-max blueprint (2-player) vs the frozen tabular/neural bots in the live engine (BB/100). `--tabular`/`--neural` optional.
+- `uv run python scripts/openpoker_bot.py --checkpoint sixmax/checkpoints/blueprint.bin` — deploy the six-max blueprint (`.bin` auto-detected → `SixmaxHandTracker`).
 - `uv run python scripts/eval_openspiel.py --hands 2000` — head-to-head eval (BB/100); `eval_openspiel_neural.py` for `.pt` checkpoints.
 - `uv run python scripts/play.py [--stack 1000] [--big-blind 10]` — interactive heads-up CLI vs the bot.
 - `uv run python scripts/range_chart.py [--scenario sb-open|bb-vs-raise]` — 13×13 ANSI preflop range chart.
