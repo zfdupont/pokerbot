@@ -13,13 +13,48 @@ translation layer.
 import importlib.util
 import os
 import random
-
-import sixmax
-
-from agents.base_agent import PokerAgent
-from models.enums import Action, Suit
+import subprocess
+import sys
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _ensure_sixmax_extension():
+    """Force-load the sixmax C++ extension as sys.modules['sixmax'].
+
+    The repo-root `sixmax/` directory is a namespace package that shadows the
+    Buck2-built `sixmax.so`, so a bare `import sixmax` from a plain script gets
+    the Python package (no C++ symbols). Under pytest the conftests already
+    force-load the .so, so this is a no-op there (guarded on a C++-only
+    attribute); for scripts (eval_hu_sanity, openpoker_bot) it builds and loads
+    the extension the same way train_sixmax.py does."""
+    mod = sys.modules.get("sixmax")
+    if mod is not None and hasattr(mod, "SizeUnit"):
+        return  # real extension already loaded (e.g. by a test conftest)
+    buck2 = os.path.expanduser("~/bin/buck2")
+    result = subprocess.run([buck2, "build", "//sixmax:sixmax", "--show-output"],
+                            capture_output=True, text=True, cwd=_ROOT)
+    if result.returncode != 0:
+        raise RuntimeError(f"Buck2 build failed:\n{result.stderr}")
+    so_dir = None
+    for line in result.stdout.splitlines():
+        if "sixmax.so" in line:
+            so_dir = os.path.join(_ROOT, os.path.dirname(line.split()[-1]))
+            break
+    if so_dir is None:
+        raise RuntimeError("Could not locate sixmax.so in buck2 output")
+    so_path = os.path.join(so_dir, "sixmax.so")
+    spec = importlib.util.spec_from_file_location("sixmax", so_path)
+    m = importlib.util.module_from_spec(spec)
+    sys.modules["sixmax"] = m  # register before exec so circular refs resolve
+    spec.loader.exec_module(m)
+
+
+_ensure_sixmax_extension()
+import sixmax  # noqa: E402  (must follow _ensure_sixmax_extension)
+
+from agents.base_agent import PokerAgent  # noqa: E402
+from models.enums import Action, Suit  # noqa: E402
 
 
 def _load_vocab(config_toml, section):
