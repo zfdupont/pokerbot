@@ -33,6 +33,7 @@ from cfr.info_set import InfoSet, stack_bucket
 from cfr.regret_table import RegretTable
 from models.card import Card
 from models.enums import Suit
+from agents.sixmax_agent import SixmaxDeployStrategy, canonical_live_after
 
 log = logging.getLogger("openpoker")
 
@@ -323,6 +324,150 @@ async def _shutdown_and_exit(ws) -> None:
     sys.exit(0)
 
 
+class SixmaxHandTracker:
+    """Six-max blueprint deployment tracker. Maintains per-seat fold/all-in
+    state and per-street raise counts (cap 3) so it can rebuild the abstraction
+    infoset key that the trainer used."""
+
+    def __init__(self):
+        self.hole_cards = []
+        self.community_cards = []
+        self.street = 0
+        self.raises_per_street = [0, 0, 0, 0]
+        self.big_blind = 20.0
+        self.my_seat = None
+        self.my_stack = 0.0
+        self.my_committed = 0.0
+        self.seats = []          # sorted table seat numbers present
+        self.button_seat = None
+        self.folded = {}         # seat -> bool
+        self.all_in = {}         # seat -> bool
+
+    def on_hand_start(self, msg):
+        self.hole_cards = []
+        self.community_cards = []
+        self.street = 0
+        self.raises_per_street = [0, 0, 0, 0]
+        self.my_seat = msg["seat"]
+        self.big_blind = msg["blinds"]["big_blind"]
+        self.button_seat = msg.get("dealer_seat")
+        self.seats = sorted(p["seat"] for p in msg.get("players", []))
+        self.folded = {s: False for s in self.seats}
+        self.all_in = {s: False for s in self.seats}
+        self.my_committed = 0.0
+
+    def on_hole_cards(self, msg):
+        self.hole_cards = [_parse_card(c) for c in msg["cards"]]
+
+    def on_community_cards(self, msg):
+        self.community_cards = [_parse_card(c) for c in msg["cards"]]
+        self.street = STREET_IDX.get(msg.get("street", "preflop"), self.street)
+        self.my_committed = 0.0
+
+    def on_player_action(self, msg):
+        seat = msg.get("seat")
+        act = msg.get("action")
+        if act == "fold" and seat in self.folded:
+            self.folded[seat] = True
+        if act == "all_in" and seat in self.all_in:
+            self.all_in[seat] = True
+        if act in ("raise", "all_in"):
+            s = STREET_IDX.get(msg.get("street", "preflop"), self.street)
+            self.raises_per_street[s] = min(self.raises_per_street[s] + 1, 3)
+
+    def _positions(self):
+        n = len(self.seats)
+        idx = {s: i for i, s in enumerate(self.seats)}
+        return (n, idx[self.button_seat], idx[self.my_seat],
+                [self.folded[s] for s in self.seats],
+                [self.all_in[s] for s in self.seats])
+
+    def decide(self, msg, strategy, buy_in):
+        bb = self.big_blind
+        pot = float(msg.get("pot", 0.0))
+        valid = {a["action"]: a for a in msg.get("valid_actions", [])}
+        for p in msg.get("players", []):
+            if p.get("seat") == self.my_seat:
+                self.my_stack = float(p["stack"])
+                break
+        to_call_chips = float(valid.get("call", {}).get("amount") or 0.0)
+
+        n, button, hero, folded, all_in = self._positions()
+        live, after = canonical_live_after(n, button, hero, folded, all_in,
+                                           self.street)
+
+        current_bet_bb = (self.my_committed + to_call_chips) / bb
+        stack_bb = (self.my_committed + self.my_stack) / bb
+        legal = self._legal_mask(strategy, valid, current_bet_bb, pot / bb,
+                                 to_call_chips / bb, stack_bb)
+
+        import random as _random
+        idx, raise_to_bb = strategy.decide(
+            hole=[_card_to_int(c) for c in self.hole_cards],
+            board=[_card_to_int(c) for c in self.community_cards],
+            street=self.street, raises_per_street=self.raises_per_street,
+            pot_bb=pot / bb, current_bet_bb=current_bet_bb,
+            to_call_bb=to_call_chips / bb, stack_bb=stack_bb, live=live,
+            after=after, legal=legal, rng=_random.Random())
+        return self._translate(strategy, idx, valid, raise_to_bb, bb)
+
+    def _legal_mask(self, strategy, valid, current_bet_bb, pot_bb, to_call_bb,
+                    stack_bb):
+        vocab = strategy._vocab
+        facing = "call" in valid
+        can_raise = "raise" in valid or "all_in" in valid
+        unopened_preflop = self.street == 0 and current_bet_bb <= 1.0 + 1e-9
+        min_raise_to_bb = float(valid.get("raise", {}).get("min", 0.0)) / self.big_blind
+        ctx = __import__("sixmax").BetContext(
+            pot=pot_bb, current_bet=current_bet_bb, to_call=to_call_bb,
+            stack=stack_bb)
+        sm = __import__("sixmax")
+        mask = [0] * vocab.size()
+        for i in range(vocab.size()):
+            a = vocab.at(i)
+            if a.type == sm.ActionType.Fold:
+                mask[i] = 1 if facing else 0
+            elif a.type == sm.ActionType.Check:
+                mask[i] = 0 if facing else 1
+            elif a.type == sm.ActionType.Call:
+                mask[i] = 1 if facing else 0
+            elif a.type == sm.ActionType.Bet:
+                bb_unit = a.unit == sm.SizeUnit.BB
+                if not can_raise or "raise" not in valid \
+                        or bb_unit != unopened_preflop:
+                    continue
+                t = vocab.target_bb(i, ctx)
+                mask[i] = 1 if (t >= min_raise_to_bb - 1e-9
+                                and t < stack_bb - 1e-9) else 0
+            elif a.type == sm.ActionType.AllIn:
+                mask[i] = 1 if can_raise else 0
+        return mask
+
+    def _translate(self, strategy, idx, valid, raise_to_bb, bb):
+        sm = __import__("sixmax")
+        a = strategy._vocab.at(idx)
+        if a.type == sm.ActionType.Fold:
+            return {"action": "fold"} if "fold" in valid else (
+                {"action": "check"} if "check" in valid else {"action": "call"})
+        if a.type == sm.ActionType.Check:
+            return {"action": "check"} if "check" in valid else (
+                {"action": "call"} if "call" in valid else {"action": "fold"})
+        if a.type == sm.ActionType.Call:
+            return {"action": "call"} if "call" in valid else (
+                {"action": "check"} if "check" in valid else {"action": "fold"})
+        if a.type == sm.ActionType.AllIn:
+            if "all_in" in valid:
+                return {"action": "all_in"}
+            if "raise" in valid:
+                return {"action": "raise", "amount": float(valid["raise"]["max"])}
+            return {"action": "call"} if "call" in valid else {"action": "check"}
+        # Bet: raise-to in chips (openpoker uses the raise-to convention).
+        raise_to = round(raise_to_bb * bb, 1)
+        min_r = float(valid["raise"].get("min", 0))
+        max_r = float(valid["raise"].get("max", self.my_stack))
+        return {"action": "raise", "amount": max(min_r, min(max_r, raise_to))}
+
+
 async def run(api_key: str, strategy, buy_in: int) -> None:
     headers = {"Authorization": f"Bearer {api_key}"}
 
@@ -331,7 +476,9 @@ async def run(api_key: str, strategy, buy_in: int) -> None:
     async for ws in websockets.connect(WS_URL, additional_headers=headers):
         try:
             log.info(f"Connected to {WS_URL}")
-            tracker = HandTracker()
+            tracker = (SixmaxHandTracker()
+                       if isinstance(strategy, SixmaxDeployStrategy)
+                       else HandTracker())
 
             loop = asyncio.get_running_loop()
             for sig in (signal.SIGTERM, signal.SIGINT):
@@ -434,7 +581,12 @@ def main() -> None:
     sys.stderr.reconfigure(line_buffering=True)
 
     log.info(f"Loading {checkpoint} ...")
-    if checkpoint.endswith(".pt"):
+    if checkpoint.endswith(".bin"):
+        toml = os.path.join(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__))), "sixmax", "configs", "default.toml")
+        strategy = SixmaxDeployStrategy.load(checkpoint, toml)
+        log.info("Six-max blueprint strategy loaded.")
+    elif checkpoint.endswith(".pt"):
         strategy = _load_neural_strategy(checkpoint)
         log.info("Neural CFR strategy loaded.")
     else:
