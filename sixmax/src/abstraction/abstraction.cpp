@@ -1,5 +1,6 @@
 #include "abstraction/abstraction.h"
 #include <algorithm>
+#include <mutex>
 #include <random>
 #include <stdexcept>
 #include "game/safe_eval.h"
@@ -105,19 +106,70 @@ Abstraction::Abstraction(const AbstractionConfig& cfg,
                          std::array<std::vector<double>, 3> edges)
     : cfg_(cfg), edges_(std::move(edges)) {}
 
+// Move only the artifact state; bucket_cache_ is left default-constructed
+// (empty) on both this and the moved-from object. The cache is a deterministic
+// per-instance accelerator, so it correctly repopulates lazily on the new
+// owner. The per-shard mutexes are never moved (they are non-movable).
+Abstraction::Abstraction(Abstraction&& other) noexcept
+    : cfg_(std::move(other.cfg_)), edges_(std::move(other.edges_)) {}
+
+Abstraction& Abstraction::operator=(Abstraction&& other) noexcept {
+    if (this != &other) {
+        cfg_ = std::move(other.cfg_);
+        edges_ = std::move(other.edges_);
+        // bucket_cache_ intentionally untouched: its mutexes cannot be moved,
+        // and any previously cached entries remain valid only if they match the
+        // new cfg_/edges_. Since edges_ changed, clear stale entries so future
+        // lookups recompute against the new distribution.
+        for (auto& shard : bucket_cache_) {
+            std::lock_guard<std::mutex> lk(shard.mu);
+            shard.map.clear();
+        }
+    }
+    return *this;
+}
+
 int Abstraction::bucket(const std::array<int, 2>& hole,
                         const std::vector<int>& board) const {
     if (board.size() < 3 || board.size() > 5)
         throw std::invalid_argument(
             "Abstraction::bucket: board must have 3, 4, or 5 cards");
     const int s = (int)board.size() - 3;  // 0=flop 1=turn 2=river
-    // Salt MUST be cfg_.seed — the same salt used when sampling the quantile
-    // edges in the constructor. Lookup-time equity estimates and the edge
-    // distribution must come from the same estimator, or percentile buckets
-    // would be calibrated against a different distribution than the lookups.
+
+    // Canonical (hole, board) identity: equity_seed already FNV-mixes the
+    // sorted board + order-normalised hole + cfg_.seed salt, so board card
+    // order is irrelevant. Fold the street s in too: the bucket also depends on
+    // which edge table (edges_[s]) is consulted, so keying on the equity seed
+    // alone could — under a 64-bit hash collision across boards of different
+    // sizes — return a value computed against the wrong edge table. Folding s
+    // in makes the memo key strictly finer than the (equity, edge-table) pair
+    // the original code uses, so the cache can never change an output.
+    const uint64_t key = fnv_mix(equity_seed(hole, board, cfg_.seed),
+                                 (uint64_t)s);
+    auto& shard = bucket_cache_[key % kBucketCacheShards];
+    {
+        std::lock_guard<std::mutex> lk(shard.mu);
+        auto it = shard.map.find(key);
+        if (it != shard.map.end()) return it->second;
+    }
+
+    // Miss: compute exactly as before. Salt MUST be cfg_.seed — the same salt
+    // used when sampling the quantile edges in the constructor. Lookup-time
+    // equity estimates and the edge distribution must come from the same
+    // estimator, or percentile buckets would be calibrated against a different
+    // distribution than the lookups. Done outside the lock so the ~200
+    // rank7-call rollout never blocks other shards' lookups.
     double eq = hand_equity(hole, board, cfg_.equity_rollouts, cfg_.seed);
     const auto& e = edges_[s];
-    return (int)(std::upper_bound(e.begin(), e.end(), eq) - e.begin());
+    const int bkt = (int)(std::upper_bound(e.begin(), e.end(), eq) - e.begin());
+
+    // Two threads that miss the same key concurrently both compute the same
+    // deterministic bkt; insert-if-absent keeps the map consistent either way.
+    {
+        std::lock_guard<std::mutex> lk(shard.mu);
+        shard.map.emplace(key, bkt);
+    }
+    return bkt;
 }
 
 int Abstraction::num_buckets(int street) const {

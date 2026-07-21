@@ -1,4 +1,6 @@
 #include "blueprint/mccfr.h"
+#include <array>
+#include <cassert>
 #include "blueprint/kuhn.h"
 
 namespace sixmax {
@@ -21,9 +23,27 @@ std::vector<double> regret_matched(const std::vector<double>& regret,
     return sigma;
 }
 
-std::vector<double> MCCFRTrainer::matched_strategy(
-        const InfosetData& d, const std::vector<uint8_t>& mask) const {
-    return regret_matched(d.regret, mask);
+void regret_matched(const std::vector<double>& regret,
+                    const std::vector<uint8_t>& mask, int n,
+                    std::array<double, kMaxActions>& out) {
+    for (int a = 0; a < n; ++a) out[a] = 0.0;
+    double pos = 0.0;
+    for (int a = 0; a < n; ++a)
+        if (mask[a] && regret[a] > 0.0) pos += regret[a];
+    if (pos > 0.0) {
+        for (int a = 0; a < n; ++a)
+            if (mask[a] && regret[a] > 0.0) out[a] = regret[a] / pos;
+    } else {
+        int legal = 0;
+        for (int a = 0; a < n; ++a) legal += mask[a] ? 1 : 0;
+        for (int a = 0; a < n; ++a) if (mask[a]) out[a] = 1.0 / legal;
+    }
+}
+
+void MCCFRTrainer::matched_strategy(
+        const InfosetData& d, const std::vector<uint8_t>& mask, int n,
+        std::array<double, kMaxActions>& out) const {
+    regret_matched(d.regret, mask, n, out);
 }
 
 void MCCFRTrainer::train(uint64_t iterations) {
@@ -40,6 +60,7 @@ void MCCFRTrainer::train(uint64_t iterations) {
 double MCCFRTrainer::traverse(GameState& s, int traverser) {
     if (s.is_terminal()) return s.utility(traverser);
     int n = game_.num_actions();
+    assert(n <= kMaxActions);
     std::vector<uint8_t> mask;
     s.legal_mask(mask);
     InfosetData& d = table_[s.infoset_key()];
@@ -47,10 +68,11 @@ double MCCFRTrainer::traverse(GameState& s, int traverser) {
         d.regret.assign(n, 0.0);
         d.strategy_sum.assign(n, 0.0);
     }
-    std::vector<double> sigma = matched_strategy(d, mask);
+    std::array<double, kMaxActions> sigma;
+    matched_strategy(d, mask, n, sigma);
 
     if (s.current_player() == traverser) {
-        std::vector<double> u(n, 0.0);
+        std::array<double, kMaxActions> u{};
         double ev = 0.0;
         for (int a = 0; a < n; ++a) {
             if (!mask[a]) continue;

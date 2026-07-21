@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <random>
@@ -7,6 +8,14 @@
 #include "blueprint/game.h"
 
 namespace sixmax {
+
+// Compile-time upper bound on the action-vocabulary width. The blueprint
+// action set is fold/check/call + a handful of bet sizes + all-in (<= ~10);
+// 16 is a safe ceiling. Hot-path per-node buffers (sigma/utility) are fixed
+// std::array<T, kMaxActions> stack storage keyed off this bound, so the
+// recursive traversal allocates nothing per node for them. Every user must
+// guard n <= kMaxActions.
+inline constexpr int kMaxActions = 16;
 
 struct InfosetData {
     std::vector<double> regret;
@@ -17,6 +26,13 @@ struct InfosetData {
 // positive regret. Shared by MCCFRTrainer and BlueprintTrainer.
 std::vector<double> regret_matched(const std::vector<double>& regret,
                                    const std::vector<uint8_t>& mask);
+
+// Out-parameter form: writes sigma[0..n) into caller-provided fixed storage
+// instead of heap-allocating a std::vector. Behaviour is bit-identical to the
+// return-by-value overload above; only n leading entries are read/written.
+void regret_matched(const std::vector<double>& regret,
+                    const std::vector<uint8_t>& mask, int n,
+                    std::array<double, kMaxActions>& out);
 
 // External-sampling MCCFR with linear weighting: regret and strategy-sum
 // updates at iteration t are multiplied by t. Single-threaded; the
@@ -34,8 +50,9 @@ public:
 
 private:
     double traverse(GameState& s, int traverser);
-    std::vector<double> matched_strategy(const InfosetData& d,
-                                         const std::vector<uint8_t>& mask) const;
+    void matched_strategy(const InfosetData& d,
+                          const std::vector<uint8_t>& mask, int n,
+                          std::array<double, kMaxActions>& out) const;
     Game& game_;
     std::unordered_map<uint64_t, InfosetData> table_;
     std::mt19937_64 rng_;

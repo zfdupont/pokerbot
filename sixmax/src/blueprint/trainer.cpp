@@ -1,4 +1,6 @@
 #include "blueprint/trainer.h"
+#include <array>
+#include <cassert>
 #include <thread>
 
 namespace sixmax {
@@ -39,11 +41,12 @@ void BlueprintTrainer::train(uint64_t iterations) {
 double BlueprintTrainer::traverse(GameState& s, int traverser, double w,
                                   std::mt19937_64& rng, int n) {
     if (s.is_terminal()) return s.utility(traverser);
+    assert(n <= kMaxActions);
     std::vector<uint8_t> mask;
     s.legal_mask(mask);
     const uint64_t key = s.infoset_key();
     Shard& sh = shards_[shard_of(key)];
-    std::vector<double> sigma;
+    std::array<double, kMaxActions> sigma;
     {
         std::lock_guard<std::mutex> lk(sh.mu);
         InfosetData& d = sh.map[key];
@@ -51,10 +54,10 @@ double BlueprintTrainer::traverse(GameState& s, int traverser, double w,
             d.regret.assign(n, 0.0);
             d.strategy_sum.assign(n, 0.0);
         }
-        sigma = regret_matched(d.regret, mask);
+        regret_matched(d.regret, mask, n, sigma);
     }
     if (s.current_player() == traverser) {
-        std::vector<double> u(n, 0.0);
+        std::array<double, kMaxActions> u{};
         double ev = 0.0;
         for (int a = 0; a < n; ++a) {
             if (!mask[a]) continue;
