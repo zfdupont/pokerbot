@@ -3,8 +3,8 @@
 Interactive heads-up poker CLI against a trained CFR bot.
 
 Usage:
-    uv run python scripts/play.py --checkpoint cfr/checkpoints/checkpoint_05040000.pkl
-    uv run python scripts/play.py --checkpoint cfr/checkpoints/checkpoint_05040000.pkl --stack 1000 --big-blind 10
+    uv run python scripts/play.py --checkpoint cfr/checkpoints/checkpoint_09040000.pkl
+    uv run python scripts/play.py --checkpoint cfr/checkpoints/checkpoint_09040000.pkl --stack 1000 --big-blind 10
 """
 import argparse
 import os
