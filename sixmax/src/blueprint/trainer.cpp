@@ -22,8 +22,14 @@ void BlueprintTrainer::train(uint64_t iterations) {
                 break;  // each thread over-grabs at most once
             }
             const double w = (double)t;  // linear CFR weight
+            // Deal ONE hand per iteration and traverse it once per seat as the
+            // traverser (on clones). Dealing a fresh hand per traverser instead
+            // advances the button a full cycle each iteration, phase-locking the
+            // traverser to a single button-relative seat so opening decisions
+            // never receive regret (see test_utg_open_decisions_receive_regret).
+            auto root = game->new_hand(rng);
             for (int p = 0; p < game->num_players(); ++p) {
-                auto s = game->new_hand(rng);
+                auto s = root->clone();
                 traverse(*s, p, w, rng, n);
             }
         }

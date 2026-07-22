@@ -62,3 +62,45 @@ def test_drives_abstracted_sixmax_engine():
         probs = t.average_strategy(k)
         if probs:
             assert abs(sum(probs) - 1.0) < 1e-9
+
+
+def _utg_open_regret_and_mass(records, num_players):
+    """Regret L1 and visit-mass over the UTG opening decision: preflop, no
+    raises yet, everyone still live and first-to-act (after == n-1). This is
+    the highest-stakes opening node (AA/KK opens live here) and the one the
+    button-rotation resonance starves."""
+    from scripts.diagnose_blueprint import decode_key
+    reg = mass = 0.0
+    for key, _probs, m, r in records:
+        d = decode_key(key)
+        if (d["street"] == 0 and sum(d["raises"]) == 0
+                and d["after"] == num_players - 1):
+            reg += r
+            mass += m
+    return reg, mass
+
+
+def test_utg_open_decisions_receive_regret(tmp_path):
+    """Regression for the button-rotation resonance in the deal loop.
+
+    The trainer must traverse each dealt hand once per seat as the traverser.
+    The buggy loop dealt a *fresh* hand per traverser, so the button advanced
+    a full cycle each iteration and the traverser was phase-locked to a single
+    button-relative seat. Every other seat's decisions — including the UTG
+    open, where AA/KK first act — accumulated average strategy but ZERO regret
+    (verified: the UTG-open node carries huge visit-mass yet exactly-zero
+    regret), freezing them at a uniform policy and producing the blueprint's
+    flat BB/100 curve. A correct deal loop puts the traverser in every seat,
+    so the UTG open must accrue regret."""
+    cfg = sixmax.EngineConfig(num_players=6)
+    t = sixmax.BlueprintTrainer(cfg, VOCAB, ABS, num_threads=1, seed=7)
+    t.train(1500)
+    ckpt = str(tmp_path / "bp.bin")
+    t.save(ckpt, VOCAB, cfg, ABS)
+    _iters, records = sixmax.dump_infosets(ckpt)
+    reg, mass = _utg_open_regret_and_mass(records, num_players=6)
+    assert mass > 0, "the UTG-open decision was never visited at all"
+    assert reg > 0, (
+        "the UTG open accumulated ZERO regret across 1500 iterations — the "
+        "traverser never occupies the opening seat (button-rotation resonance "
+        "in the deal loop)")

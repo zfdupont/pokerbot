@@ -50,8 +50,15 @@ void MCCFRTrainer::train(uint64_t iterations) {
     for (uint64_t i = 0; i < iterations; ++i) {
         ++iter_;
         weight_ = (double)iter_;  // linear CFR weighting
+        // Deal ONE hand per iteration and traverse it once per seat as the
+        // traverser (on clones). Dealing a fresh hand per traverser advances
+        // the button a full cycle each iteration, phase-locking the traverser
+        // to a single button-relative seat so opening decisions never receive
+        // regret. Kept identical to BlueprintTrainer's deal loop per the
+        // trainer-parity invariant.
+        auto root = game_.new_hand(rng_);
         for (int t = 0; t < game_.num_players(); ++t) {
-            auto s = game_.new_hand(rng_);
+            auto s = root->clone();
             traverse(*s, t);
         }
     }
