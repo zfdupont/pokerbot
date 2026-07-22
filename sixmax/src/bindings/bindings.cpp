@@ -1,6 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <fstream>
+#include <cmath>
 #include "game/safe_eval.h"
 #include "vocab/vocab.h"
 #include "blueprint/game.h"
@@ -291,6 +292,29 @@ PYBIND11_MODULE(sixmax, m) {
                 return h;
             }());
         return sixmax::Abstraction(loaded.abs_cfg, std::move(loaded.edges));
+    }, py::arg("path"));
+    // --- Read-only autopsy dump: recovers per-infoset visit-weight and regret
+    //     that the normalized accessors discard (plateau diagnosis). ---
+    m.def("dump_infosets", [](const std::string& path) {
+        uint64_t h;
+        {
+            std::ifstream i(path, std::ios::binary);
+            i.seekg(8);
+            i.read(reinterpret_cast<char*>(&h), sizeof h);
+        }
+        auto loaded = sixmax::load_blueprint(path, h);
+        py::list records;
+        for (const auto& [key, data] : loaded.table) {
+            double mass = 0.0, reg = 0.0;
+            for (double v : data.strategy_sum) mass += v;
+            for (double v : data.regret) reg += std::fabs(v);
+            std::vector<double> probs(data.strategy_sum.size(), 0.0);
+            if (mass > 0.0)
+                for (size_t i = 0; i < probs.size(); ++i)
+                    probs[i] = data.strategy_sum[i] / mass;
+            records.append(py::make_tuple(key, probs, mass, reg));
+        }
+        return py::make_tuple(loaded.iterations, records);
     }, py::arg("path"));
     m.def("resume_blueprint",
           [](const std::string& path, const sixmax::EngineConfig& cfg,
