@@ -89,92 +89,124 @@ def probe_policy(records, card_id, street, total_raises):
 # verdict() — pure stdlib, no sixmax dependency
 # ---------------------------------------------------------------------------
 
+def _monotone_trend(series, direction):
+    """Score a numeric series for a monotone trend in the given direction.
+
+    direction: "down" (values should decrease) or "up" (values should increase).
+
+    Returns (fraction_in_direction, net_change) where fraction_in_direction is
+    the fraction of consecutive step-pairs that moved in the given direction,
+    and net_change is series[-1] - series[0].
+
+    A signal is considered "learning" iff fraction_in_direction >= 0.8 AND
+    abs(net_change) > 1e-6.
+    """
+    n = len(series)
+    if n < 2:
+        return 0.0, 0.0
+    steps = n - 1
+    net_change = series[-1] - series[0]
+    if direction == "down":
+        in_direction = sum(1 for i in range(steps) if series[i + 1] < series[i])
+    else:  # "up"
+        in_direction = sum(1 for i in range(steps) if series[i + 1] > series[i])
+    return in_direction / steps, net_change
+
+
 def verdict(reports):
     """Classify the plateau from the metric trend across ordered reports.
 
     reports: list of checkpoint_report dicts ordered by iterations ascending.
     Returns (label, rationale) where label is one of:
-      "undertraining" — all three signals trend learning-way (more iters would help)
-      "structural"    — no signals moving (model hit a true ceiling)
-      "mixed"         — 1–2 signals moving (inconclusive; run more diagnostics)
+      "undertraining" — both gating signals trend learning-way (more iters would help)
+      "structural"    — neither gating signal moving (model hit a true ceiling)
+      "mixed"         — exactly one signal learning (inconclusive; run more diagnostics)
 
-    Decision rule (relative tolerance tol=0.05):
-      d_entropy  = entropy_top[last]  - entropy_top[first]   -> learning if < -tol*scale
-      d_regret   = avg_regret_top[last] - avg_regret_top[first] -> learning if < -tol*scale
-      d_probe    = mean over probes of (expected_mass[last] - expected_mass[first])
-                   -> learning if > +tol*scale
+    Two GATING signals (trend-based, fraction >= 0.8 of consecutive steps AND
+    abs(net_change) > 1e-6 to count as learning):
+      1. entropy_top series, direction "down" (concentrating = learning)
+      2. mean probe expected_mass series, direction "up" (right-direction mass growing)
+
+    avg_regret_top is NOT a gate — it's included in the rationale as context only
+    (grows monotonically under linear CFR, so it can never signal "shrinking").
     """
     if len(reports) < 2:
         return ("mixed", "need >=2 checkpoints to assess a trend")
 
-    _TOL = 0.05
-    _EPS = 1e-9
-
-    first, last = reports[0], reports[-1]
-
-    def _rel_tol(a, b):
-        return _TOL * max(abs(a), abs(b), _EPS)
+    _FRAC_THRESHOLD = 0.8
+    _MIN_CHANGE = 1e-6
 
     # Signal 1: entropy_top falling
-    d_entropy = last["entropy_top"] - first["entropy_top"]
-    tol_e = _rel_tol(first["entropy_top"], last["entropy_top"])
-    entropy_learning = d_entropy < -tol_e
+    entropy_series = [r["entropy_top"] for r in reports]
+    e_frac, e_net = _monotone_trend(entropy_series, "down")
+    entropy_learning = e_frac >= _FRAC_THRESHOLD and abs(e_net) > _MIN_CHANGE
+    steps = len(reports) - 1
+    e_steps = round(e_frac * steps)
 
-    # Signal 2: avg_regret_top shrinking
-    d_regret = last["avg_regret_top"] - first["avg_regret_top"]
-    tol_r = _rel_tol(first["avg_regret_top"], last["avg_regret_top"])
-    regret_learning = d_regret < -tol_r
+    # Signal 2: mean probe expected_mass rising
+    probe_series = []
+    if reports[0]["probes"]:
+        n_probes = len(reports[0]["probes"])
+        for r in reports:
+            p_list = r["probes"]
+            if p_list:
+                probe_series.append(
+                    sum(p["expected_mass"] for p in p_list[:n_probes]) / n_probes
+                )
+            else:
+                probe_series.append(0.0)
+    p_frac, p_net = _monotone_trend(probe_series, "up") if probe_series else (0.0, 0.0)
+    probe_learning = bool(probe_series) and p_frac >= _FRAC_THRESHOLD and abs(p_net) > _MIN_CHANGE
+    p_steps = round(p_frac * steps)
 
-    # Signal 3: mean probe expected_mass rising
-    probe_learning = False
-    if first["probes"] and last["probes"]:
-        n_probes = min(len(first["probes"]), len(last["probes"]))
-        if n_probes > 0:
-            d_probe = sum(
-                last["probes"][i]["expected_mass"] - first["probes"][i]["expected_mass"]
-                for i in range(n_probes)
-            ) / n_probes
-            f_probe = sum(first["probes"][i]["expected_mass"] for i in range(n_probes)) / n_probes
-            l_probe = sum(last["probes"][i]["expected_mass"] for i in range(n_probes)) / n_probes
-            tol_p = _rel_tol(f_probe, l_probe)
-            probe_learning = d_probe > tol_p
+    # avg_regret_top — context only (grows monotonically under linear CFR)
+    regret_series = [r["avg_regret_top"] for r in reports]
+    r_frac, r_net = _monotone_trend(regret_series, "up")
+    regret_note = (
+        f"regret rate rising ({r_net:+.3e}, {round(r_frac * steps)}/{steps} steps, "
+        "cumulative — expected under linear CFR)"
+        if r_net > 0 else
+        f"regret rate flat/falling ({r_net:+.3e})"
+    )
 
-    learning_count = sum([entropy_learning, regret_learning, probe_learning])
-
-    if learning_count == 3:
-        return (
-            "undertraining",
-            f"entropy_top falling ({d_entropy:+.3f}), avg_regret_top shrinking "
-            f"({d_regret:+.3e}), probe expected-mass rising ({'+' if probe_learning else '-'}): "
-            "all signals indicate the model is still learning; train longer.",
-        )
-    elif learning_count == 0:
-        return (
-            "structural",
-            f"entropy_top flat ({d_entropy:+.3f}), avg_regret_top flat "
-            f"({d_regret:+.3e}), probe masses flat: well-evidenced infosets not "
-            "differentiating despite more iterations — likely a structural ceiling.",
+    # Build per-signal descriptions
+    e_desc = (
+        f"entropy_top falls monotonically at {e_steps}/{steps} steps "
+        f"({entropy_series[0]:.3f}→{entropy_series[-1]:.3f})"
+        if entropy_learning else
+        f"entropy_top not monotonically falling ({e_steps}/{steps} steps, "
+        f"{entropy_series[0]:.3f}→{entropy_series[-1]:.3f})"
+    )
+    if probe_series:
+        p_desc = (
+            f"probe aggression rises at {p_steps}/{steps} steps "
+            f"({probe_series[0]:.3f}→{probe_series[-1]:.3f})"
+            if probe_learning else
+            f"probe mass not monotonically rising ({p_steps}/{steps} steps, "
+            f"{probe_series[0]:.3f}→{probe_series[-1]:.3f})"
         )
     else:
-        moving = []
-        not_moving = []
-        if entropy_learning:
-            moving.append(f"entropy_top falling ({d_entropy:+.3f})")
-        else:
-            not_moving.append(f"entropy_top flat ({d_entropy:+.3f})")
-        if regret_learning:
-            moving.append(f"avg_regret_top shrinking ({d_regret:+.3e})")
-        else:
-            not_moving.append(f"avg_regret_top flat ({d_regret:+.3e})")
-        if probe_learning:
-            moving.append("probe expected-mass rising")
-        else:
-            not_moving.append("probe expected-mass flat")
+        p_desc = "probe mass unavailable (no probes in reports)"
+
+    gating_count = sum([entropy_learning, probe_learning])
+
+    if gating_count == 2:
+        return (
+            "undertraining",
+            f"{e_desc}; {p_desc}; {regret_note} — "
+            "both signals indicate the model is still learning; train longer.",
+        )
+    elif gating_count == 0:
+        return (
+            "structural",
+            f"{e_desc}; {p_desc}; {regret_note} — "
+            "neither signal moving despite more iterations: likely a structural ceiling.",
+        )
+    else:
         return (
             "mixed",
-            f"Learning signals: {', '.join(moving)}. "
-            f"Flat signals: {', '.join(not_moving)}. "
-            "Recommend paired-per-deck eval slope as tie-breaker.",
+            f"{e_desc}; {p_desc}; {regret_note} — "
+            "signals disagree; recommend paired-per-deck eval slope as tie-breaker.",
         )
 
 
@@ -185,11 +217,17 @@ def verdict(reports):
 import os as _os
 import sys as _sys
 
-_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
-
 
 def _sixmax():
-    """Lazy import so this module stays Buck2-free until main() runs."""
+    """Lazy import so this module stays Buck2-free until main() runs.
+
+    sys.path surgery lives here so importing this module at the top level
+    (e.g. `from scripts.diagnose_blueprint import verdict`) does NOT mutate
+    sys.path or trigger any sixmax/agents imports.
+    """
+    _repo_root = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+    if _repo_root not in _sys.path:
+        _sys.path.insert(0, _repo_root)
     import agents.sixmax_agent  # noqa: F401  (force-loads the .so)
     import sixmax
     return sixmax

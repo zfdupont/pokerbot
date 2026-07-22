@@ -3,7 +3,7 @@ import os
 import pytest
 from scripts.diagnose_blueprint import (
     entropy_bits, support_size, gini, weighted_mean,
-    decode_key, top_tier, probe_policy, verdict,
+    decode_key, top_tier, probe_policy, verdict, _monotone_trend,
 )
 
 
@@ -51,11 +51,35 @@ def test_probe_policy_aggregates_matching_infosets():
 
 
 # ---------------------------------------------------------------------------
+# _monotone_trend() helper tests
+# ---------------------------------------------------------------------------
+
+def test_monotone_trend_down_perfect():
+    frac, net = _monotone_trend([3.0, 2.5, 2.0, 1.5], "down")
+    assert frac == 1.0 and abs(net - (-1.5)) < 1e-12
+
+
+def test_monotone_trend_up_perfect():
+    frac, net = _monotone_trend([0.1, 0.2, 0.3, 0.4], "up")
+    assert frac == 1.0 and abs(net - 0.3) < 1e-12
+
+
+def test_monotone_trend_flat_series():
+    frac, net = _monotone_trend([1.0, 1.0, 1.0, 1.0], "down")
+    assert frac == 0.0 and net == 0.0
+
+
+# ---------------------------------------------------------------------------
 # verdict() pure-function tests (no sixmax dependency)
 # ---------------------------------------------------------------------------
 
 def _make_report(iterations, entropy_top, avg_regret_top, probe_expected_masses):
-    """Build a minimal checkpoint_report dict for verdict() unit tests."""
+    """Build a minimal checkpoint_report dict for verdict() unit tests.
+
+    Keys match what checkpoint_report() actually produces:
+      entropy_top, avg_regret_top, iterations, probes (list of dicts with
+      "expected_mass" key).
+    """
     probes = [{"expected_mass": m} for m in probe_expected_masses]
     return {
         "iterations": iterations,
@@ -65,38 +89,87 @@ def _make_report(iterations, entropy_top, avg_regret_top, probe_expected_masses)
     }
 
 
-def test_verdict_undertraining_all_three_signals():
-    """All three signals trending 'learning' -> undertraining."""
-    r0 = _make_report(100000, entropy_top=2.5, avg_regret_top=0.8, probe_expected_masses=[0.2, 0.1])
-    r1 = _make_report(1000000, entropy_top=1.5, avg_regret_top=0.4, probe_expected_masses=[0.7, 0.6])
-    label, rationale = verdict([r0, r1])
-    assert label == "undertraining", f"expected undertraining, got {label}: {rationale}"
-    assert rationale  # non-empty rationale
+def _make_series(entropy_vals, probe_vals, regret_vals=None):
+    """Build a multi-checkpoint series for trend-based verdict tests."""
+    n = len(entropy_vals)
+    if regret_vals is None:
+        # Monotonically rising regret (realistic for linear CFR)
+        regret_vals = [100_000 * (i + 1) for i in range(n)]
+    reports = []
+    for i in range(n):
+        reports.append(_make_report(
+            iterations=(i + 1) * 100_000,
+            entropy_top=entropy_vals[i],
+            avg_regret_top=regret_vals[i],
+            probe_expected_masses=[probe_vals[i]],
+        ))
+    return reports
 
 
-def test_verdict_structural_no_signals():
-    """No signals moving -> structural ceiling."""
-    r0 = _make_report(100000, entropy_top=2.0, avg_regret_top=0.5, probe_expected_masses=[0.4])
-    r1 = _make_report(1000000, entropy_top=2.0, avg_regret_top=0.5, probe_expected_masses=[0.4])
-    label, rationale = verdict([r0, r1])
-    assert label == "structural", f"expected structural, got {label}: {rationale}"
+def test_verdict_undertraining_both_gating_signals():
+    """Both gating signals (entropy down, probe up) monotonically trending -> undertraining.
+
+    10 checkpoints: entropy_top strictly decreasing, probe mass strictly increasing.
+    """
+    n = 10
+    entropy_vals = [2.5 - i * 0.1 for i in range(n)]   # 2.5 → 1.6
+    probe_vals   = [0.2 + i * 0.05 for i in range(n)]  # 0.2 → 0.65
+    reports = _make_series(entropy_vals, probe_vals)
+    label, rationale = verdict(reports)
+    assert label == "undertraining", f"expected undertraining, got {label!r}: {rationale}"
+    assert rationale  # non-empty
 
 
-def test_verdict_mixed_one_signal():
-    """Only entropy falling, regret and probe flat -> mixed."""
-    r0 = _make_report(100000, entropy_top=2.0, avg_regret_top=0.5, probe_expected_masses=[0.4])
-    r1 = _make_report(1000000, entropy_top=1.2, avg_regret_top=0.5, probe_expected_masses=[0.4])
-    label, rationale = verdict([r0, r1])
-    assert label == "mixed", f"expected mixed, got {label}: {rationale}"
+def test_verdict_structural_both_flat():
+    """Both gating signals flat -> structural ceiling."""
+    n = 10
+    entropy_vals = [2.0] * n
+    probe_vals   = [0.4] * n
+    reports = _make_series(entropy_vals, probe_vals)
+    label, rationale = verdict(reports)
+    assert label == "structural", f"expected structural, got {label!r}: {rationale}"
     assert rationale
 
 
-def test_verdict_mixed_two_signals():
-    """Entropy and probe mass moving but regret flat -> mixed."""
-    r0 = _make_report(100000, entropy_top=2.0, avg_regret_top=0.5, probe_expected_masses=[0.2])
-    r1 = _make_report(1000000, entropy_top=1.0, avg_regret_top=0.5, probe_expected_masses=[0.7])
-    label, rationale = verdict([r0, r1])
-    assert label == "mixed", f"expected mixed, got {label}: {rationale}"
+def test_verdict_mixed_only_entropy_falling():
+    """entropy_top strictly decreasing but probe mass flat -> mixed (one gating signal)."""
+    n = 10
+    entropy_vals = [2.5 - i * 0.1 for i in range(n)]  # strict decrease
+    probe_vals   = [0.4] * n                            # completely flat
+    reports = _make_series(entropy_vals, probe_vals)
+    label, rationale = verdict(reports)
+    assert label == "mixed", f"expected mixed, got {label!r}: {rationale}"
+    assert rationale
+
+
+def test_verdict_mixed_only_probe_rising():
+    """probe mass strictly increasing but entropy_top flat -> mixed (one gating signal)."""
+    n = 10
+    entropy_vals = [2.0] * n                            # flat
+    probe_vals   = [0.2 + i * 0.05 for i in range(n)]  # strict increase
+    reports = _make_series(entropy_vals, probe_vals)
+    label, rationale = verdict(reports)
+    assert label == "mixed", f"expected mixed, got {label!r}: {rationale}"
+    assert rationale
+
+
+def test_verdict_entropy_not_learning_when_fraction_below_threshold():
+    """entropy_top decreases at only ~half the steps (fraction < 0.8) -> that signal is NOT learning.
+
+    Construct a 10-checkpoint series where entropy goes up then down alternately —
+    fraction in 'down' direction is ~0.5, well below the 0.8 gate.
+    With probe also flat this should be structural.
+    """
+    # Oscillating pattern: goes down on odd steps, up on even — ~50% "down"
+    base = 2.0
+    entropy_vals = [base + (0.05 if i % 2 == 0 else -0.05) * (i + 1) for i in range(10)]
+    probe_vals   = [0.4] * 10
+    reports = _make_series(entropy_vals, probe_vals)
+    label, rationale = verdict(reports)
+    # entropy_learning should be False (fraction < 0.8)
+    assert label in ("structural", "mixed"), (
+        f"oscillating entropy should not count as learning; got {label!r}: {rationale}"
+    )
 
 
 def test_verdict_insufficient_checkpoints():
@@ -114,13 +187,24 @@ def test_verdict_empty_reports():
     assert "2" in rationale
 
 
-def test_verdict_sub_noise_wiggle_is_flat():
-    """Tiny wiggles below relative tolerance must not flip to undertraining."""
-    # 0.1% change is sub-noise relative to the values
-    r0 = _make_report(100000, entropy_top=2.0, avg_regret_top=0.5, probe_expected_masses=[0.4])
-    r1 = _make_report(1000000, entropy_top=1.999, avg_regret_top=0.4999, probe_expected_masses=[0.4001])
-    label, rationale = verdict([r0, r1])
-    assert label == "structural", f"expected structural (sub-noise), got {label}: {rationale}"
+def test_verdict_real_data_entropy_monotone_should_be_undertraining_or_mixed():
+    """Simulate the actual run: entropy_top 0.665→0.642 at all 9 steps (strictly down).
+
+    Probe mass is flat (stuck at 0.67), so we expect 'mixed' (one gating signal).
+    The OLD code incorrectly labeled this 'structural' because the net drop (0.023)
+    was below the 5% relative tolerance (0.033). The new trend-based code must NOT
+    label it structural when entropy is strictly monotone.
+    """
+    entropy_vals = [0.665, 0.662, 0.660, 0.657, 0.654, 0.651, 0.648, 0.646, 0.644, 0.642]
+    probe_vals   = [0.67] * 10   # completely frozen (real data)
+    regret_vals  = [2.239e5, 2.458e5, 2.677e5, 2.894e5, 3.113e5,
+                    3.324e5, 3.533e5, 3.742e5, 3.952e5, 4.162e5]
+    reports = _make_series(entropy_vals, probe_vals, regret_vals)
+    label, rationale = verdict(reports)
+    assert label != "structural", (
+        f"monotone entropy drop must not be labeled 'structural'; got {label!r}: {rationale}"
+    )
+    assert rationale
 
 
 # ---------------------------------------------------------------------------
