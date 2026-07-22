@@ -27,5 +27,6 @@ Lookup table for all pattern files in this directory. Check here before starting
 | [debug-bot-misplay.md](debug-bot-misplay.md) | Bot folds strong hands, raises trash, or loses to random — encoding/scaling checklist |
 | [deploy-openpoker.md](deploy-openpoker.md) | Deploying a checkpoint to openpoker.ai over WebSocket |
 | [eval-checkpoint.md](eval-checkpoint.md) | Measuring a trained checkpoint vs OpenSpiel or random baselines |
+| [eval-checkpoint.md#six-max-blueprint-vs-baseline-live-engine](eval-checkpoint.md) | Measuring a six-max blueprint vs a fixed baseline (PotOdds) — BB/100 curve |
 | [train-strategy.md#task-neural-deep-cfr](train-strategy.md#task-neural-deep-cfr) | Running or resuming a neural Deep CFR training job |
 | [train-strategy.md#task-tabular-mccfr](train-strategy.md#task-tabular-mccfr) | Running or resuming a tabular MCCFR training job |

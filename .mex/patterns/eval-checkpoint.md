@@ -14,7 +14,7 @@ edges:
     condition: for the chip-scaling rule when evaluating .pt checkpoints
   - target: patterns/debug-bot-misplay.md
     condition: when eval results look absurd (large negative win rate)
-last_updated: 2026-07-18
+last_updated: 2026-07-21
 ---
 
 # Evaluate a Checkpoint
@@ -47,6 +47,29 @@ last_updated: 2026-07-18
 
 - Large negative BB/100 → go to `patterns/debug-bot-misplay.md`; suspect chip scaling or the check/call mapping before suspecting training.
 - Crash while parsing info states → dump the raw info-state string and compare with `CFRBotPolicy`'s parsing assumptions.
+
+## Six-max: blueprint vs baseline (live engine)
+
+`scripts/eval_sixmax_baseline.py` is the *6-max* strength benchmark (distinct
+from the OpenSpiel HU path above and from `eval_hu_sanity.py`'s HU-specialist
+opponents). It sits the blueprint (via `SixmaxAgent`) in one seat of an n-max
+live `game/poker.py` table against n−1 fixed baseline agents and reports
+**BB/100 + a 95% CI**.
+
+- Run: `uv run python scripts/eval_sixmax_baseline.py --checkpoints "sixmax/checkpoints/blueprint_*.bin" [--villain potodds] [--hands 500]`.
+- `--hands` counts **decks**, each played once per seat (seat rotation over an
+  identical deck cancels card luck — only the shuffle uses global `random`).
+  Each deck is one independent sample for the SE.
+- The curve x-axis comes from `train_sixmax.py`'s `snapshots` naming
+  `blueprint_<iters>.bin` (`parse_iters` reads the last integer group).
+- Villain is pluggable (`potodds` default; also `simple`/`position`/
+  `hand_strength`). PotOdds never bets/raises, so it is a *floor* — beating it
+  is necessary, not sufficient.
+
+**Gotcha — variance:** 6-max all-in swings are huge. The 1M blueprint scored
+−262 **±480** BB/100 over 200 decks; the CI dwarfs the mean. Use thousands of
+decks before trusting a per-checkpoint number, and always read the CI, not just
+the point estimate.
 
 ## Update Scaffold
 
