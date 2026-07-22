@@ -76,6 +76,7 @@ BUILTIN_DEFAULTS = {
     "checkpoint": "sixmax/checkpoints/blueprint.bin",
     "seed": 7,
     "selection_enabled": False, "selection_hands": 2000,
+    "snapshots": False,  # keep a distinct <base>_<iters>.bin per save (curve)
 }
 
 # TOML key -> flat config key (only where they differ)
@@ -206,6 +207,9 @@ def main() -> None:
                         dest="selection_enabled")
     parser.add_argument("--selection-hands", type=int, default=None,
                         dest="selection_hands")
+    parser.add_argument("--snapshots",
+                        action=argparse.BooleanOptionalAction, default=None,
+                        dest="snapshots")
     args = parser.parse_args()
 
     cfg = resolve_config(args, repo_root)
@@ -245,6 +249,11 @@ def main() -> None:
         completed += chunk
         trainer.save(cfg["checkpoint"], vocab, engine_cfg, abstraction)
         write_config_snapshot(cfg, cfg["checkpoint"])
+        if cfg["snapshots"]:
+            base, ext = os.path.splitext(cfg["checkpoint"])
+            snap = f"{base}_{completed:08d}{ext}"
+            shutil.copy2(cfg["checkpoint"], snap)
+            print(f"  snapshot -> {snap}")
         if cfg["selection_enabled"]:
             run_selection(cfg, repo_root, trainer)
         print(f"[{completed:,}/{cfg['iterations']:,}] "
