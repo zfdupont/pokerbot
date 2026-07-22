@@ -16,7 +16,7 @@ edges:
     condition: when working on the tabular MCCFR pipeline, abstraction, or exploitability
   - target: context/neural-cfr.md
     condition: when working on the C++ Deep CFR subsystem (neural_cfr/)
-last_updated: 2026-07-20
+last_updated: 2026-07-22
 ---
 
 # Architecture
@@ -54,7 +54,7 @@ Trained strategies flow outward to four consumers: `scripts/play.py` (interactiv
   - `src/abstraction/` — lossless 169-class preflop index; deterministic MC `hand_equity` (RNG seeded from sorted hole+board+salt, so bucket assignments are stable with no cache or shared state); `Abstraction` = per-street equity-percentile quantile edges (50/50/20 default), bucket lookups MUST reuse the edge-sampling salt; `abstract_key.{h,cpp}` — the single source of truth for the infoset-key bit layout (`pack_abstract_key` + `pot_bucket`), used by both `EngineGameState::abstract_key` (trainer) and the Python deployment bridge (via bindings) so keys can never drift
   - `src/blueprint/` — `game.h` abstract `GameState`/`Game` solver interface; `kuhn.{h,cpp}` frozen Kuhn validation fixture; `mccfr.{h,cpp}` single-threaded reference trainer + shared `regret_matched`/`kuhn_exact_value_lookup`; `trainer.{h,cpp}` multithreaded `BlueprintTrainer` (GameFactory-based so the Kuhn −1/18 gate covers the concurrent path; 64-shard mutexed table; atomic global linear-CFR counter; per-thread Game instances — `EngineGame::new_hand` mutates `button_`); `checkpoint.{h,cpp}` binary artifacts (SIXBP001, embeds vocab hash + abstraction config+edges, atomic tmp+rename, loaders refuse hash mismatches) + read-only `BlueprintStrategy`; `engine_game.{h,cpp}` vocab-masked bridge — owns all action legality; `infoset_key()` = bit-packed abstraction key (card/street/raises≤3/pot-bucket/live_opps/after — table-size-agnostic) when an `Abstraction` is attached, naive exact hash otherwise
   - `src/engine/engine.{h,cpp}` — 2–6 player NLHE engine in the BB chip frame (doubles, SB 0.5, BB 1.0, stack 100, eps 1e-9); contribution-level side-pot settlement (`settle_pots`) property-tested against the Python `PotManager` oracle; the engine trusts callers on action legality (debug assert only — legality lives in the bridge mask)
-  - `src/bindings/bindings.cpp` — pybind11 surface; `tests/sixmax/conftest.py` buck2-builds and force-loads the `.so` as `sys.modules["sixmax"]` (scripts `train_sixmax.py`/`eval_sixmax.py` do the same force-load)
+  - `src/bindings/bindings.cpp` — pybind11 surface; `tests/sixmax/conftest.py` buck2-builds and force-loads the `.so` as `sys.modules["sixmax"]` (scripts `train_sixmax.py`/`eval_sixmax.py`/`diagnose_blueprint.py` do the same force-load). Includes read-only `dump_infosets(path)` → `(iterations, [(key, probs, strategy_sum_l1, regret_l1)])` for offline checkpoint analysis (consumed by `scripts/diagnose_blueprint.py`, the blueprint plateau autopsy)
 - `util/` — `evaluator.py` (live showdown), `util.py` + `lookup_table.py` (fast evaluator for CFR equity)
 - `scripts/` — all runnable entry points (training, play, eval, deploy)
 - `tests/` — mirrors source layout; conftests make tests fast (see `context/conventions.md`)
