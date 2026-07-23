@@ -1,4 +1,5 @@
 _python_include = read_config("python", "include_path", "")
+_cpu_tune = read_config("build", "cpu_tune", "native")
 
 cxx_library(
     name = "sixmax",
@@ -7,12 +8,12 @@ cxx_library(
             "src/engine/engine.cpp", "src/blueprint/engine_game.cpp", "src/abstraction/abstraction.cpp", "src/abstraction/abstract_key.cpp", "src/blueprint/checkpoint.cpp"],
     headers = glob(["src/**/*.h"]),
     header_namespace = "",
-    compiler_flags = ["-std=c++17", "-O3", "-mcpu=native", "-DNDEBUG"] +
+    compiler_flags = ["-std=c++17", "-O3", "-mcpu=" + _cpu_tune, "-DNDEBUG"] +
                      (["-I" + _python_include] if _python_include else []),
     deps = ["//common:evaluator", "//third_party:pybind11"],
     exported_preprocessor_flags = ["-Isixmax/src"],
     preferred_linkage = "shared",
     soname = "sixmax.so",
-    linker_flags = ["-undefined", "dynamic_lookup"],
+    linker_flags = ["-undefined", "dynamic_lookup"] if host_info().os.is_macos else [],
     visibility = ["PUBLIC"],
 )
