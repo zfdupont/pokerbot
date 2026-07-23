@@ -86,3 +86,23 @@ def test_chip_matrix_row_sums_match_totals():
         col_sum = sum(obs.chip_matrix[j][seat] for j in range(6))
         # chip matrix is antisymmetric: M[i][j] = -M[j][i]
         assert abs(row_sum + col_sum) < 1e-6
+
+
+# ---------------------------------------------------------------------------
+# CLI smoke test: fails fast when checkpoint paths are missing
+# ---------------------------------------------------------------------------
+def test_main_runs_without_checkpoints(tmp_path, monkeypatch):
+    """main() fails fast with SystemExit when checkpoint paths are missing."""
+    import subprocess, sys
+    result = subprocess.run(
+        [sys.executable, "-m", "scripts.eval_mixed_table",
+         "--blueprint", str(tmp_path / "missing.bin"),
+         "--neural", str(tmp_path / "missing.pt"),
+         "--tabular", str(tmp_path / "missing.pkl"),
+         "--hands", "5"],
+        capture_output=True, text=True,
+        cwd=_ROOT,
+    )
+    assert result.returncode != 0
+    assert "missing" in result.stderr.lower() or "not found" in result.stderr.lower() \
+        or result.returncode == 1

@@ -147,26 +147,89 @@ class MixedTableObserver(GameObserver):
                 print("  ".join(f"{str(v):>10}" for v in r))
 
 
+SEAT_LABELS = ["sixmax", "neural", "tabular", "potodds_3", "potodds_4", "potodds_5"]
+_BB = 2
+_SB = 1
+_STACK = 200
+
+
+def _build_agents(blueprint_path: str, neural_path: str, tabular_path: str):
+    """Instantiate all six agents. Fails fast if any checkpoint is missing."""
+    for label, path in [("--blueprint", blueprint_path),
+                        ("--neural", neural_path),
+                        ("--tabular", tabular_path)]:
+        if not os.path.exists(path):
+            raise SystemExit(f"checkpoint not found for {label}: {path}")
+
+    _repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _toml = os.path.join(_repo, "sixmax", "configs", "default.toml")
+
+    from agents.sixmax_agent import SixmaxAgent
+    from agents.neural_agent import NeuralAgent
+    from agents.cfr_agent import CFRAgent
+    from agents.potodds_agent import PotOddsAgent
+
+    sixmax = SixmaxAgent(blueprint_path, config_toml=_toml)
+    neural = NeuralAgent(neural_path)
+    tabular = CFRAgent(tabular_path)
+    po3 = PotOddsAgent()
+    po4 = PotOddsAgent()
+    po5 = PotOddsAgent()
+    return [sixmax, neural, tabular, po3, po4, po5]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Mixed-table multi-agent poker eval"
-    )
-    parser.add_argument("--blueprint", metavar="PATH",
-                        help="Path to sixmax blueprint checkpoint (.bin)")
-    parser.add_argument("--neural", metavar="PATH",
-                        help="Path to neural CFR checkpoint (.pt)")
-    parser.add_argument("--tabular", metavar="PATH",
-                        help="Path to tabular CFR checkpoint (.pkl)")
+        description="Mixed-table multi-agent eval (BB/100 + chip matrix)")
+    parser.add_argument("--blueprint", required=True,
+                        help="SixmaxAgent checkpoint (.bin)")
+    parser.add_argument("--neural", required=True,
+                        help="NeuralAgent checkpoint (.pt)")
+    parser.add_argument("--tabular", required=True,
+                        help="CFRAgent checkpoint (.pkl)")
     parser.add_argument("--hands", type=int, default=10000,
-                        help="Number of hands to play (default: 10000)")
-    parser.add_argument("--seed", type=int, default=1,
-                        help="Random seed (default: 1)")
-    parser.add_argument("--csv", metavar="PATH",
-                        help="Write BB/100 results to CSV file")
+                        help="number of hands to play (default 10000)")
+    parser.add_argument("--seed", type=int, default=1)
+    parser.add_argument("--csv", default=None,
+                        help="optional CSV output path")
     args = parser.parse_args()
 
-    print(f"Mixed-table eval: {args.hands} hands, seed={args.seed}")
-    print("Agent wiring not yet implemented — observer module ready.")
+    agents = _build_agents(args.blueprint, args.neural, args.tabular)
+    players = [
+        Player(SEAT_LABELS[i], _STACK, agent=agents[i])
+        for i in range(6)
+    ]
+
+    obs = MixedTableObserver(SEAT_LABELS, bb=_BB)
+    game = PokerGame(players, small_blind=_SB, observers=[obs])
+
+    for i in range(args.hands):
+        random.seed(args.seed * 1_000_003 + i)
+        game.play_hand()
+
+    print(f"\nMixed-table eval — {args.hands} hands, seed {args.seed}\n")
+    obs.report()
+
+    if args.csv:
+        _write_csv(obs, args.csv)
+        print(f"\nwrote {args.csv}")
+
+
+def _write_csv(obs: MixedTableObserver, path: str) -> None:
+    import csv
+    with open(path, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["agent", "hands", "bb100", "ci_95"])
+        for seat, label in enumerate(SEAT_LABELS):
+            bb100, ci = obs.bb100_ci(seat)
+            w.writerow([label, obs.hands_played, f"{bb100:.4f}", f"{ci:.4f}"])
+        w.writerow([])
+        w.writerow([""] + SEAT_LABELS)
+        for i, row_label in enumerate(SEAT_LABELS):
+            w.writerow([row_label] + [
+                "—" if i == j else f"{obs.chip_matrix[i][j]:.4f}"
+                for j in range(6)
+            ])
 
 
 if __name__ == "__main__":
