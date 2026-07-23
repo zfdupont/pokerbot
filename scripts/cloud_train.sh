@@ -134,7 +134,6 @@ echo "[cloud_train] Pulling Docker image..."
 ssh "root@$SERVER_IP" "docker pull $IMAGE"
 
 # ── Mid-run sync loop (background) ───────────────────────────────────────────
-sync_count=0
 mid_sync_loop() {
     local _count=0
     while true; do
@@ -142,8 +141,6 @@ mid_sync_loop() {
         _count=$(( _count + 1 ))
         local _elapsed
         _elapsed=$(( $(date +%s) - START_TIME ))
-        local _iters_est
-        # Estimate iters done: linearly interpolate (rough)
         local _cost
         _cost=$(echo "scale=2; $_elapsed / 3600 * $HOURLY_RATE" | bc)
         echo "[sync ${_count} @ ~${_elapsed}s elapsed] est. cost: \$${_cost}"
