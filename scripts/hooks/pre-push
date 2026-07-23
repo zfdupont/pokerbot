@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Warn if sixmax C++ source is dirty but the Docker image hasn't been rebuilt.
+set -euo pipefail
+
+DIRTY=$(git diff --name-only HEAD -- sixmax/src/ common/src/ third_party/ sixmax/BUCK common/BUCK 2>/dev/null)
+if [ -n "$DIRTY" ]; then
+    echo "WARNING: C++ source changed since last Docker push:"
+    echo "$DIRTY" | sed 's/^/   /'
+    echo "   Run 'make docker-push' before starting a cloud training run."
+fi
+exit 0

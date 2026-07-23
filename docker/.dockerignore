@@ -1,0 +1,20 @@
+# Large vendored deps not needed to build sixmax (only needed for neural_cfr)
+third_party/libtorch/
+
+# Build artifacts
+buck-out/
+**/__pycache__/
+**/*.pyc
+
+# Checkpoints (large, don't belong in build context)
+sixmax/checkpoints/
+neural_cfr/checkpoints/
+cfr/checkpoints/
+
+# Git
+.git/
+
+# Dev / local files
+.env
+.venv/
+*.local
