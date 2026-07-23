@@ -92,6 +92,7 @@ run_local() {
 run_remote() {
     : "${HCLOUD_TOKEN:?HCLOUD_TOKEN not set — add to .env}"
     : "${HETZNER_SSH_KEY_NAME:?HETZNER_SSH_KEY_NAME not set — add to .env}"
+    : "${GHCR_PAT:?GHCR_PAT not set — add to .env (GitHub PAT with read:packages scope)}"
 
     SERVER_NAME="pokerbot-bench-${TIMESTAMP}"
     SERVER_IP=""
@@ -127,8 +128,18 @@ run_remote() {
     echo "[cloud_benchmark] Server IP: $SERVER_IP"
 
     echo "[cloud_benchmark] Waiting for SSH..."
-    until ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
-        "root@$SERVER_IP" echo ok 2>/dev/null || false; do sleep 5; done
+    _ssh_attempts=0
+    until ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 "root@$SERVER_IP" echo ok 2>/dev/null; do
+        sleep 5
+        (( _ssh_attempts++ ))
+        [[ $_ssh_attempts -ge 24 ]] && { echo "[cloud_benchmark] SSH timeout after 2 min — destroying server"; exit 1; }
+    done
+
+    echo "[cloud_benchmark] Installing Docker..."
+    ssh "root@$SERVER_IP" "curl -fsSL https://get.docker.com | sh"
+
+    echo "[cloud_benchmark] Logging in to GHCR..."
+    ssh "root@$SERVER_IP" "echo '$GHCR_PAT' | docker login ghcr.io -u zfdupont --password-stdin"
 
     echo "[cloud_benchmark] Syncing repo source..."
     rsync -avz --exclude='third_party/' --exclude='buck-out/' \

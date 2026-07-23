@@ -87,6 +87,7 @@ fi
 # ── Validation ────────────────────────────────────────────────────────────────
 : "${HCLOUD_TOKEN:?HCLOUD_TOKEN not set — add to .env}"
 : "${HETZNER_SSH_KEY_NAME:?HETZNER_SSH_KEY_NAME not set — add to .env}"
+: "${GHCR_PAT:?GHCR_PAT not set — add to .env (GitHub PAT with read:packages scope)}"
 
 if [ -n "$RESUME_CHECKPOINT" ] && [ ! -f "$RESUME_CHECKPOINT" ]; then
     echo "Error: resume checkpoint not found: $RESUME_CHECKPOINT"
@@ -107,8 +108,18 @@ SERVER_IP=$(hcloud server describe "$SERVER_NAME" -o json \
 echo "[cloud_train] Server IP: $SERVER_IP"
 
 echo "[cloud_train] Waiting for SSH..."
-until ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
-    "root@$SERVER_IP" echo ok 2>/dev/null || false; do sleep 5; done
+_ssh_attempts=0
+until ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 "root@$SERVER_IP" echo ok 2>/dev/null; do
+    sleep 5
+    (( _ssh_attempts++ ))
+    [[ $_ssh_attempts -ge 24 ]] && { echo "[cloud_train] SSH timeout after 2 min — destroying server"; exit 1; }
+done
+
+echo "[cloud_train] Installing Docker..."
+ssh "root@$SERVER_IP" "curl -fsSL https://get.docker.com | sh"
+
+echo "[cloud_train] Logging in to GHCR..."
+ssh "root@$SERVER_IP" "echo '$GHCR_PAT' | docker login ghcr.io -u zfdupont --password-stdin"
 
 # ── Sync source ───────────────────────────────────────────────────────────────
 echo "[cloud_train] Syncing repo source..."
