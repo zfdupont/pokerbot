@@ -111,12 +111,14 @@ def test_main_runs_without_checkpoints(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 # Integration smoke test: real blueprint + PotOddsAgent substitutes, 50 hands
 # ---------------------------------------------------------------------------
-def test_smoke_50_hands(blueprint_6max_ckpt):
+def test_smoke_50_hands(blueprint_6max_ckpt, blueprint_hu_ckpt):
     """50-hand mixed-table smoke: chip conservation + finite BB/100.
 
-    NeuralAgent and CFRAgent are skipped (no .pt/.pkl fixtures available);
-    PotOddsAgent fills seats 1-5. SixmaxAgent uses blueprint_6max_ckpt for
-    the correct 6-player training frame.
+    Seat 0 runs SixmaxAgent(blueprint_6max_ckpt) with the 6-player training
+    frame; seats 1-5 are PotOddsAgent() substitutes (NeuralAgent and CFRAgent
+    require .pt/.pkl fixtures not available here). blueprint_hu_ckpt is
+    accepted as a parameter to exercise the session-scoped 2-player fixture
+    loading path; the body does not use it directly.
     """
     import random as _random
     from scripts.eval_mixed_table import MixedTableObserver, SEAT_LABELS, _BB, _SB, _STACK
@@ -158,11 +160,14 @@ def test_smoke_50_hands(blueprint_6max_ckpt):
         assert math.isfinite(bb100), f"seat {seat} BB/100 is not finite"
         assert ci >= 0.0
 
-    # Chip matrix is antisymmetric: M[i][j] = -M[j][i]
-    # Row sums for winners equal their total delta; for losers the chip matrix
-    # uses equal attribution across losers, so only antisymmetry is guaranteed.
+    # Winner-seat row-sum check: for each net-winner seat the chip_matrix row
+    # sum must equal that seat's total delta (the attribution algorithm assigns
+    # each winner's gain to matrix cells that sum to exactly that gain per hand).
     for seat in range(6):
-        row_sum = sum(obs.chip_matrix[seat])
-        col_sum = sum(obs.chip_matrix[j][seat] for j in range(6))
-        assert abs(row_sum + col_sum) < 1e-6, \
-            f"seat {seat} chip matrix not antisymmetric: row={row_sum:.4f}, col={col_sum:.4f}"
+        total_delta = sum(obs._deltas[seat])
+        if total_delta > 1e-9:
+            row_sum = sum(obs.chip_matrix[seat])
+            assert abs(row_sum - total_delta) < 1e-6, (
+                f"seat {seat} chip_matrix row sum {row_sum:.6f} != "
+                f"total delta {total_delta:.6f}"
+            )
