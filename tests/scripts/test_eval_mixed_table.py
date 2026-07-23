@@ -106,3 +106,63 @@ def test_main_runs_without_checkpoints(tmp_path, monkeypatch):
     assert result.returncode != 0
     assert "missing" in result.stderr.lower() or "not found" in result.stderr.lower() \
         or result.returncode == 1
+
+
+# ---------------------------------------------------------------------------
+# Integration smoke test: real blueprint + PotOddsAgent substitutes, 50 hands
+# ---------------------------------------------------------------------------
+def test_smoke_50_hands(blueprint_6max_ckpt):
+    """50-hand mixed-table smoke: chip conservation + finite BB/100.
+
+    NeuralAgent and CFRAgent are skipped (no .pt/.pkl fixtures available);
+    PotOddsAgent fills seats 1-5. SixmaxAgent uses blueprint_6max_ckpt for
+    the correct 6-player training frame.
+    """
+    import random as _random
+    from scripts.eval_mixed_table import MixedTableObserver, SEAT_LABELS, _BB, _SB, _STACK
+    from agents.sixmax_agent import SixmaxAgent
+    from agents.potodds_agent import PotOddsAgent
+    from models.player import Player
+    from game.poker import PokerGame
+
+    toml = os.path.join(_ROOT, "sixmax", "configs", "default.toml")
+
+    agents_under_test = [
+        SixmaxAgent(blueprint_6max_ckpt, config_toml=toml),
+        PotOddsAgent(),   # neural substitute
+        PotOddsAgent(),   # tabular substitute (CFRAgent needs real .pkl)
+        PotOddsAgent(),
+        PotOddsAgent(),
+        PotOddsAgent(),
+    ]
+    players = [Player(SEAT_LABELS[i], _STACK, agent=agents_under_test[i])
+               for i in range(6)]
+    obs = MixedTableObserver(SEAT_LABELS, bb=_BB)
+    game = PokerGame(players, small_blind=_SB, observers=[obs])
+
+    for i in range(50):
+        _random.seed(1 * 1_000_003 + i)
+        game.play_hand()
+
+    assert obs.hands_played == 50
+
+    # Chip conservation: sum of all per-hand deltas across all seats = 0
+    for hand_idx in range(50):
+        hand_total = sum(obs._deltas[seat][hand_idx] for seat in range(6))
+        assert abs(hand_total) < 1e-6, \
+            f"chips not conserved in hand {hand_idx}: total={hand_total}"
+
+    # All BB/100 finite and CI non-negative
+    for seat in range(6):
+        bb100, ci = obs.bb100_ci(seat)
+        assert math.isfinite(bb100), f"seat {seat} BB/100 is not finite"
+        assert ci >= 0.0
+
+    # Chip matrix is antisymmetric: M[i][j] = -M[j][i]
+    # Row sums for winners equal their total delta; for losers the chip matrix
+    # uses equal attribution across losers, so only antisymmetry is guaranteed.
+    for seat in range(6):
+        row_sum = sum(obs.chip_matrix[seat])
+        col_sum = sum(obs.chip_matrix[j][seat] for j in range(6))
+        assert abs(row_sum + col_sum) < 1e-6, \
+            f"seat {seat} chip matrix not antisymmetric: row={row_sum:.4f}, col={col_sum:.4f}"
