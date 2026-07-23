@@ -1,6 +1,9 @@
 """Blueprint preflop range chart: infoset indexing, position mapping, rendering."""
+import glob
 import importlib.util
 import os
+
+import pytest
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -39,3 +42,29 @@ def test_sample_card_ids_suit_convention():
     # i>j lower-left = offsuit -> different suits
     c1, c2 = m.sample_card_ids(1, 0)          # AKo
     assert c1 % 4 != c2 % 4
+
+
+_CKPTS = sorted(glob.glob(os.path.join(_ROOT, "sixmax", "checkpoints", "blueprint_0*.bin")))
+
+
+@pytest.mark.skipif(not _CKPTS, reason="no blueprint snapshot available")
+def test_position_mapping_discriminates():
+    m = _load_script()
+    sixmax = m._sixmax()
+    ckpt = _CKPTS[-1]
+    _iters, records = sixmax.dump_infosets(ckpt)
+    vocab = m.load_vocab_for(ckpt)
+    roles = m.resolve_action_roles(vocab)
+    idx = m.build_index(records)
+
+    def aggr(i, j, pos):
+        p = m.cell_probs(idx, pos, i, j)
+        return sum(p[k] for k in roles["aggressive"]) if p else None
+
+    # Premiums beat trash at each mapped cell. 72o is offsuit (i>j): 7=index7, 2=index12
+    # -> (i=12, j=7). AA=(0,0), AKs=(0,1) suited.
+    for pos in ("BTN", "SB"):
+        assert aggr(0, 0, pos) > aggr(12, 7, pos)   # AA > 72o
+        assert aggr(0, 1, pos) > aggr(12, 7, pos)   # AKs > 72o
+    # SB (1,1) opens strictly wider than BTN (2,2): the property that catches a mis-map.
+    assert m.role_width(idx, "SB", roles) > m.role_width(idx, "BTN", roles)

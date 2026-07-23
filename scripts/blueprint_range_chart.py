@@ -58,3 +58,16 @@ def cell_probs(index, pos_key, i, j):
     c1, c2 = sample_card_ids(i, j)
     card_id = sixmax.preflop_class([c1, c2])
     return index.get((live, after, card_id))
+
+
+def role_width(index, pos_key, roles):
+    """Mean aggressive-role mass over the 169 grid cells present for a position."""
+    total, agg = 0, 0.0
+    for i in range(13):
+        for j in range(13):
+            p = cell_probs(index, pos_key, i, j)
+            if p is None:
+                continue
+            total += 1
+            agg += sum(p[k] for k in roles["aggressive"])
+    return agg / total if total else float("nan")
