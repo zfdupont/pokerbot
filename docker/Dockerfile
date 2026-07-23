@@ -61,7 +61,7 @@ ENV SIXMAX_SO_PATH=/opt/sixmax.so
 
 # Install Python deps (system-wide — no venv needed in container)
 COPY pyproject.toml /tmp/pyproject.toml
-RUN uv pip install --system \
+RUN uv pip install --system --python python3.10 \
         "numpy>=1.26" \
         "tomli>=2.0" \
         "tqdm>=4.66"
