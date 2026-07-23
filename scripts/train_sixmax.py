@@ -48,7 +48,9 @@ def _build_and_get_so_dir(repo_root: str) -> str:
 def _force_load_sixmax(repo_root: str):
     """Load the .so and register it as sys.modules['sixmax'] (the repo-root
     sixmax/ directory is a namespace package that would win otherwise)."""
-    so_path = os.path.join(_build_and_get_so_dir(repo_root), "sixmax.so")
+    so_path = os.environ.get("SIXMAX_SO_PATH")
+    if not so_path:
+        so_path = os.path.join(_build_and_get_so_dir(repo_root), "sixmax.so")
     spec = importlib.util.spec_from_file_location("sixmax", so_path)
     mod = importlib.util.module_from_spec(spec)
     sys.modules["sixmax"] = mod
