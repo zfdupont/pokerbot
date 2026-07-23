@@ -206,6 +206,9 @@ def main() -> None:
     for i in range(args.hands):
         random.seed(args.seed * 1_000_003 + i)
         game.play_hand()
+        for p in players:          # rebuy to keep 6-handed table
+            if p.stack == 0:
+                p.stack = _STACK
 
     print(f"\nMixed-table eval — {args.hands} hands, seed {args.seed}\n")
     obs.report()
