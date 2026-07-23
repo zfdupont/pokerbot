@@ -13,7 +13,7 @@ PROFILE=false
 LOCAL=false
 IMAGE="ghcr.io/zfdupont/pokerbot-trainer:latest"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BENCH_CHECKPOINT="sixmax/checkpoints/bench_${TIMESTAMP}.bin"
+BENCH_CHECKPOINT="${REPO_ROOT}/sixmax/checkpoints/bench_${TIMESTAMP}.bin"
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
@@ -63,6 +63,7 @@ run_local() {
     echo "[cloud_benchmark] Running locally (no VPS)"
     cd "$REPO_ROOT"
 
+    START=$(date +%s)
     if $PROFILE; then
         echo "[cloud_benchmark] Profiling with sample (macOS)"
         uv run python scripts/train_sixmax.py \
@@ -70,21 +71,21 @@ run_local() {
             --checkpoint "$BENCH_CHECKPOINT" &
         TRAIN_PID=$!
         sleep 2
-        sample "$TRAIN_PID" 30 -f /tmp/pokerbot_sample_${TIMESTAMP}.txt 2>/dev/null || true
+        sample "$TRAIN_PID" 30 -f "${REPO_ROOT}/sixmax/checkpoints/sample_${TIMESTAMP}.txt" 2>/dev/null || true
         wait "$TRAIN_PID"
-        echo "[cloud_benchmark] Profile saved to /tmp/pokerbot_sample_${TIMESTAMP}.txt"
+        echo "[cloud_benchmark] Profile saved to ${REPO_ROOT}/sixmax/checkpoints/sample_${TIMESTAMP}.txt"
     else
-        START=$(date +%s)
         uv run python scripts/train_sixmax.py \
             --iterations "$ITERS" \
             --checkpoint "$BENCH_CHECKPOINT"
-        END=$(date +%s)
-        ELAPSED=$((END - START))
-        ITERS_PER_SEC=$((ITERS / ELAPSED))
-        echo ""
-        echo "Benchmark complete (local)"
-        print_cost_table "$ITERS_PER_SEC"
     fi
+    END=$(date +%s)
+    ELAPSED=$((END - START))
+    [[ $ELAPSED -eq 0 ]] && ELAPSED=1
+    ITERS_PER_SEC=$((ITERS / ELAPSED))
+    echo ""
+    echo "Benchmark complete (local)"
+    print_cost_table "$ITERS_PER_SEC"
 }
 
 # ── Remote mode ───────────────────────────────────────────────────────────────
@@ -104,7 +105,7 @@ run_remote() {
                 "${REPO_ROOT}/sixmax/checkpoints/" 2>/dev/null || true
             if $PROFILE; then
                 rsync -avz --ignore-errors \
-                    "root@${SERVER_IP}:/tmp/pokerbot/callgrind.out" \
+                    "root@${SERVER_IP}:/tmp/pokerbot/sixmax/checkpoints/callgrind_${TIMESTAMP}.out" \
                     "${REPO_ROOT}/sixmax/checkpoints/callgrind_${TIMESTAMP}.out" 2>/dev/null || true
             fi
             echo "[cloud_benchmark] Destroying $SERVER_NAME..."
@@ -127,7 +128,7 @@ run_remote() {
 
     echo "[cloud_benchmark] Waiting for SSH..."
     until ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
-        "root@$SERVER_IP" echo ok 2>/dev/null; do sleep 5; done
+        "root@$SERVER_IP" echo ok 2>/dev/null || false; do sleep 5; done
 
     echo "[cloud_benchmark] Syncing repo source..."
     rsync -avz --exclude='third_party/' --exclude='buck-out/' \
@@ -139,36 +140,41 @@ run_remote() {
     echo "[cloud_benchmark] Pulling Docker image..."
     ssh "root@$SERVER_IP" "docker pull $IMAGE"
 
-    DOCKER_CMD="docker run --rm \
-        -v /tmp/pokerbot/sixmax/configs:/pokerbot/sixmax/configs:ro \
+    # -v broad ro mount FIRST, then write mount for checkpoints overrides it
+    DOCKER_BASE="docker run --rm \
+        -v /tmp/pokerbot/sixmax:/pokerbot/sixmax:ro \
         -v /tmp/pokerbot/sixmax/checkpoints:/pokerbot/sixmax/checkpoints \
         -v /tmp/pokerbot/scripts:/pokerbot/scripts:ro \
-        -v /tmp/pokerbot/sixmax:/pokerbot/sixmax:ro \
         -v /tmp/pokerbot/agents:/pokerbot/agents:ro \
         -e SIXMAX_SO_PATH=/opt/sixmax.so \
         --name pokerbot-bench \
-        $IMAGE \
-        python3.10 /pokerbot/scripts/train_sixmax.py \
-            --iterations $ITERS \
-            --checkpoint /pokerbot/sixmax/checkpoints/bench_${TIMESTAMP}.bin"
+        $IMAGE"
 
+    TRAIN_CMD="python3.10 /pokerbot/scripts/train_sixmax.py \
+        --iterations $ITERS \
+        --checkpoint /pokerbot/sixmax/checkpoints/bench_${TIMESTAMP}.bin"
+
+    START_REMOTE=$(date +%s)
     if $PROFILE; then
-        echo "[cloud_benchmark] Running with callgrind profiling (this will be slow)..."
-        ssh "root@$SERVER_IP" "apt-get install -y valgrind -qq && \
-            valgrind --tool=callgrind --callgrind-out-file=/tmp/pokerbot/callgrind.out \
-            $DOCKER_CMD"
+        echo "[cloud_benchmark] Installing valgrind on VM..."
+        ssh "root@$SERVER_IP" "apt-get install -y valgrind -qq"
+        echo "[cloud_benchmark] Running with callgrind profiling inside container (this will be slow)..."
+        ssh "root@$SERVER_IP" "$DOCKER_BASE \
+            valgrind --tool=callgrind \
+            --callgrind-out-file=/pokerbot/sixmax/checkpoints/callgrind_${TIMESTAMP}.out \
+            $TRAIN_CMD"
     else
         echo "[cloud_benchmark] Running timed benchmark..."
-        START_REMOTE=$(date +%s)
-        ssh "root@$SERVER_IP" "$DOCKER_CMD"
-        END_REMOTE=$(date +%s)
-        ELAPSED=$((END_REMOTE - START_REMOTE))
-        ITERS_PER_SEC=$((ITERS / ELAPSED))
-
-        echo ""
-        echo "Benchmark complete"
-        print_cost_table "$ITERS_PER_SEC"
+        ssh "root@$SERVER_IP" "$DOCKER_BASE $TRAIN_CMD"
     fi
+    END_REMOTE=$(date +%s)
+    ELAPSED=$((END_REMOTE - START_REMOTE))
+    [[ $ELAPSED -eq 0 ]] && ELAPSED=1
+    ITERS_PER_SEC=$((ITERS / ELAPSED))
+
+    echo ""
+    echo "Benchmark complete"
+    print_cost_table "$ITERS_PER_SEC"
 }
 
 # ── Entry point ───────────────────────────────────────────────────────────────
