@@ -38,16 +38,25 @@ The blueprint stores **abstract** infosets keyed by
 Position is reconstructed from the abstraction geometry:
 
 - Preflop = `street == 0`; unopened pot = all `raises == 0`.
-- In an unopened pot, `(live, after)` encodes strategic position: `live` = players not
-  yet folded (incl. hero), `after` = players still to act behind hero.
+- In an unopened pot, `(live, after)` encodes strategic position: `live` = **live
+  opponents** (players not folded, *excluding hero*), `after` = players still to act
+  behind hero. This is the `(live_opps, after)` table-size-invariant encoding pinned by
+  `tests/sixmax/test_abstract_key.py` (a 6-handed and 5-handed spot with the same
+  geometry are literally the same infoset).
 - `dump_infosets()` confirms each unopened-preflop `(live, after)` cell holds a full
   169-hand grid, and `preflop_class([c1,c2])` maps concrete hole cards to the card id at
   **full 169-hand resolution** (no bucket collapse preflop).
 
-Empirical validation at `(live=3, after=2)` on the 1.5M snapshot: AA raises 0.82, AKs
-0.78, 72o/K2o fold to 0.00 — shape is poker-sane. Mean raise-mass ≈ 0.13 (~13% width),
-i.e. the current undertrained blueprint opens far tighter than a pro's ~45% button. That
-tightness is a *feature to surface*, not a bug in the tool.
+Empirical validation on the 1.5M snapshot (seat order UTG,HJ,CO,BTN,SB,BB):
+- **BTN open** = `(live=2, after=2)` → width 34.6%; AA .84, AKs .91, JTs .52, 54s .77,
+  72o .00 — a real button range.
+- **SB open** = `(live=1, after=1)` → width 53.0%; wide and aggressive, correct for the
+  strategically-heads-up SB-vs-BB spot (same infoset as the HU SB the abstract-key test
+  pins).
+
+Shape is poker-sane and the two widths discriminate by position. vs a human pro the bot's
+button (~35%) is a touch tight (pros ~45%) but reasonable; SB (~53%) is squarely human.
+Surfacing that gap is the point of the tool.
 
 ## Data flow
 
@@ -71,20 +80,22 @@ Reuses, by import (no duplication, no new bridge — stays a `scripts/` tool):
 
 ```
 POSITIONS = {
-    "BTN": (live=3, after=2),   # folded to button: BTN, SB, BB live; SB, BB behind
-    "SB":  (live=2, after=1),   # folded to SB: SB, BB live; BB behind
+    "BTN": (live=2, after=2),   # folded to button: SB, BB live opponents behind
+    "SB":  (live=1, after=1),   # folded to SB: BB the lone live opponent behind
 }
 ```
 
-Risk: `(3,2)` and `(4,3)` read similarly (~0.13 width), so the mapping is not
-self-evident. A pytest asserts the chosen cells *behave like their labels* rather than
-trusting the guess:
-- premiums (AA, KK, AKs) aggressive-mass strictly greater than trash (72o, K2o) at each
-  mapped cell;
-- both mapped cells exist (169 hands present).
+`live` = live *opponents* (hero excluded), per the `(live_opps, after)` encoding.
+Derivation (num_players=6, seat order UTG,HJ,CO,BTN,SB,BB): BTN open = 3 prior folds →
+2 live opponents (SB,BB), 2 to act after → `(2,2)`; SB open = 4 prior folds → 1 live
+opponent (BB), 1 to act after → `(1,1)`.
 
-If the assertion fails, re-derive the mapping from the engine's actual deal/act order
-before proceeding.
+Because raise-shape alone can't distinguish positions (every unopened spot raises
+premiums), a pytest asserts the *widths discriminate as expected*:
+- both mapped cells hold all 169 hands;
+- premiums (AA, AKs) aggressive-mass > trash (72o) at each cell;
+- SB `(1,1)` width strictly greater than BTN `(2,2)` width (SB-vs-BB opens wider than the
+  3-handed button) — the property that would have caught the original mis-mapping.
 
 ## Rendering
 
