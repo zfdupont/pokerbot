@@ -47,7 +47,7 @@ sixmax/src/dream/
 
 **CHIP_NORM=100.0** — equals the standard buy-in (full stack = 1.0). Stack sizes up to 1000 BB encode as ≤10.0, well within ReLU range.
 
-**RAISE_NORM=5.0, clipped at 5** — replaces the engine's hard cap of 3. The cap was a tabular tree-pruning heuristic; the neural tree is bounded naturally by all-in. Sequences longer than 5 raises are essentially never rational (players jam), so clipping is cosmetic in practice.
+**RAISE_NORM=5.0, clipped at 5** — replaces the engine's hard cap of 3. The cap was a tabular tree-pruning heuristic; the neural tree is bounded naturally by all-in. Sequences longer than 5 raises are essentially never rational (players jam), so clipping is cosmetic in practice. **Prerequisite engine change:** remove the cap from `EngineGameState::raises_` in `src/engine/engine.cpp` (currently `// per-street raise count, capped 3`); the array continues to track raise counts but no longer truncates at 3.
 
 **6-seat block (dims 124–141)** — raw per-seat stacks and bets rather than a single effective-stack scalar. The net learns effective stack, SPR, and side-pot dynamics implicitly from the joint distribution. Absent seats zero-pad cleanly.
 
@@ -158,7 +158,7 @@ private:
 };
 ```
 
-Exposed to Python via `bindings.cpp` identically to `BlueprintStrategy`. `SixmaxDeployStrategy`, `SixmaxAgent`, and `openpoker_bot.py` need no changes — they call `get_probs()` on whatever strategy object they hold. The `.pt` extension (vs `.bin` for tabular) is the existing auto-detect signal in `openpoker_bot.py`.
+Exposed to Python via `bindings.cpp` identically to `BlueprintStrategy`. `SixmaxDeployStrategy` and `SixmaxAgent` need no changes — they call `get_probs()` on whatever strategy object they hold. **`openpoker_bot.py` requires one update:** it currently uses `.pt` as the signal for `neural_cfr/` checkpoints. DREAM checkpoints are also libtorch archives; distinguish them by naming convention (`dream_*.pt`) and update the auto-detect branch to inspect the filename prefix rather than extension alone.
 
 ## Scripts
 
