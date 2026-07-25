@@ -23,6 +23,16 @@ public:
         return (uint64_t)card * 4 + (uint64_t)history_code;
     }
 
+    // Accessors for Python bindings and test utilities.
+    int card(int player) const { return cards_[player]; }
+    // History code: 0=empty 1=check 2=bet 3=check+bet (matches key_for convention)
+    int history_code() const {
+        if (history_.empty()) return 0;
+        if (history_.size() == 1) return history_[0] == 0 ? 1 : 2;
+        return 3;  // check then bet
+    }
+    int acting_player() const { return (int)history_.size() % 2; }
+
 private:
     int cards_[2];
     std::vector<int> history_;

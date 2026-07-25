@@ -76,7 +76,13 @@ PYBIND11_MODULE(sixmax, m) {
         .def("num_players", &sixmax::Game::num_players)
         .def("num_actions", &sixmax::Game::num_actions);
     py::class_<sixmax::KuhnState, sixmax::GameState>(m, "KuhnState")
-        .def(py::init<int, int>(), py::arg("card0"), py::arg("card1"));
+        .def(py::init<int, int>(), py::arg("card0"), py::arg("card1"))
+        .def("card", &sixmax::KuhnState::card, py::arg("player"),
+             "Return the card held by the given player (0=J, 1=Q, 2=K).")
+        .def("history_code", &sixmax::KuhnState::history_code,
+             "History code: 0=empty, 1=check, 2=bet, 3=check+bet.")
+        .def("acting_player", &sixmax::KuhnState::acting_player,
+             "Index of the player whose turn it is (0 or 1).");
     py::class_<sixmax::KuhnGame, sixmax::Game>(m, "KuhnGame")
         .def(py::init<>());
     m.def("kuhn_infoset_key", &sixmax::KuhnState::key_for,
