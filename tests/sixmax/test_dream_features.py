@@ -105,3 +105,56 @@ def test_get_probs_all_finite(default_vocab):
     probs = ds.get_probs(state)
     for p in probs:
         assert math.isfinite(p), f"non-finite probability: {p}"
+
+
+# ---------------------------------------------------------------------------
+# Direct encode_state_vec structural tests
+# ---------------------------------------------------------------------------
+
+def test_encode_state_vec_length(default_vocab):
+    """encode_state_vec returns exactly FEATURE_DIM floats."""
+    state = _make_preflop_state(default_vocab)
+    vec = sixmax.encode_state_vec(state)
+    assert len(vec) == sixmax.FEATURE_DIM
+
+
+def test_encode_state_vec_all_finite(default_vocab):
+    """encode_state_vec contains no NaN or Inf values."""
+    state = _make_preflop_state(default_vocab)
+    vec = sixmax.encode_state_vec(state)
+    for i, v in enumerate(vec):
+        assert math.isfinite(v), f"non-finite value at index {i}: {v}"
+
+
+def test_encode_state_vec_hole_cards_sum(default_vocab):
+    """Hole card dims 0-33: one-hot rank (13 bits) + one-hot suit (4 bits) per card
+    = 17 bits * 2 cards. Each card contributes exactly 1 rank bit + 1 suit bit,
+    so dims 0-16 sum to 2.0 (card 0) and dims 17-33 sum to 2.0 (card 1)."""
+    state = _make_preflop_state(default_vocab)
+    vec = sixmax.encode_state_vec(state)
+    # Dims 0-16: rank(13) + suit(4) for hole card 0
+    card0_sum = sum(vec[0:17])
+    assert math.isclose(card0_sum, 2.0, abs_tol=1e-5), \
+        f"hole card 0 dims 0-16 sum to {card0_sum}, expected 2.0"
+    # Dims 17-33: rank(13) + suit(4) for hole card 1
+    card1_sum = sum(vec[17:34])
+    assert math.isclose(card1_sum, 2.0, abs_tol=1e-5), \
+        f"hole card 1 dims 17-33 sum to {card1_sum}, expected 2.0"
+
+
+def test_encode_state_vec_street_one_hot(default_vocab):
+    """Street one-hot dims 119-122 sum to 1.0."""
+    state = _make_preflop_state(default_vocab)
+    vec = sixmax.encode_state_vec(state)
+    street_sum = sum(vec[119:123])
+    assert math.isclose(street_sum, 1.0, abs_tol=1e-5), \
+        f"street one-hot dims 119-122 sum to {street_sum}, expected 1.0"
+
+
+def test_encode_state_vec_acting_player_one_hot(default_vocab):
+    """Acting player one-hot dims 142-147 sum to 1.0."""
+    state = _make_preflop_state(default_vocab)
+    vec = sixmax.encode_state_vec(state)
+    player_sum = sum(vec[142:148])
+    assert math.isclose(player_sum, 1.0, abs_tol=1e-5), \
+        f"acting player one-hot dims 142-147 sum to {player_sum}, expected 1.0"

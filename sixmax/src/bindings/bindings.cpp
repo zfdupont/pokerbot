@@ -378,7 +378,6 @@ PYBIND11_MODULE(sixmax, m) {
         .def(py::init<int, int, int, int>(),
              py::arg("input_dim"), py::arg("hidden_size"),
              py::arg("n_layers"), py::arg("output_dim"))
-        .def("__call__", &PyDreamMLP::forward)
         .def("forward_vec", &PyDreamMLP::forward_vec,
              py::arg("flat_input"), py::arg("batch_size"),
              "Run forward pass via Python lists. flat_input is a flat float list of "
@@ -424,11 +423,9 @@ PYBIND11_MODULE(sixmax, m) {
     py::class_<PyWeightedReservoir>(m, "WeightedReservoir")
         .def(py::init<size_t, uint64_t>(),
              py::arg("capacity"), py::arg("seed") = 42)
-        .def("add", &PyWeightedReservoir::add)
         .def("add_vec", &PyWeightedReservoir::add_vec,
              py::arg("feat"), py::arg("target"), py::arg("weight"),
              "Add a sample via Python float lists instead of torch.Tensor.")
-        .def("sample_batch", &PyWeightedReservoir::sample_batch)
         .def("sample_batch_vec", &PyWeightedReservoir::sample_batch_vec,
              py::arg("n"),
              "Sample n items; returns (feat_flat, tgt_flat, weights) as Python lists.")
@@ -502,6 +499,17 @@ PYBIND11_MODULE(sixmax, m) {
         },
         py::arg("path"), py::arg("adv_net"), py::arg("strat_net"),
         py::arg("iterations"), py::arg("vocab_hash"));
+
+    // encode_state_vec: Python-callable overload avoiding at::Tensor ABI mismatch
+    m.def("encode_state_vec", [](const sixmax::EngineGameState& state) {
+        auto t = sixmax::encode_state(state);
+        auto a = t.accessor<float, 1>();
+        std::vector<float> out(sixmax::FEATURE_DIM);
+        for (int i = 0; i < sixmax::FEATURE_DIM; ++i) out[i] = a[i];
+        return out;
+    }, py::arg("state"),
+       "Encode game state to a flat float vector of length FEATURE_DIM. "
+       "Use instead of encode_state() to avoid the Python<->C++ torch ABI mismatch.");
 
     // Constants
     m.attr("FEATURE_DIM") = sixmax::FEATURE_DIM;
