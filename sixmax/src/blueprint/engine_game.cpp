@@ -87,7 +87,7 @@ void EngineGameState::apply(int action) {
         case ActionType::Bet:
         case ActionType::AllIn: {
             int st = (int)hand_.street();
-            if (raises_[st] < 3) ++raises_[st];  // capped per-street count
+            ++raises_[st];
             double target = vocab_->target_bb(action, bet_context());
             hand_.apply({EngineActionType::RaiseTo, target});
             break;
@@ -115,7 +115,10 @@ uint64_t EngineGameState::abstract_key(const Abstraction& abs) const {
         ++live;
         if (!hand_.player(s).all_in && order(s) > order(p)) ++after;
     }
-    uint64_t key = pack_abstract_key((int)card, street, raises_,
+    std::array<uint8_t, 4> capped_raises;
+    for (int i = 0; i < 4; ++i)
+        capped_raises[i] = std::min(raises_[i], uint8_t(3));
+    uint64_t key = pack_abstract_key((int)card, street, capped_raises,
                                      hand_.pot(), live, after);
     return key;
 }

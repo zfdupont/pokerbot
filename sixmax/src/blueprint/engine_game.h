@@ -34,6 +34,16 @@ public:
     uint64_t abstract_key(const Abstraction& abs) const;
     BetContext bet_context() const;  // exposed for tests and Phase 2 search
 
+    // Accessors for neural feature encoding
+    std::array<int, 2> hole_cards(int p) const { return hand_.hole_cards(p); }
+    std::vector<int>   board()           const { return hand_.board(); }
+    const PlayerState& player_state(int p) const { return hand_.player(p); }
+    int  num_players() const { return hand_.num_players(); }
+    Street street()    const { return hand_.street(); }
+    double pot()       const { return hand_.pot(); }
+    double to_call()   const { return hand_.to_call(); }
+    std::array<uint8_t, 4> raises_per_street() const { return raises_; }
+
 private:
     bool size_class_ok(const AbstractAction& a) const;
     HandState hand_;
