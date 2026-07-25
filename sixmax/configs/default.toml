@@ -33,3 +33,24 @@ checkpoint = "sixmax/checkpoints/blueprint.bin"
 seed = 7
 selection_enabled = false
 selection_hands = 2000
+
+[train.dream]
+hidden_size    = 256
+hidden_layers  = 3
+lr             = 1e-3
+batch_size     = 4096
+reservoir_size = 2_000_000
+train_interval = 10_000
+sgd_steps      = 2_000
+epsilon        = 0.06
+num_threads    = 0        # 0 = hardware_concurrency
+seed           = 42
+stack_min      = 20.0
+stack_max      = 250.0
+stack_log_mean = 4.605    # ln(100)
+stack_log_std  = 0.5
+players_min    = 2
+players_max    = 6
+device         = "cpu"    # "mps" for MacBook, "cuda" for cloud
+checkpoint_interval = 0   # 0 = save at end only
+checkpoint     = "sixmax/checkpoints/dream.pt"

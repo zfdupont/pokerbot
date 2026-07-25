@@ -31,7 +31,7 @@ public:
 
 private:
     DreamStrategy() = default;
-    DreamMLP strat_net_{nullptr};
+    mutable DreamMLP strat_net_{nullptr};
     torch::Device device_{torch::kCPU};
     uint64_t iterations_ = 0;
     int n_actions_ = 0;

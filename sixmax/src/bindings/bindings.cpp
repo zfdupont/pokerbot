@@ -2,6 +2,7 @@
 #include <pybind11/stl.h>
 #include <fstream>
 #include <cmath>
+#include <random>
 #include "game/safe_eval.h"
 #include "vocab/vocab.h"
 #include "blueprint/game.h"
@@ -13,6 +14,11 @@
 #include "abstraction/abstraction.h"
 #include "abstraction/abstract_key.h"
 #include "blueprint/checkpoint.h"
+#include "dream/features.h"
+#include "dream/nets.h"
+#include "dream/reservoir.h"
+#include "dream/trainer.h"
+#include "dream/checkpoint.h"
 
 namespace py = pybind11;
 
@@ -346,4 +352,107 @@ PYBIND11_MODULE(sixmax, m) {
         .def("num_players", &sixmax::BlueprintStrategy::num_players)
         .def("abstraction", &sixmax::BlueprintStrategy::abstraction,
              py::return_value_policy::reference_internal);
+
+    // --- Dream neural CFR (Task 7) ---
+
+    // DreamMLP: thin wrapper around the TORCH_MODULE holder
+    struct PyDreamMLP {
+        sixmax::DreamMLP net;
+        PyDreamMLP(int in, int h, int n, int out) : net(in, h, n, out) {}
+        torch::Tensor forward(torch::Tensor x) { return net->forward(x); }
+    };
+    py::class_<PyDreamMLP>(m, "DreamMLP")
+        .def(py::init<int, int, int, int>(),
+             py::arg("input_dim"), py::arg("hidden_size"),
+             py::arg("n_layers"), py::arg("output_dim"))
+        .def("__call__", &PyDreamMLP::forward);
+
+    // WeightedReservoir: wrapper with internal rng
+    struct PyWeightedReservoir {
+        sixmax::WeightedReservoir r;
+        std::mt19937_64 rng;
+        PyWeightedReservoir(size_t cap, uint64_t seed = 42) : r(cap), rng(seed) {}
+        void add(torch::Tensor f, torch::Tensor t, float w) { r.add(f, t, w, rng); }
+        auto sample_batch(size_t n) { return r.sample_batch(n, rng); }
+        size_t size() const { return r.size(); }
+        void clear() { r.clear(); }
+    };
+    py::class_<PyWeightedReservoir>(m, "WeightedReservoir")
+        .def(py::init<size_t, uint64_t>(),
+             py::arg("capacity"), py::arg("seed") = 42)
+        .def("add", &PyWeightedReservoir::add)
+        .def("sample_batch", &PyWeightedReservoir::sample_batch)
+        .def("size", &PyWeightedReservoir::size)
+        .def("clear", &PyWeightedReservoir::clear);
+
+    // DreamConfig
+    py::class_<sixmax::DreamConfig>(m, "DreamConfig")
+        .def(py::init<>())
+        .def_readwrite("hidden_size", &sixmax::DreamConfig::hidden_size)
+        .def_readwrite("hidden_layers", &sixmax::DreamConfig::hidden_layers)
+        .def_readwrite("lr", &sixmax::DreamConfig::lr)
+        .def_readwrite("batch_size", &sixmax::DreamConfig::batch_size)
+        .def_readwrite("reservoir_size", &sixmax::DreamConfig::reservoir_size)
+        .def_readwrite("train_interval", &sixmax::DreamConfig::train_interval)
+        .def_readwrite("sgd_steps", &sixmax::DreamConfig::sgd_steps)
+        .def_readwrite("epsilon", &sixmax::DreamConfig::epsilon)
+        .def_readwrite("num_threads", &sixmax::DreamConfig::num_threads)
+        .def_readwrite("seed", &sixmax::DreamConfig::seed)
+        .def_readwrite("stack_min", &sixmax::DreamConfig::stack_min)
+        .def_readwrite("stack_max", &sixmax::DreamConfig::stack_max)
+        .def_readwrite("players_min", &sixmax::DreamConfig::players_min)
+        .def_readwrite("players_max", &sixmax::DreamConfig::players_max);
+
+    // DreamTrainer
+    py::class_<sixmax::DreamTrainer>(m, "DreamTrainer")
+        .def(py::init([](int n_actions, const sixmax::ActionVocab* vocab,
+                         const sixmax::Abstraction* abstraction,
+                         sixmax::DreamConfig cfg,
+                         const std::string& device_str) {
+            return std::make_unique<sixmax::DreamTrainer>(
+                n_actions, vocab, abstraction, cfg,
+                torch::Device(device_str));
+        }),
+        py::arg("n_actions"), py::arg("vocab"), py::arg("abstraction"),
+        py::arg("cfg"), py::arg("device") = "cpu",
+        py::keep_alive<1, 3>(),   // trainer holds ActionVocab*
+        py::keep_alive<1, 4>())   // trainer holds Abstraction*
+        .def("train", &sixmax::DreamTrainer::train, py::arg("iterations"),
+             py::call_guard<py::gil_scoped_release>())
+        .def("total_iterations", &sixmax::DreamTrainer::total_iterations)
+        .def("save", [](const sixmax::DreamTrainer& t, const std::string& path,
+                        uint64_t vocab_hash) {
+            sixmax::save_dream_checkpoint(path, t.adv_net(), t.strat_net(),
+                                          t.total_iterations(), vocab_hash);
+        }, py::arg("path"), py::arg("vocab_hash"));
+
+    // DreamStrategy
+    py::class_<sixmax::DreamStrategy>(m, "DreamStrategy")
+        .def_static("load",
+            [](const std::string& path, const std::string& device_str,
+               const sixmax::ActionVocab& vocab) {
+                auto device = torch::Device(device_str);
+                return sixmax::DreamStrategy::load(path, device, vocab);
+            },
+            py::arg("path"), py::arg("device") = "cpu", py::arg("vocab"))
+        .def("get_probs",
+            [](const sixmax::DreamStrategy& s, const sixmax::EngineGameState& state) {
+                return s.get_probs(state);
+            })
+        .def_property_readonly("iterations", &sixmax::DreamStrategy::iterations);
+
+    // Module-level save function
+    m.def("save_dream_checkpoint",
+        [](const std::string& path, PyDreamMLP& adv, PyDreamMLP& strat,
+           uint64_t iterations, uint64_t vocab_hash) {
+            sixmax::save_dream_checkpoint(path, adv.net, strat.net,
+                                          iterations, vocab_hash);
+        },
+        py::arg("path"), py::arg("adv_net"), py::arg("strat_net"),
+        py::arg("iterations"), py::arg("vocab_hash"));
+
+    // Constants
+    m.attr("FEATURE_DIM") = sixmax::FEATURE_DIM;
+    m.attr("CHIP_NORM")   = sixmax::CHIP_NORM;
+    m.attr("RAISE_NORM")  = sixmax::RAISE_NORM;
 }

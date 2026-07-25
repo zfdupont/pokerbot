@@ -1,17 +1,44 @@
 _python_include = read_config("python", "include_path", "")
 _cpu_tune = read_config("build", "cpu_tune", "native")
 
+# Core: all implementation including dream/, no pybind11
+cxx_library(
+    name = "core",
+    srcs = [
+        "src/vocab/vocab.cpp",
+        "src/blueprint/kuhn.cpp",
+        "src/blueprint/mccfr.cpp",
+        "src/blueprint/trainer.cpp",
+        "src/engine/engine.cpp",
+        "src/blueprint/engine_game.cpp",
+        "src/abstraction/abstraction.cpp",
+        "src/abstraction/abstract_key.cpp",
+        "src/blueprint/checkpoint.cpp",
+        "src/dream/features.cpp",
+        "src/dream/nets.cpp",
+        "src/dream/reservoir.cpp",
+        "src/dream/trainer.cpp",
+        "src/dream/checkpoint.cpp",
+    ],
+    headers = glob(["src/**/*.h"]),
+    header_namespace = "",
+    compiler_flags = ["-std=c++17", "-O3", "-mcpu=" + _cpu_tune, "-DNDEBUG"],
+    exported_preprocessor_flags = ["-Isixmax/src"],
+    deps = ["//common:evaluator", "//third_party:libtorch"],
+    exported_deps = ["//common:evaluator"],
+    preferred_linkage = "static",
+    visibility = ["PUBLIC"],
+)
+
+# Python extension: bindings only
 cxx_library(
     name = "sixmax",
-    srcs = ["src/bindings/bindings.cpp", "src/vocab/vocab.cpp",
-            "src/blueprint/kuhn.cpp", "src/blueprint/mccfr.cpp", "src/blueprint/trainer.cpp",
-            "src/engine/engine.cpp", "src/blueprint/engine_game.cpp", "src/abstraction/abstraction.cpp", "src/abstraction/abstract_key.cpp", "src/blueprint/checkpoint.cpp"],
-    headers = glob(["src/**/*.h"]),
+    srcs = ["src/bindings/bindings.cpp"],
+    headers = [],
     header_namespace = "",
     compiler_flags = ["-std=c++17", "-O3", "-mcpu=" + _cpu_tune, "-DNDEBUG"] +
                      (["-I" + _python_include] if _python_include else []),
-    deps = ["//common:evaluator", "//third_party:pybind11"],
-    exported_preprocessor_flags = ["-Isixmax/src"],
+    deps = [":core", "//third_party:pybind11", "//third_party:libtorch"],
     preferred_linkage = "shared",
     soname = "sixmax.so",
     linker_flags = ["-undefined", "dynamic_lookup"] if host_info().os.is_macos else [],
