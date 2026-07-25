@@ -401,7 +401,9 @@ PYBIND11_MODULE(sixmax, m) {
         .def_readwrite("stack_min", &sixmax::DreamConfig::stack_min)
         .def_readwrite("stack_max", &sixmax::DreamConfig::stack_max)
         .def_readwrite("players_min", &sixmax::DreamConfig::players_min)
-        .def_readwrite("players_max", &sixmax::DreamConfig::players_max);
+        .def_readwrite("players_max", &sixmax::DreamConfig::players_max)
+        .def_readwrite("stack_log_mean", &sixmax::DreamConfig::stack_log_mean)
+        .def_readwrite("stack_log_std",  &sixmax::DreamConfig::stack_log_std);
 
     // DreamTrainer
     py::class_<sixmax::DreamTrainer>(m, "DreamTrainer")
@@ -415,8 +417,8 @@ PYBIND11_MODULE(sixmax, m) {
         }),
         py::arg("n_actions"), py::arg("vocab"), py::arg("abstraction"),
         py::arg("cfg"), py::arg("device") = "cpu",
-        py::keep_alive<1, 3>(),   // trainer holds ActionVocab*
-        py::keep_alive<1, 4>())   // trainer holds Abstraction*
+        py::keep_alive<0, 3>(),   // trainer holds ActionVocab*
+        py::keep_alive<0, 4>())   // trainer holds Abstraction*
         .def("train", &sixmax::DreamTrainer::train, py::arg("iterations"),
              py::call_guard<py::gil_scoped_release>())
         .def("total_iterations", &sixmax::DreamTrainer::total_iterations)
