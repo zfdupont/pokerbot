@@ -132,19 +132,13 @@ void DreamTrainer::retrain_adv() {
         target  = target.to(device_);
         weights = weights.to(device_);
 
+        std::lock_guard<std::mutex> lock(adv_net_mu_);   // hold for full update
         opt.zero_grad();
-        torch::Tensor pred;
-        {
-            std::lock_guard<std::mutex> lock(adv_net_mu_);
-            pred = adv_net_->forward(feat);
-        }
+        auto pred = adv_net_->forward(feat);
         // Weighted MSE over all action dimensions
         auto loss = ((pred - target).pow(2) * weights.unsqueeze(1)).mean();
         loss.backward();
-        {
-            std::lock_guard<std::mutex> lock(adv_net_mu_);
-            torch::nn::utils::clip_grad_norm_(adv_net_->parameters(), 1.0);
-        }
+        torch::nn::utils::clip_grad_norm_(adv_net_->parameters(), 1.0);
         opt.step();
     }
 }
@@ -161,19 +155,13 @@ void DreamTrainer::retrain_strat() {
         target  = target.to(device_);
         weights = weights.to(device_);
 
+        std::lock_guard<std::mutex> lock(strat_net_mu_);   // hold for full update
         opt.zero_grad();
-        torch::Tensor pred;
-        {
-            std::lock_guard<std::mutex> lock(strat_net_mu_);
-            pred = torch::log_softmax(strat_net_->forward(feat), /*dim=*/1);
-        }
+        auto pred = torch::log_softmax(strat_net_->forward(feat), /*dim=*/1);
         // Weighted cross-entropy: -Σ target * log(pred), per-sample weighted
         auto loss = -(target * pred * weights.unsqueeze(1)).mean();
         loss.backward();
-        {
-            std::lock_guard<std::mutex> lock(strat_net_mu_);
-            torch::nn::utils::clip_grad_norm_(strat_net_->parameters(), 1.0);
-        }
+        torch::nn::utils::clip_grad_norm_(strat_net_->parameters(), 1.0);
         opt.step();
     }
 }
