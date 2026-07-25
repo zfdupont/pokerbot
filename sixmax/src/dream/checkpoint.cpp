@@ -44,6 +44,11 @@ DreamStrategy DreamStrategy::load(const std::string& path,
     torch::serialize::InputArchive meta;
     root.read("meta", meta);
 
+    torch::Tensor magic_t;
+    meta.read("magic", magic_t);
+    if ((uint32_t)magic_t.item<int64_t>() != kMagic)
+        throw std::runtime_error("DreamStrategy::load: not a SIXDM001 checkpoint");
+
     torch::Tensor vh_t;
     meta.read("vocab_hash", vh_t);
     uint64_t saved_hash = (uint64_t)vh_t.item<int64_t>();
