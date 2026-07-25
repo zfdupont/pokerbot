@@ -52,3 +52,27 @@ _spec = _ilu.spec_from_file_location("sixmax", _so_path)
 _mod = _ilu.module_from_spec(_spec)
 sys.modules["sixmax"] = _mod  # register BEFORE exec so circular refs work
 _spec.loader.exec_module(_mod)
+
+# ---------------------------------------------------------------------------
+# Shared fixtures
+# ---------------------------------------------------------------------------
+import pytest
+import importlib.util as _ilu2
+
+
+def _load_vocab_mod():
+    path = os.path.join(_REPO_ROOT, "sixmax", "vocab_config.py")
+    spec = _ilu2.spec_from_file_location("vocab_config", path)
+    mod = _ilu2.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+_TOML = os.path.join(_REPO_ROOT, "sixmax", "configs", "default.toml")
+
+
+@pytest.fixture(scope="session")
+def default_vocab():
+    """Session-scoped ActionVocab loaded from the default blueprint config."""
+    vc = _load_vocab_mod()
+    return vc.load_vocab(_TOML, "blueprint")

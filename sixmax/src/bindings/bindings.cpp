@@ -358,14 +358,32 @@ PYBIND11_MODULE(sixmax, m) {
     // DreamMLP: thin wrapper around the TORCH_MODULE holder
     struct PyDreamMLP {
         sixmax::DreamMLP net;
-        PyDreamMLP(int in, int h, int n, int out) : net(in, h, n, out) {}
+        int input_dim_, output_dim_;
+        PyDreamMLP(int in, int h, int n, int out)
+            : net(in, h, n, out), input_dim_(in), output_dim_(out) {}
         torch::Tensor forward(torch::Tensor x) { return net->forward(x); }
+        // Python-list overload: accepts flat vector (batch*in), returns flat (batch*out)
+        std::vector<float> forward_vec(const std::vector<float>& flat, int batch) {
+            auto x = torch::from_blob(
+                const_cast<float*>(flat.data()),
+                {batch, input_dim_},
+                torch::kFloat32).clone();
+            auto out = net->forward(x);
+            out = out.contiguous();
+            const float* ptr = out.data_ptr<float>();
+            return std::vector<float>(ptr, ptr + batch * output_dim_);
+        }
     };
     py::class_<PyDreamMLP>(m, "DreamMLP")
         .def(py::init<int, int, int, int>(),
              py::arg("input_dim"), py::arg("hidden_size"),
              py::arg("n_layers"), py::arg("output_dim"))
-        .def("__call__", &PyDreamMLP::forward);
+        .def("__call__", &PyDreamMLP::forward)
+        .def("forward_vec", &PyDreamMLP::forward_vec,
+             py::arg("flat_input"), py::arg("batch_size"),
+             "Run forward pass via Python lists. flat_input is a flat float list of "
+             "length batch_size*input_dim; returns flat float list of length "
+             "batch_size*output_dim.");
 
     // WeightedReservoir: wrapper with internal rng
     struct PyWeightedReservoir {
@@ -373,6 +391,32 @@ PYBIND11_MODULE(sixmax, m) {
         std::mt19937_64 rng;
         PyWeightedReservoir(size_t cap, uint64_t seed = 42) : r(cap), rng(seed) {}
         void add(torch::Tensor f, torch::Tensor t, float w) { r.add(f, t, w, rng); }
+        // Python-list overload: accepts flat vectors, avoids Python-tensor bridge
+        void add_vec(const std::vector<float>& feat,
+                     const std::vector<float>& tgt, float w) {
+            auto f = torch::from_blob(
+                const_cast<float*>(feat.data()),
+                {(long)feat.size()}, torch::kFloat32).clone();
+            auto t = torch::from_blob(
+                const_cast<float*>(tgt.data()),
+                {(long)tgt.size()}, torch::kFloat32).clone();
+            r.add(f, t, w, rng);
+        }
+        // Returns (feat_flat, tgt_flat, weights) as Python lists
+        std::tuple<std::vector<float>, std::vector<float>, std::vector<float>>
+        sample_batch_vec(size_t n) {
+            auto [feat, tgt, w] = r.sample_batch(n, rng);
+            feat = feat.contiguous(); tgt = tgt.contiguous(); w = w.contiguous();
+            const float* fp = feat.data_ptr<float>();
+            const float* tp = tgt.data_ptr<float>();
+            const float* wp = w.data_ptr<float>();
+            long fsz = feat.numel(), tsz = tgt.numel();
+            return {
+                std::vector<float>(fp, fp + fsz),
+                std::vector<float>(tp, tp + tsz),
+                std::vector<float>(wp, wp + n)
+            };
+        }
         auto sample_batch(size_t n) { return r.sample_batch(n, rng); }
         size_t size() const { return r.size(); }
         void clear() { r.clear(); }
@@ -381,7 +425,13 @@ PYBIND11_MODULE(sixmax, m) {
         .def(py::init<size_t, uint64_t>(),
              py::arg("capacity"), py::arg("seed") = 42)
         .def("add", &PyWeightedReservoir::add)
+        .def("add_vec", &PyWeightedReservoir::add_vec,
+             py::arg("feat"), py::arg("target"), py::arg("weight"),
+             "Add a sample via Python float lists instead of torch.Tensor.")
         .def("sample_batch", &PyWeightedReservoir::sample_batch)
+        .def("sample_batch_vec", &PyWeightedReservoir::sample_batch_vec,
+             py::arg("n"),
+             "Sample n items; returns (feat_flat, tgt_flat, weights) as Python lists.")
         .def("size", &PyWeightedReservoir::size)
         .def("clear", &PyWeightedReservoir::clear);
 
