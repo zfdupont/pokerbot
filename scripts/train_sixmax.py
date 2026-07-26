@@ -10,6 +10,7 @@ builtin defaults. The effective config is snapshotted to
 <checkpoint>.config.toml on every save (neural_cfr pattern).
 """
 import argparse
+import ctypes
 import importlib.util
 import json
 import os
@@ -45,9 +46,19 @@ def _build_and_get_so_dir(repo_root: str) -> str:
                        f"stdout: {result.stdout}\nstderr: {result.stderr}")
 
 
+def _preload_libtorch(repo_root: str) -> None:
+    """Pre-load libtorch shared libraries (macOS SIP ignores DYLD_LIBRARY_PATH)."""
+    lib_dir = os.path.join(repo_root, "third_party", "libtorch", "lib")
+    for lib in ["libc10.dylib", "libtorch_cpu.dylib", "libtorch.dylib"]:
+        lib_path = os.path.join(lib_dir, lib)
+        if os.path.exists(lib_path):
+            ctypes.CDLL(lib_path)
+
+
 def _force_load_sixmax(repo_root: str):
     """Load the .so and register it as sys.modules['sixmax'] (the repo-root
     sixmax/ directory is a namespace package that would win otherwise)."""
+    _preload_libtorch(repo_root)
     so_path = os.environ.get("SIXMAX_SO_PATH")
     if not so_path:
         so_path = os.path.join(_build_and_get_so_dir(repo_root), "sixmax.so")

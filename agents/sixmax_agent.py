@@ -147,6 +147,92 @@ def _card_to_int(card):
     return (card.rank - 2) * 4 + _SUIT_TO_IDX[card.suit]
 
 
+class DreamDeployStrategy:
+    """Deployment wrapper for sixmax.DreamStrategy.
+
+    Provides the same decide() interface as SixmaxDeployStrategy so that
+    SixmaxHandTracker (openpoker_bot.py) can route to it unchanged.
+
+    The neural net reads an EngineGameState feature vector; we reconstruct
+    a minimal one by placing hero hole cards and board cards at their
+    canonical deck positions and using placeholder indices for unseen cards.
+    """
+
+    def __init__(self, strategy, vocab):
+        self._strategy = strategy
+        self._vocab = vocab
+
+    @classmethod
+    def load(cls, path, config_toml, section="blueprint"):
+        vocab = _load_vocab(config_toml, section)
+        strategy = sixmax.DreamStrategy.load(path, "cpu", vocab)
+        return cls(strategy, vocab)
+
+    @property
+    def num_players(self):
+        return 2  # DreamStrategy is generalist; default to 2 for deploy
+
+    def decide(self, *, hole, board, street, raises_per_street, pot_bb,
+               current_bet_bb, to_call_bb, stack_bb, live, after, legal, rng):
+        """Sample an action from the DreamStrategy network.
+
+        Constructs a minimal EngineGameState with hero at seat 0, board cards
+        at their canonical deck positions, and placeholder indices for the
+        unseen opponent hole cards.  The feature encoder only reads the hero's
+        own hole cards and community cards, so placeholders are harmless.
+        """
+        n_players = 2  # hero + one representative opponent for feature encoding
+
+        # Build a full 52-card deck placeholder, then overwrite the hero's
+        # cards (deck[0], deck[1]) and board (deck[2*n..2*n+4]).
+        used = set(hole) | set(board)
+        placeholder = iter(c for c in range(52) if c not in used)
+        deck = list(range(52))
+
+        # Hero at seat 0
+        deck[0] = hole[0]
+        deck[1] = hole[1]
+        # Opponent at seat 1 — use distinct placeholder cards
+        deck[2] = next(placeholder)
+        deck[3] = next(placeholder)
+        # Board: deck[2*n_players .. 2*n_players+4]
+        board_start = 2 * n_players
+        for j, c in enumerate(board):
+            deck[board_start + j] = c
+        # Fill remaining board positions with placeholders if board is partial
+        for j in range(len(board), 5):
+            deck[board_start + j] = next(placeholder)
+
+        cfg = sixmax.EngineConfig(num_players=n_players)
+        cfg.starting_stack = stack_bb  # approximately right for feature scaling
+        state = sixmax.EngineGameState(cfg, 0, deck, self._vocab, [])
+        probs = self._strategy.get_probs(state)
+
+        legal_idx = [i for i, m in enumerate(legal) if m]
+        weights = [probs[i] if i < len(probs) else 0.0 for i in legal_idx]
+        total = sum(weights)
+        if total <= 0.0:
+            idx = rng.choice(legal_idx)
+        else:
+            r = rng.random() * total
+            acc = 0.0
+            idx = legal_idx[-1]
+            for i, w in zip(legal_idx, weights):
+                acc += w
+                if r <= acc:
+                    idx = i
+                    break
+
+        action = self._vocab.at(idx)
+        if action.type in (sixmax.ActionType.Bet, sixmax.ActionType.AllIn):
+            ctx = sixmax.BetContext(pot=pot_bb, current_bet=current_bet_bb,
+                                    to_call=to_call_bb, stack=stack_bb)
+            raise_to = self._vocab.target_bb(idx, ctx)
+        else:
+            raise_to = 0.0
+        return idx, raise_to
+
+
 class SixmaxAgent(PokerAgent):
     """Live-engine adapter over SixmaxDeployStrategy. Computes the legal mask,
     (live, after), and BB rescale from GameState; translates the blueprint's

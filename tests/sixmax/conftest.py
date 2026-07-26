@@ -6,6 +6,7 @@ import sixmax. The output path contains a content-hash component that
 changes on rebuild, so we discover it dynamically via
 `buck2 build --show-output`.
 """
+import ctypes
 import importlib.util as _ilu
 import os
 import subprocess
@@ -15,6 +16,16 @@ import sys
 # Repository root (two levels up from this file: tests/sixmax/ → root)
 # ---------------------------------------------------------------------------
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# ---------------------------------------------------------------------------
+# Pre-load libtorch shared libraries (macOS SIP ignores DYLD_LIBRARY_PATH)
+# Must happen before Buck2-built sixmax.so is dlopen'd below.
+# ---------------------------------------------------------------------------
+_LIB_DIR = os.path.join(_REPO_ROOT, "third_party", "libtorch", "lib")
+for _lib in ["libc10.dylib", "libtorch_cpu.dylib", "libtorch.dylib"]:
+    _lib_path = os.path.join(_LIB_DIR, _lib)
+    if os.path.exists(_lib_path):
+        ctypes.CDLL(_lib_path)
 
 # ---------------------------------------------------------------------------
 # Discover Buck2 output path and insert into sys.path

@@ -18,6 +18,7 @@ import ctypes
 import json
 import logging
 import os
+import pathlib
 import signal
 import subprocess
 import sys
@@ -33,7 +34,7 @@ from cfr.info_set import InfoSet, stack_bucket
 from cfr.regret_table import RegretTable
 from models.card import Card
 from models.enums import Suit
-from agents.sixmax_agent import SixmaxDeployStrategy, canonical_live_after
+from agents.sixmax_agent import SixmaxDeployStrategy, DreamDeployStrategy, canonical_live_after
 
 log = logging.getLogger("openpoker")
 
@@ -477,7 +478,7 @@ async def run(api_key: str, strategy, buy_in: int) -> None:
         try:
             log.info(f"Connected to {WS_URL}")
             tracker = (SixmaxHandTracker()
-                       if isinstance(strategy, SixmaxDeployStrategy)
+                       if isinstance(strategy, (SixmaxDeployStrategy, DreamDeployStrategy))
                        else HandTracker())
 
             loop = asyncio.get_running_loop()
@@ -581,11 +582,17 @@ def main() -> None:
     sys.stderr.reconfigure(line_buffering=True)
 
     log.info(f"Loading {checkpoint} ...")
+    _ckpt_path = pathlib.Path(checkpoint)
     if checkpoint.endswith(".bin"):
         toml = os.path.join(os.path.dirname(os.path.dirname(
             os.path.abspath(__file__))), "sixmax", "configs", "default.toml")
         strategy = SixmaxDeployStrategy.load(checkpoint, toml)
         log.info("Six-max blueprint strategy loaded.")
+    elif _ckpt_path.suffix == ".pt" and _ckpt_path.stem.startswith("dream_"):
+        toml = os.path.join(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__))), "sixmax", "configs", "default.toml")
+        strategy = DreamDeployStrategy.load(checkpoint, toml)
+        log.info("DREAM neural blueprint strategy loaded.")
     elif checkpoint.endswith(".pt"):
         strategy = _load_neural_strategy(checkpoint)
         log.info("Neural CFR strategy loaded.")
