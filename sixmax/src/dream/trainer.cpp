@@ -2,6 +2,7 @@
 #include "dream/trainer.h"
 #include "dream/features.h"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <numeric>
 #include <thread>
@@ -65,49 +66,107 @@ std::vector<float> DreamTrainer::eps_greedy_strategy(
 }
 
 // ---------------------------------------------------------------------------
-// Traversal
+// Stochastic external-sampling MCCFR traversal
 // ---------------------------------------------------------------------------
+//
+// Algorithm (per DREAM / DeepCFR external-sampling):
+//   Terminal node  → return utility for updating_player.
+//   Updating player's node →
+//     1. For each legal action a: clone state, apply a, recurse → v(a).
+//     2. Compute sigma = eps_greedy_strategy(adv_net output, mask).
+//     3. E_v = Σ sigma[a] * v(a).
+//     4. adv_target[a] = v(a) - E_v  (instantaneous regret, unbiased estimator
+//        of counterfactual regret under external sampling).
+//     5. Store (features, adv_target, weight=t) in M_v_.
+//     6. Store (features, sigma,      weight=t) in M_pi_.
+//     7. Return E_v.
+//   Opponent node →
+//     1. Compute sigma = eps_greedy_strategy.
+//     2. Sample one action a_opp from sigma.
+//     3. Store (features, sigma, weight=t) in M_pi_.
+//     4. Apply a_opp, recurse, return result.
+//
+// This keeps branching factor = 1 for all opponent nodes (tractable), while
+// giving unbiased advantage estimates for the updating player.  Two traversals
+// per hand (one per player) are standard in alternating-update CFR.
 
-void DreamTrainer::traverse(EngineGameState& state, std::mt19937_64& rng,
-                             std::vector<TrajectoryNode>& traj,
-                             std::vector<float>& utilities) {
-    traj.clear();
-
-    // Walk forward: at each decision node sample one action per ε-greedy strategy
-    while (!state.is_terminal()) {
-        int p = state.current_player();
-
-        torch::Tensor feat;
-        {
-            torch::NoGradGuard no_grad;
-            feat = encode_state(state).to(device_);
-        }
-
-        std::vector<uint8_t> mask;
-        state.legal_mask(mask);
-
-        torch::Tensor adv_out;
-        {
-            std::lock_guard<std::mutex> lock(adv_net_mu_);
-            torch::NoGradGuard no_grad;
-            adv_out = adv_net_->forward(feat.unsqueeze(0)).squeeze(0).cpu();
-        }
-
-        auto sigma = eps_greedy_strategy(adv_out, mask);
-
-        // Sample one action
-        std::discrete_distribution<int> dist(sigma.begin(), sigma.end());
-        int a_star = dist(rng);
-
-        traj.push_back({feat.cpu(), sigma, a_star, p});
-        state.apply(a_star);
+float DreamTrainer::traverse(EngineGameState& state, int updating_player,
+                              uint64_t t, std::mt19937_64& rng) {
+    if (state.is_terminal()) {
+        return (float)state.utility(updating_player);
     }
 
-    // Collect utilities for all players
-    int n = state.num_players();
-    utilities.resize(n);
-    for (int i = 0; i < n; ++i)
-        utilities[i] = (float)state.utility(i);
+    int p = state.current_player();
+
+    torch::Tensor feat;
+    {
+        torch::NoGradGuard no_grad;
+        feat = encode_state(state).to(device_);
+    }
+
+    std::vector<uint8_t> mask;
+    state.legal_mask(mask);
+
+    torch::Tensor adv_out;
+    {
+        std::lock_guard<std::mutex> lock(adv_net_mu_);
+        torch::NoGradGuard no_grad;
+        adv_out = adv_net_->forward(feat.unsqueeze(0)).squeeze(0).cpu();
+    }
+
+    auto sigma = eps_greedy_strategy(adv_out, mask);
+    float weight = (float)t;
+
+    if (p == updating_player) {
+        // ---- Updating player's node: enumerate ALL legal actions ----
+
+        // Collect legal action indices
+        std::vector<int> legal_actions;
+        legal_actions.reserve(n_actions_);
+        for (int a = 0; a < n_actions_; ++a) {
+            if (mask[a]) legal_actions.push_back(a);
+        }
+
+        // Recurse into each legal action by cloning the state
+        std::vector<float> action_values(n_actions_, 0.0f);
+        for (int a : legal_actions) {
+            auto child = std::unique_ptr<EngineGameState>(
+                static_cast<EngineGameState*>(state.clone().release()));
+            child->apply(a);
+            action_values[a] = traverse(*child, updating_player, t, rng);
+        }
+
+        // Compute expected value under current strategy
+        float expected_v = 0.0f;
+        for (int a : legal_actions) {
+            expected_v += sigma[a] * action_values[a];
+        }
+
+        // Instantaneous regrets = v(a) - E[v] for each legal action
+        std::vector<float> adv_target(n_actions_, 0.0f);
+        for (int a : legal_actions) {
+            adv_target[a] = action_values[a] - expected_v;
+        }
+
+        auto adv_t  = torch::tensor(adv_target, torch::kFloat32);
+        auto strat_t = torch::tensor(sigma,     torch::kFloat32);
+        M_v_.add(feat.cpu(), adv_t,   weight, rng);
+        M_pi_.add(feat.cpu(), strat_t, weight, rng);
+
+        return expected_v;
+
+    } else {
+        // ---- Opponent node: sample one action (outcome-sampling style) ----
+
+        std::discrete_distribution<int> dist(sigma.begin(), sigma.end());
+        int a_opp = dist(rng);
+
+        auto strat_t = torch::tensor(sigma, torch::kFloat32);
+        M_pi_.add(feat.cpu(), strat_t, weight, rng);
+
+        state.apply(a_opp);
+        return traverse(state, updating_player, t, rng);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -177,8 +236,9 @@ void DreamTrainer::worker(uint64_t n_iterations, uint64_t seed_offset) {
     std::uniform_int_distribution<int> n_players_dist(cfg_.players_min,
                                                        cfg_.players_max);
 
-    std::vector<TrajectoryNode> traj;
-    std::vector<float>          utilities;
+    // Timing accumulator for avg_traverse_ns_
+    double total_traverse_ns = 0.0;
+    uint64_t traverse_count  = 0;
 
     for (uint64_t it = 0; it < n_iterations; ++it) {
         // Randomize game config per hand
@@ -197,36 +257,42 @@ void DreamTrainer::worker(uint64_t n_iterations, uint64_t seed_offset) {
         EngineConfig eng_cfg{n_players, 100.0};
         int button = (int)(rng() % (uint64_t)n_players);
 
-        EngineGameState state(
-            HandState(eng_cfg, button, std::move(deck), stacks),
-            vocab_, abstraction_);
+        // Stochastic external-sampling: two traversals per hand, one per player.
+        // t_base is a globally-unique even weight for the reservoir; pass t_base
+        // and t_base+1 for the two player traversals so weights are distinct.
+        uint64_t t_base = iter_.fetch_add(2, std::memory_order_relaxed) + 1;
+        // hand_count is the 1-based index of this hand (local+global), used for
+        // the retrain interval gate so it fires regardless of thread count.
+        uint64_t hand_count = t_base / 2 + 1;   // t_base is odd; (t_base-1)/2+1
 
-        traverse(state, rng, traj, utilities);
+        auto t0 = std::chrono::steady_clock::now();
 
-        uint64_t t = iter_.fetch_add(1, std::memory_order_relaxed) + 1;
-        float weight = (float)t;
+        for (int updating_player = 0; updating_player < 2; ++updating_player) {
+            // Re-shuffle deck for each player traversal to get independent samples
+            std::shuffle(deck.begin(), deck.end(), rng);
 
-        // For each decision node: store IS-weighted advantage + strategy samples
-        for (const auto& node : traj) {
-            int   p         = node.player;
-            float u_p       = p < (int)utilities.size() ? utilities[p] : 0.0f;
-            float prob_star = node.sigma[node.a_star];
-            if (prob_star < 1e-9f) continue;  // skip near-zero IS weights
+            EngineGameState state(
+                HandState(eng_cfg, button, deck, stacks),
+                vocab_, abstraction_);
 
-            // IS-corrected sparse advantage vector: only sampled action is non-zero
-            std::vector<float> adv_target(n_actions_, 0.0f);
-            adv_target[node.a_star] = u_p / prob_star;
-            auto adv_t = torch::tensor(adv_target, torch::kFloat32);
-            M_v_.add(node.features, adv_t, weight, rng);
-
-            // Strategy sample
-            auto strat_t = torch::tensor(node.sigma, torch::kFloat32);
-            M_pi_.add(node.features, strat_t, weight, rng);
+            traverse(state, updating_player, t_base + (uint64_t)updating_player, rng);
         }
 
-        // Retrain every train_interval traversals (when reservoir is large enough)
-        if (t % (uint64_t)cfg_.train_interval == 0 &&
+        auto t1 = std::chrono::steady_clock::now();
+        total_traverse_ns +=
+            (double)std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+        traverse_count += 2;
+
+        // Retrain every train_interval HANDS (when reservoir is large enough).
+        // Using hand_count (not t_base) ensures the check fires correctly
+        // regardless of whether we fetch_add by 1 or 2 per loop iteration.
+        if (hand_count % (uint64_t)cfg_.train_interval == 0 &&
             M_v_.size() >= (size_t)cfg_.batch_size) {
+            // Update timing stat before retraining
+            if (traverse_count > 0) {
+                avg_traverse_ns_.store(total_traverse_ns / (double)traverse_count,
+                                       std::memory_order_relaxed);
+            }
             retrain_adv();
             retrain_strat();
         }

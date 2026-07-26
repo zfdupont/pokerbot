@@ -50,20 +50,23 @@ public:
     DreamMLP adv_net()   const { return adv_net_; }
     DreamMLP strat_net() const { return strat_net_; }
 
-private:
-    struct TrajectoryNode {
-        torch::Tensor      features;
-        std::vector<float> sigma;    // strategy at this node
-        int                a_star;   // sampled action
-        int                player;
-    };
+    // Average nanoseconds per traversal (both players combined), updated each
+    // retrain cycle.  Zero until the first retraining fires.
+    double avg_traverse_ns() const {
+        return avg_traverse_ns_.load(std::memory_order_relaxed);
+    }
 
+private:
     void worker(uint64_t n_iterations, uint64_t seed_offset);
 
-    // Traverse a single hand: fills traj and utilities in-place.
-    void traverse(EngineGameState& state, std::mt19937_64& rng,
-                  std::vector<TrajectoryNode>& traj,
-                  std::vector<float>& utilities);
+    // Stochastic external-sampling MCCFR traversal.
+    //   updating_player: the player whose regrets are being updated this pass.
+    //   At the updating player's node:  recurse into ALL legal actions, compute
+    //     instantaneous regrets v(a) - E_sigma[v], store full advantage vector.
+    //   At an opponent node: sample one action from the opponent's sigma, recurse.
+    //   Returns the expected value for updating_player at this node.
+    float traverse(EngineGameState& state, int updating_player,
+                   uint64_t t, std::mt19937_64& rng);
 
     std::vector<float> eps_greedy_strategy(const torch::Tensor& advantages,
                                            const std::vector<uint8_t>& mask) const;
@@ -86,7 +89,8 @@ private:
     WeightedReservoir M_v_;    // advantage samples
     WeightedReservoir M_pi_;   // strategy samples
 
-    std::atomic<uint64_t> iter_{0};
+    std::atomic<uint64_t>    iter_{0};
+    std::atomic<double>      avg_traverse_ns_{0.0};
 };
 
 }  // namespace sixmax

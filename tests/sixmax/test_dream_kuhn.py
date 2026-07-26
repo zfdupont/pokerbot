@@ -1,5 +1,13 @@
 """
-Kuhn poker convergence gate for DREAM IS weights + reservoir + retraining.
+Kuhn poker convergence gate for DREAM with stochastic external-sampling MCCFR.
+
+Validates the same algorithm now implemented in DreamTrainer.cpp:
+  - Updating player's node: enumerate ALL legal actions, recurse each, store
+    instantaneous regrets adv_target[a] = v(a) - E_sigma[v] (unbiased).
+  - Opponent node: sample one action from sigma (outcome-sampling style).
+  - Two traversals per hand (alternating updating_player 0/1).
+  - Advantage net reinitialised from scratch each cycle (DREAM protocol).
+  - Strategy net accumulates across all cycles.
 
 Uses 9-dim feature encoding (card one-hot + history one-hot + player one-hot).
 Trains for 50K external-sampling MCCFR traversals (25K per player).

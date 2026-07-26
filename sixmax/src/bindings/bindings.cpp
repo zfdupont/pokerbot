@@ -475,6 +475,9 @@ PYBIND11_MODULE(sixmax, m) {
         .def("train", &sixmax::DreamTrainer::train, py::arg("iterations"),
              py::call_guard<py::gil_scoped_release>())
         .def("total_iterations", &sixmax::DreamTrainer::total_iterations)
+        .def("avg_traverse_ns", &sixmax::DreamTrainer::avg_traverse_ns,
+             "Average nanoseconds per traverse() call (both players combined). "
+             "Zero until the first retraining cycle fires.")
         .def("save", [](const sixmax::DreamTrainer& t, const std::string& path,
                         uint64_t vocab_hash) {
             sixmax::save_dream_checkpoint(path, t.adv_net(), t.strat_net(),
