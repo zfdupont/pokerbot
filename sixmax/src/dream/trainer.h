@@ -50,7 +50,11 @@ public:
     DreamMLP adv_net()   const { return adv_net_; }
     DreamMLP strat_net() const { return strat_net_; }
 
-    // Average nanoseconds per traversal (both players combined), updated each
+    // Number of entries currently in the advantage reservoir (M_v).
+    // Used by tests to verify all seats contribute advantage samples.
+    size_t adv_reservoir_size() const { return M_v_.size(); }
+
+    // Average nanoseconds per traversal (all players combined), updated each
     // retrain cycle.  Zero until the first retraining fires.
     double avg_traverse_ns() const {
         return avg_traverse_ns_.load(std::memory_order_relaxed);

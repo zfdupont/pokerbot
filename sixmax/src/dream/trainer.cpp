@@ -87,8 +87,9 @@ std::vector<float> DreamTrainer::eps_greedy_strategy(
 //     4. Apply a_opp, recurse, return result.
 //
 // This keeps branching factor = 1 for all opponent nodes (tractable), while
-// giving unbiased advantage estimates for the updating player.  Two traversals
-// per hand (one per player) are standard in alternating-update CFR.
+// giving unbiased advantage estimates for the updating player.  n_players
+// traversals per hand (one per active seat) ensure every seat's advantage net
+// receives training signal from every hand.
 
 float DreamTrainer::traverse(EngineGameState& state, int updating_player,
                               uint64_t t, std::mt19937_64& rng) {
@@ -257,17 +258,20 @@ void DreamTrainer::worker(uint64_t n_iterations, uint64_t seed_offset) {
         EngineConfig eng_cfg{n_players, 100.0};
         int button = (int)(rng() % (uint64_t)n_players);
 
-        // Stochastic external-sampling: two traversals per hand, one per player.
-        // t_base is a globally-unique even weight for the reservoir; pass t_base
-        // and t_base+1 for the two player traversals so weights are distinct.
-        uint64_t t_base = iter_.fetch_add(2, std::memory_order_relaxed) + 1;
+        // Stochastic external-sampling: n_players traversals per hand, one per
+        // active seat.  t_base is a globally-unique weight for the reservoir;
+        // each player traversal gets a distinct weight t_base+seat_idx so
+        // samples from the same hand have strictly increasing weights.
+        uint64_t t_base = iter_.fetch_add((uint64_t)n_players,
+                                           std::memory_order_relaxed) + 1;
         // hand_count is the 1-based index of this hand (local+global), used for
         // the retrain interval gate so it fires regardless of thread count.
-        uint64_t hand_count = t_base / 2 + 1;   // t_base is odd; (t_base-1)/2+1
+        // Divide by n_players to get the hand index from the iteration counter.
+        uint64_t hand_count = (t_base - 1) / (uint64_t)n_players + 1;
 
         auto t0 = std::chrono::steady_clock::now();
 
-        for (int updating_player = 0; updating_player < 2; ++updating_player) {
+        for (int updating_player = 0; updating_player < n_players; ++updating_player) {
             // Re-shuffle deck for each player traversal to get independent samples
             std::shuffle(deck.begin(), deck.end(), rng);
 
@@ -281,7 +285,7 @@ void DreamTrainer::worker(uint64_t n_iterations, uint64_t seed_offset) {
         auto t1 = std::chrono::steady_clock::now();
         total_traverse_ns +=
             (double)std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
-        traverse_count += 2;
+        traverse_count += (uint64_t)n_players;
 
         // Retrain every train_interval HANDS (when reservoir is large enough).
         // Using hand_count (not t_base) ensures the check fires correctly

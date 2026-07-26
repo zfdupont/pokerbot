@@ -154,8 +154,8 @@ class DreamDeployStrategy:
     SixmaxHandTracker (openpoker_bot.py) can route to it unchanged.
 
     The neural net reads an EngineGameState feature vector; we reconstruct
-    a minimal one by placing hero hole cards and board cards at their
-    canonical deck positions and using placeholder indices for unseen cards.
+    the full n_players state with real per-seat stacks so that seats 2-5
+    features (stacks, street_bets, live_mask) are on-distribution.
     """
 
     def __init__(self, strategy, vocab):
@@ -170,21 +170,34 @@ class DreamDeployStrategy:
 
     @property
     def num_players(self):
-        return 2  # DreamStrategy is generalist; default to 2 for deploy
+        return 6  # DreamStrategy is a 2-6 player generalist
 
     def decide(self, *, hole, board, street, raises_per_street, pot_bb,
-               current_bet_bb, to_call_bb, stack_bb, live, after, legal, rng):
+               current_bet_bb, to_call_bb, stack_bb, live, after, legal, rng,
+               n_players=None, seat_stacks_bb=None):
         """Sample an action from the DreamStrategy network.
 
-        Constructs a minimal EngineGameState with hero at seat 0, board cards
-        at their canonical deck positions, and placeholder indices for the
-        unseen opponent hole cards.  The feature encoder only reads the hero's
-        own hole cards and community cards, so placeholders are harmless.
+        Constructs an n_players EngineGameState with the hero at seat 0 and
+        real per-seat stacks when available, so all feature dimensions are
+        on-distribution.  Falls back to a 2-player reconstruction when
+        n_players is not supplied (e.g. unit tests or legacy callers).
+
+        Args:
+            n_players:       Actual number of active players at the table.
+                             When None, defaults to 2 (HU fallback).
+            seat_stacks_bb:  List of per-seat stacks in BB (length n_players),
+                             with hero at index 0.  When None, all opponents
+                             are assigned stack_bb as an approximation.
         """
-        n_players = 2  # hero + one representative opponent for feature encoding
+        if n_players is None:
+            n_players = 2
+
+        if seat_stacks_bb is None:
+            # Approximate: give every seat the hero's current stack
+            seat_stacks_bb = [stack_bb] * n_players
 
         # Build a full 52-card deck placeholder, then overwrite the hero's
-        # cards (deck[0], deck[1]) and board (deck[2*n..2*n+4]).
+        # cards (deck[0], deck[1]) and board (deck[2*n_players..2*n_players+4]).
         used = set(hole) | set(board)
         placeholder = iter(c for c in range(52) if c not in used)
         deck = list(range(52))
@@ -192,9 +205,10 @@ class DreamDeployStrategy:
         # Hero at seat 0
         deck[0] = hole[0]
         deck[1] = hole[1]
-        # Opponent at seat 1 — use distinct placeholder cards
-        deck[2] = next(placeholder)
-        deck[3] = next(placeholder)
+        # Opponents at seats 1..n_players-1 — distinct placeholder cards
+        for opp in range(1, n_players):
+            deck[2 * opp]     = next(placeholder)
+            deck[2 * opp + 1] = next(placeholder)
         # Board: deck[2*n_players .. 2*n_players+4]
         board_start = 2 * n_players
         for j, c in enumerate(board):
@@ -204,8 +218,10 @@ class DreamDeployStrategy:
             deck[board_start + j] = next(placeholder)
 
         cfg = sixmax.EngineConfig(num_players=n_players)
-        cfg.starting_stack = stack_bb  # approximately right for feature scaling
-        state = sixmax.EngineGameState(cfg, 0, deck, self._vocab, [])
+        cfg.starting_stack = stack_bb  # feature scaling: training frame is BB=1
+        # Pass per-seat stacks so the encoder sees real chip counts for all seats
+        stacks = [float(s) for s in seat_stacks_bb]
+        state = sixmax.EngineGameState(cfg, 0, deck, self._vocab, stacks)
         probs = self._strategy.get_probs(state)
 
         legal_idx = [i for i, m in enumerate(legal) if m]

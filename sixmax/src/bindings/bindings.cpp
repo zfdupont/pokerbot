@@ -475,6 +475,9 @@ PYBIND11_MODULE(sixmax, m) {
         .def("train", &sixmax::DreamTrainer::train, py::arg("iterations"),
              py::call_guard<py::gil_scoped_release>())
         .def("total_iterations", &sixmax::DreamTrainer::total_iterations)
+        .def("adv_reservoir_size", &sixmax::DreamTrainer::adv_reservoir_size,
+             "Number of entries currently in the advantage reservoir (M_v). "
+             "Used by tests to verify all seats contribute advantage samples.")
         .def("avg_traverse_ns", &sixmax::DreamTrainer::avg_traverse_ns,
              "Average nanoseconds per traverse() call (both players combined). "
              "Zero until the first retraining cycle fires.")

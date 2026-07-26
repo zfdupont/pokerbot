@@ -387,10 +387,16 @@ class SixmaxHandTracker:
         bb = self.big_blind
         pot = float(msg.get("pot", 0.0))
         valid = {a["action"]: a for a in msg.get("valid_actions", [])}
+
+        # Collect per-seat stacks in seat order so DreamDeployStrategy can
+        # reconstruct EngineGameState with real chip counts for all seats.
+        seat_stacks = {}
         for p in msg.get("players", []):
-            if p.get("seat") == self.my_seat:
-                self.my_stack = float(p["stack"])
-                break
+            seat = p.get("seat")
+            seat_stacks[seat] = float(p.get("stack", 0.0))
+            if seat == self.my_seat:
+                self.my_stack = seat_stacks[seat]
+
         to_call_chips = float(valid.get("call", {}).get("amount") or 0.0)
 
         n, button, hero, folded, all_in = self._positions()
@@ -402,14 +408,26 @@ class SixmaxHandTracker:
         legal = self._legal_mask(strategy, valid, current_bet_bb, pot / bb,
                                  to_call_chips / bb, stack_bb)
 
+        # Build hero-first per-seat stack list in canonical seat order.
+        # Hero is placed at index 0; remaining seats follow table order.
+        other_seats = [s for s in self.seats if s != self.my_seat]
+        seat_stacks_bb = [stack_bb] + [
+            seat_stacks.get(s, stack_bb) / bb for s in other_seats
+        ]
+
         import random as _random
-        idx, raise_to_bb = strategy.decide(
+        from agents.sixmax_agent import DreamDeployStrategy as _DDS
+        decide_kwargs = dict(
             hole=[_card_to_int(c) for c in self.hole_cards],
             board=[_card_to_int(c) for c in self.community_cards],
             street=self.street, raises_per_street=self.raises_per_street,
             pot_bb=pot / bb, current_bet_bb=current_bet_bb,
             to_call_bb=to_call_chips / bb, stack_bb=stack_bb, live=live,
             after=after, legal=legal, rng=_random.Random())
+        if isinstance(strategy, _DDS):
+            decide_kwargs["n_players"] = n
+            decide_kwargs["seat_stacks_bb"] = seat_stacks_bb
+        idx, raise_to_bb = strategy.decide(**decide_kwargs)
         return self._translate(strategy, idx, valid, raise_to_bb, bb)
 
     def _legal_mask(self, strategy, valid, current_bet_bb, pot_bb, to_call_bb,
