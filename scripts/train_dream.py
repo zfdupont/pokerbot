@@ -128,6 +128,7 @@ def main():
         done = 0
         while done < total_iters:
             chunk = min(ckpt_interval, total_iters - done)
+            # external-sampling counts both player traversals; ds.iterations returns 2*total_iters
             trainer.train(chunk)
             done += chunk
             elapsed = time.time() - start
@@ -135,6 +136,7 @@ def main():
             trainer.save(ckpt_path, vocab.hash())
             print(f"  Saved checkpoint -> {ckpt_path}")
     else:
+        # external-sampling counts both player traversals; ds.iterations returns 2*total_iters
         trainer.train(total_iters)
         trainer.save(ckpt_path, vocab.hash())
         print(f"Saved -> {ckpt_path} ({time.time()-start:.0f}s)")
