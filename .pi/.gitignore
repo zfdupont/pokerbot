@@ -1,0 +1,5 @@
+# Commit pi project config; ignore pi runtime artifacts.
+*
+!.gitignore
+!settings.json
+!APPEND_SYSTEM.md

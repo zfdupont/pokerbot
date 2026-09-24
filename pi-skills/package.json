@@ -1,0 +1,10 @@
+{
+  "name": "pokerbot-pi-skills",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pi skills ported from this repo's Claude Code / superpowers / MEX workflow.",
+  "keywords": ["pi-package"],
+  "pi": {
+    "skills": ["./skills"]
+  }
+}
