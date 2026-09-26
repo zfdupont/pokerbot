@@ -18,16 +18,17 @@ import tempfile
 
 import pytest
 import sixmax
+import sixmax_dream
 
-_FEAT_DIM = sixmax.FEATURE_DIM   # 154
-_HIDDEN   = 256                   # must match DreamStrategy::load hard-coded arch
-_LAYERS   = 3                     # must match DreamStrategy::load hard-coded arch
+_FEAT_DIM = sixmax_dream.FEATURE_DIM   # 154
+_HIDDEN   = 256                         # must match DreamStrategy::load hard-coded arch
+_LAYERS   = 3                           # must match DreamStrategy::load hard-coded arch
 
 
 def _make_nets(n_actions: int):
     """Return a (adv, strat) pair of DreamMLPs with the canonical architecture."""
-    adv  = sixmax.DreamMLP(_FEAT_DIM, _HIDDEN, _LAYERS, n_actions)
-    strat = sixmax.DreamMLP(_FEAT_DIM, _HIDDEN, _LAYERS, n_actions)
+    adv  = sixmax_dream.DreamMLP(_FEAT_DIM, _HIDDEN, _LAYERS, n_actions)
+    strat = sixmax_dream.DreamMLP(_FEAT_DIM, _HIDDEN, _LAYERS, n_actions)
     return adv, strat
 
 
@@ -41,12 +42,12 @@ def test_checkpoint_roundtrip(default_vocab, tmp_path):
     n = default_vocab.size()
     adv, strat = _make_nets(n)
 
-    sixmax.save_dream_checkpoint(path, adv, strat, 999, default_vocab.hash())
+    sixmax_dream.save_dream_checkpoint(path, adv, strat, 999, default_vocab.hash())
 
     assert os.path.exists(path), "checkpoint file was not created"
     assert os.path.getsize(path) > 0, "checkpoint file is empty"
 
-    ds = sixmax.DreamStrategy.load(path, "cpu", default_vocab)
+    ds = sixmax_dream.DreamStrategy.load(path, "cpu", default_vocab)
     assert ds.iterations == 999
 
 
@@ -55,8 +56,8 @@ def test_checkpoint_iterations_zero(default_vocab, tmp_path):
     path = str(tmp_path / "zero.pt")
     n = default_vocab.size()
     adv, strat = _make_nets(n)
-    sixmax.save_dream_checkpoint(path, adv, strat, 0, default_vocab.hash())
-    ds = sixmax.DreamStrategy.load(path, "cpu", default_vocab)
+    sixmax_dream.save_dream_checkpoint(path, adv, strat, 0, default_vocab.hash())
+    ds = sixmax_dream.DreamStrategy.load(path, "cpu", default_vocab)
     assert ds.iterations == 0
 
 
@@ -66,8 +67,8 @@ def test_checkpoint_large_iterations(default_vocab, tmp_path):
     n = default_vocab.size()
     adv, strat = _make_nets(n)
     big = 1_000_000
-    sixmax.save_dream_checkpoint(path, adv, strat, big, default_vocab.hash())
-    ds = sixmax.DreamStrategy.load(path, "cpu", default_vocab)
+    sixmax_dream.save_dream_checkpoint(path, adv, strat, big, default_vocab.hash())
+    ds = sixmax_dream.DreamStrategy.load(path, "cpu", default_vocab)
     assert ds.iterations == big
 
 
@@ -81,10 +82,10 @@ def test_vocab_hash_mismatch(default_vocab, tmp_path):
     n = default_vocab.size()
     adv, strat = _make_nets(n)
     wrong_hash = 0xDEADBEEF
-    sixmax.save_dream_checkpoint(path, adv, strat, 1, wrong_hash)
+    sixmax_dream.save_dream_checkpoint(path, adv, strat, 1, wrong_hash)
 
     with pytest.raises(RuntimeError, match="vocab hash mismatch"):
-        sixmax.DreamStrategy.load(path, "cpu", default_vocab)
+        sixmax_dream.DreamStrategy.load(path, "cpu", default_vocab)
 
 
 def test_correct_hash_does_not_raise(default_vocab, tmp_path):
@@ -92,8 +93,8 @@ def test_correct_hash_does_not_raise(default_vocab, tmp_path):
     path = str(tmp_path / "ok.pt")
     n = default_vocab.size()
     adv, strat = _make_nets(n)
-    sixmax.save_dream_checkpoint(path, adv, strat, 5, default_vocab.hash())
-    ds = sixmax.DreamStrategy.load(path, "cpu", default_vocab)
+    sixmax_dream.save_dream_checkpoint(path, adv, strat, 5, default_vocab.hash())
+    ds = sixmax_dream.DreamStrategy.load(path, "cpu", default_vocab)
     assert ds is not None
 
 
@@ -106,8 +107,8 @@ def test_get_probs_after_load(default_vocab, tmp_path):
     path = str(tmp_path / "inf.pt")
     n = default_vocab.size()
     adv, strat = _make_nets(n)
-    sixmax.save_dream_checkpoint(path, adv, strat, 42, default_vocab.hash())
-    ds = sixmax.DreamStrategy.load(path, "cpu", default_vocab)
+    sixmax_dream.save_dream_checkpoint(path, adv, strat, 42, default_vocab.hash())
+    ds = sixmax_dream.DreamStrategy.load(path, "cpu", default_vocab)
 
     cfg = sixmax.EngineConfig(num_players=2)
     state = sixmax.EngineGameState(cfg, 0, list(range(52)), default_vocab, [])

@@ -17,6 +17,7 @@ import tempfile
 
 import pytest
 import sixmax
+import sixmax_dream
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -30,13 +31,13 @@ def _make_preflop_state(vocab):
 
 def _make_dream_strategy(vocab, iterations=0):
     """Save a randomly-initialised DreamStrategy and reload it."""
-    adv = sixmax.DreamMLP(sixmax.FEATURE_DIM, 256, 3, vocab.size())
-    strat = sixmax.DreamMLP(sixmax.FEATURE_DIM, 256, 3, vocab.size())
+    adv = sixmax_dream.DreamMLP(sixmax_dream.FEATURE_DIM, 256, 3, vocab.size())
+    strat = sixmax_dream.DreamMLP(sixmax_dream.FEATURE_DIM, 256, 3, vocab.size())
     with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as f:
         path = f.name
     try:
-        sixmax.save_dream_checkpoint(path, adv, strat, iterations, vocab.hash())
-        return sixmax.DreamStrategy.load(path, "cpu", vocab)
+        sixmax_dream.save_dream_checkpoint(path, adv, strat, iterations, vocab.hash())
+        return sixmax_dream.DreamStrategy.load(path, "cpu", vocab)
     finally:
         os.unlink(path)
 
@@ -46,15 +47,15 @@ def _make_dream_strategy(vocab, iterations=0):
 # ---------------------------------------------------------------------------
 
 def test_feature_dim():
-    assert sixmax.FEATURE_DIM == 154
+    assert sixmax_dream.FEATURE_DIM == 154
 
 
 def test_chip_norm():
-    assert sixmax.CHIP_NORM == 100.0
+    assert sixmax_dream.CHIP_NORM == 100.0
 
 
 def test_raise_norm():
-    assert sixmax.RAISE_NORM == 5.0
+    assert sixmax_dream.RAISE_NORM == 5.0
 
 
 # ---------------------------------------------------------------------------
@@ -114,14 +115,14 @@ def test_get_probs_all_finite(default_vocab):
 def test_encode_state_vec_length(default_vocab):
     """encode_state_vec returns exactly FEATURE_DIM floats."""
     state = _make_preflop_state(default_vocab)
-    vec = sixmax.encode_state_vec(state)
-    assert len(vec) == sixmax.FEATURE_DIM
+    vec = sixmax_dream.encode_state_vec(state)
+    assert len(vec) == sixmax_dream.FEATURE_DIM
 
 
 def test_encode_state_vec_all_finite(default_vocab):
     """encode_state_vec contains no NaN or Inf values."""
     state = _make_preflop_state(default_vocab)
-    vec = sixmax.encode_state_vec(state)
+    vec = sixmax_dream.encode_state_vec(state)
     for i, v in enumerate(vec):
         assert math.isfinite(v), f"non-finite value at index {i}: {v}"
 
@@ -131,7 +132,7 @@ def test_encode_state_vec_hole_cards_sum(default_vocab):
     = 17 bits * 2 cards. Each card contributes exactly 1 rank bit + 1 suit bit,
     so dims 0-16 sum to 2.0 (card 0) and dims 17-33 sum to 2.0 (card 1)."""
     state = _make_preflop_state(default_vocab)
-    vec = sixmax.encode_state_vec(state)
+    vec = sixmax_dream.encode_state_vec(state)
     # Dims 0-16: rank(13) + suit(4) for hole card 0
     card0_sum = sum(vec[0:17])
     assert math.isclose(card0_sum, 2.0, abs_tol=1e-5), \
@@ -145,7 +146,7 @@ def test_encode_state_vec_hole_cards_sum(default_vocab):
 def test_encode_state_vec_street_one_hot(default_vocab):
     """Street one-hot dims 119-122 sum to 1.0."""
     state = _make_preflop_state(default_vocab)
-    vec = sixmax.encode_state_vec(state)
+    vec = sixmax_dream.encode_state_vec(state)
     street_sum = sum(vec[119:123])
     assert math.isclose(street_sum, 1.0, abs_tol=1e-5), \
         f"street one-hot dims 119-122 sum to {street_sum}, expected 1.0"
@@ -154,7 +155,7 @@ def test_encode_state_vec_street_one_hot(default_vocab):
 def test_encode_state_vec_acting_player_one_hot(default_vocab):
     """Acting player one-hot dims 142-147 sum to 1.0."""
     state = _make_preflop_state(default_vocab)
-    vec = sixmax.encode_state_vec(state)
+    vec = sixmax_dream.encode_state_vec(state)
     player_sum = sum(vec[142:148])
     assert math.isclose(player_sum, 1.0, abs_tol=1e-5), \
         f"acting player one-hot dims 142-147 sum to {player_sum}, expected 1.0"
@@ -183,7 +184,7 @@ def test_dream_trainer_all_seats_get_advantage_samples(default_vocab):
     abs_ = sixmax.Abstraction(flop_buckets=5, turn_buckets=5, river_buckets=3,
                               equity_rollouts=10, quantile_samples=50, seed=0)
 
-    cfg = sixmax.DreamConfig()
+    cfg = sixmax_dream.DreamConfig()
     cfg.players_min = 3
     cfg.players_max = 3
     cfg.reservoir_size = 100_000
@@ -194,7 +195,7 @@ def test_dream_trainer_all_seats_get_advantage_samples(default_vocab):
     n_hands = 20
     # DreamTrainer.train(iterations) runs `iterations` outer loop iterations
     # (each is one full hand with n_players traversals).
-    trainer = sixmax.DreamTrainer(
+    trainer = sixmax_dream.DreamTrainer(
         default_vocab.size(), default_vocab, abs_, cfg, "cpu")
     trainer.train(n_hands)
 

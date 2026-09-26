@@ -15,7 +15,7 @@ Tests verify:
 import math
 import random
 
-import sixmax
+import sixmax_dream
 
 
 def _randf(n: int) -> list:
@@ -28,12 +28,12 @@ def _randf(n: int) -> list:
 # ---------------------------------------------------------------------------
 
 def test_construct_6_actions():
-    net = sixmax.DreamMLP(154, 256, 3, 6)
+    net = sixmax_dream.DreamMLP(154, 256, 3, 6)
     assert net is not None
 
 
 def test_construct_custom_shape():
-    net = sixmax.DreamMLP(154, 64, 2, 10)
+    net = sixmax_dream.DreamMLP(154, 64, 2, 10)
     assert net is not None
 
 
@@ -43,7 +43,7 @@ def test_construct_custom_shape():
 
 def test_output_shape_6_actions():
     """forward_vec batch=4, 6 outputs → flat list of length 4*6=24."""
-    net = sixmax.DreamMLP(154, 256, 3, 6)
+    net = sixmax_dream.DreamMLP(154, 256, 3, 6)
     batch = 4
     x = _randf(batch * 154)
     out = net.forward_vec(x, batch)
@@ -52,7 +52,7 @@ def test_output_shape_6_actions():
 
 def test_output_shape_10_actions():
     """forward_vec batch=1, 10 outputs → 10 elements."""
-    net = sixmax.DreamMLP(154, 256, 3, 10)
+    net = sixmax_dream.DreamMLP(154, 256, 3, 10)
     x = _randf(154)
     out = net.forward_vec(x, 1)
     assert len(out) == 10
@@ -61,16 +61,16 @@ def test_output_shape_10_actions():
 def test_output_shape_matches_vocab(default_vocab):
     """Output dim equals vocab.size() for a net built with that n_actions."""
     n = default_vocab.size()
-    net = sixmax.DreamMLP(sixmax.FEATURE_DIM, 256, 3, n)
+    net = sixmax_dream.DreamMLP(sixmax_dream.FEATURE_DIM, 256, 3, n)
     batch = 2
-    x = _randf(batch * sixmax.FEATURE_DIM)
+    x = _randf(batch * sixmax_dream.FEATURE_DIM)
     out = net.forward_vec(x, batch)
     assert len(out) == batch * n
 
 
 def test_output_all_finite():
     """No NaN or inf in forward output."""
-    net = sixmax.DreamMLP(154, 128, 2, 6)
+    net = sixmax_dream.DreamMLP(154, 128, 2, 6)
     x = _randf(4 * 154)
     out = net.forward_vec(x, 4)
     for v in out:
@@ -79,8 +79,8 @@ def test_output_all_finite():
 
 def test_different_seeds_give_different_output():
     """Two randomly-initialised nets should produce different outputs (very likely)."""
-    net1 = sixmax.DreamMLP(154, 256, 3, 6)
-    net2 = sixmax.DreamMLP(154, 256, 3, 6)
+    net1 = sixmax_dream.DreamMLP(154, 256, 3, 6)
+    net2 = sixmax_dream.DreamMLP(154, 256, 3, 6)
     x = _randf(154)
     out1 = net1.forward_vec(x, 1)
     out2 = net2.forward_vec(x, 1)
