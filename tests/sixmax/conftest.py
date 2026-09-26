@@ -28,41 +28,33 @@ for _lib in ["libc10.dylib", "libtorch_cpu.dylib", "libtorch.dylib"]:
         ctypes.CDLL(_lib_path)
 
 # ---------------------------------------------------------------------------
-# Discover Buck2 output path and insert into sys.path
+# Discover Buck2 output path and force-load extension modules
 # ---------------------------------------------------------------------------
-def _discover_so_dir() -> str:
+def _discover_so_dir(target: str, soname: str) -> str:
     buck2 = os.path.expanduser("~/bin/buck2")
-    result = subprocess.run(
-        [buck2, "build", "//sixmax:sixmax", "--show-output"],
-        capture_output=True,
-        text=True,
-        cwd=_REPO_ROOT,
-    )
+    result = subprocess.run([buck2, "build", target, "--show-output"],
+                            capture_output=True, text=True, cwd=_REPO_ROOT)
     for line in result.stdout.splitlines():
-        if "sixmax.so" in line:
-            # Line format: "root//sixmax:sixmax  buck-out/v2/art/.../sixmax.so"
+        if soname in line:
             rel_so = line.split()[-1]
             return os.path.join(_REPO_ROOT, os.path.dirname(rel_so))
-    raise RuntimeError(
-        f"Could not locate sixmax.so in buck2 output.\n"
-        f"stdout: {result.stdout}\nstderr: {result.stderr}"
-    )
+    raise RuntimeError(f"Could not locate {soname}\nstdout: {result.stdout}\nstderr: {result.stderr}")
 
 
-_so_dir = _discover_so_dir()
-if _so_dir not in sys.path:
-    sys.path.insert(0, _so_dir)
+def _force_load(module_name: str, target: str) -> None:
+    soname = module_name + ".so"
+    so_dir = _discover_so_dir(target, soname)
+    if so_dir not in sys.path:
+        sys.path.insert(0, so_dir)
+    so_path = os.path.join(so_dir, soname)
+    spec = _ilu.spec_from_file_location(module_name, so_path)
+    mod = _ilu.module_from_spec(spec)
+    sys.modules[module_name] = mod  # register before exec so circular refs work
+    spec.loader.exec_module(mod)
 
-# The project root contains a `sixmax/` directory which Python 3
-# treats as a namespace package, taking precedence over sixmax.so
-# even when so_dir is at sys.path[0]. Force-load the .so and register
-# it as sys.modules['sixmax'] so every subsequent `import sixmax`
-# gets the C++ extension.
-_so_path = os.path.join(_so_dir, "sixmax.so")
-_spec = _ilu.spec_from_file_location("sixmax", _so_path)
-_mod = _ilu.module_from_spec(_spec)
-sys.modules["sixmax"] = _mod  # register BEFORE exec so circular refs work
-_spec.loader.exec_module(_mod)
+
+_force_load("sixmax", "//sixmax:sixmax")            # must be first (cross-module types)
+_force_load("sixmax_dream", "//sixmax:sixmax_dream")
 
 # ---------------------------------------------------------------------------
 # Shared fixtures

@@ -1,7 +1,6 @@
 _python_include = read_config("python", "include_path", "")
 _cpu_tune = read_config("build", "cpu_tune", "native")
 
-# Core: all implementation including dream/, no pybind11
 cxx_library(
     name = "core",
     srcs = [
@@ -14,23 +13,36 @@ cxx_library(
         "src/abstraction/abstraction.cpp",
         "src/abstraction/abstract_key.cpp",
         "src/blueprint/checkpoint.cpp",
+    ],
+    headers = glob(["src/**/*.h"]),
+    header_namespace = "",
+    compiler_flags = ["-std=c++17", "-O3", "-mcpu=" + _cpu_tune, "-DNDEBUG"],
+    exported_preprocessor_flags = ["-Isixmax/src"],
+    deps = ["//common:evaluator"],
+    exported_deps = ["//common:evaluator"],
+    preferred_linkage = "static",
+    visibility = ["PUBLIC"],
+)
+
+cxx_library(
+    name = "dream",
+    srcs = [
         "src/dream/features.cpp",
         "src/dream/nets.cpp",
         "src/dream/reservoir.cpp",
         "src/dream/trainer.cpp",
         "src/dream/checkpoint.cpp",
     ],
-    headers = glob(["src/**/*.h"]),
+    headers = glob(["src/dream/*.h"]),
     header_namespace = "",
     compiler_flags = ["-std=c++17", "-O3", "-mcpu=" + _cpu_tune, "-DNDEBUG"],
     exported_preprocessor_flags = ["-Isixmax/src"],
-    deps = ["//common:evaluator", "//third_party:libtorch"],
-    exported_deps = ["//common:evaluator"],
+    deps = [":core", "//third_party:libtorch"],
+    exported_deps = [":core", "//third_party:libtorch"],
     preferred_linkage = "static",
     visibility = ["PUBLIC"],
 )
 
-# Python extension: bindings only
 cxx_library(
     name = "sixmax",
     srcs = ["src/bindings/bindings.cpp"],
@@ -38,9 +50,23 @@ cxx_library(
     header_namespace = "",
     compiler_flags = ["-std=c++17", "-O3", "-mcpu=" + _cpu_tune, "-DNDEBUG"] +
                      (["-I" + _python_include] if _python_include else []),
-    deps = [":core", "//third_party:pybind11", "//third_party:libtorch"],
+    deps = [":core", "//third_party:pybind11"],
     preferred_linkage = "shared",
     soname = "sixmax.so",
+    linker_flags = ["-undefined", "dynamic_lookup"] if host_info().os.is_macos else [],
+    visibility = ["PUBLIC"],
+)
+
+cxx_library(
+    name = "sixmax_dream",
+    srcs = ["src/bindings/bindings_dream.cpp"],
+    headers = [],
+    header_namespace = "",
+    compiler_flags = ["-std=c++17", "-O3", "-mcpu=" + _cpu_tune, "-DNDEBUG"] +
+                     (["-I" + _python_include] if _python_include else []),
+    deps = [":core", ":dream", "//third_party:pybind11", "//third_party:libtorch"],
+    preferred_linkage = "shared",
+    soname = "sixmax_dream.so",
     linker_flags = ["-undefined", "dynamic_lookup"] if host_info().os.is_macos else [],
     visibility = ["PUBLIC"],
 )
