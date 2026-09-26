@@ -50,6 +50,29 @@ def _ensure_sixmax_extension():
     spec.loader.exec_module(m)
 
 
+def _ensure_sixmax_dream_extension():
+    """Lazily force-load sixmax_dream (keeps blueprint deploy path torch-free)."""
+    mod = sys.modules.get("sixmax_dream")
+    if mod is not None and hasattr(mod, "DreamTrainer"):
+        return mod
+    _ensure_sixmax_extension()  # sixmax first (cross-module types)
+    buck2 = os.path.expanduser("~/bin/buck2")
+    result = subprocess.run([buck2, "build", "//sixmax:sixmax_dream", "--show-output"],
+                            capture_output=True, text=True, cwd=_ROOT)
+    if result.returncode != 0:
+        raise RuntimeError(f"Buck2 build failed:\n{result.stderr}")
+    so_dir = next((os.path.join(_ROOT, os.path.dirname(l.split()[-1]))
+                   for l in result.stdout.splitlines() if "sixmax_dream.so" in l), None)
+    if so_dir is None:
+        raise RuntimeError("Could not locate sixmax_dream.so in buck2 output")
+    so_path = os.path.join(so_dir, "sixmax_dream.so")
+    spec = importlib.util.spec_from_file_location("sixmax_dream", so_path)
+    m = importlib.util.module_from_spec(spec)
+    sys.modules["sixmax_dream"] = m
+    spec.loader.exec_module(m)
+    return m
+
+
 _ensure_sixmax_extension()
 import sixmax  # noqa: E402  (must follow _ensure_sixmax_extension)
 
@@ -148,25 +171,30 @@ def _card_to_int(card):
 
 
 class DreamDeployStrategy:
-    """Deployment wrapper for sixmax.DreamStrategy.
+    """Deployment wrapper for sixmax_dream.DreamStrategy.
 
     Provides the same decide() interface as SixmaxDeployStrategy so that
     SixmaxHandTracker (openpoker_bot.py) can route to it unchanged.
+
+    sixmax_dream (libtorch) is loaded LAZILY — only when a DREAM checkpoint is
+    actually deployed — so importing this module never pulls in libtorch and the
+    blueprint deploy path (SixmaxDeployStrategy) remains torch-free.
 
     The neural net reads an EngineGameState feature vector; we reconstruct
     the full n_players state with real per-seat stacks so that seats 2-5
     features (stacks, street_bets, live_mask) are on-distribution.
     """
 
-    def __init__(self, strategy, vocab):
+    def __init__(self, path, config_toml, section="blueprint"):
+        vocab = _load_vocab(config_toml, section)
+        sixmax_dream = _ensure_sixmax_dream_extension()
+        strategy = sixmax_dream.DreamStrategy.load(path, "cpu", vocab)
         self._strategy = strategy
         self._vocab = vocab
 
     @classmethod
     def load(cls, path, config_toml, section="blueprint"):
-        vocab = _load_vocab(config_toml, section)
-        strategy = sixmax.DreamStrategy.load(path, "cpu", vocab)
-        return cls(strategy, vocab)
+        return cls(path, config_toml, section)
 
     @property
     def num_players(self):
