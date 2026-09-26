@@ -73,11 +73,32 @@ def main():
     sys.modules["sixmax"] = sixmax
     spec.loader.exec_module(sixmax)
 
+    # Force-load sixmax_dream extension — sixmax must be loaded first (cross-module pybind types)
+    result_dream = subprocess.run(
+        [buck2, "build", "//sixmax:sixmax_dream", "--show-output"],
+        capture_output=True, text=True, cwd=repo_root,
+    )
+    if result_dream.returncode != 0:
+        sys.exit(f"Buck2 build failed for sixmax_dream:\n{result_dream.stderr}")
+    so_path_dream = None
+    for line in result_dream.stdout.splitlines():
+        if "sixmax_dream.so" in line:
+            rel_so = line.split()[-1]
+            so_path_dream = os.path.join(repo_root, rel_so)
+            break
+    if so_path_dream is None:
+        sys.exit(f"Could not locate sixmax_dream.so in buck2 output.\n"
+                 f"stdout: {result_dream.stdout}\nstderr: {result_dream.stderr}")
+    spec_dream = importlib.util.spec_from_file_location("sixmax_dream", so_path_dream)
+    sixmax_dream = importlib.util.module_from_spec(spec_dream)
+    sys.modules["sixmax_dream"] = sixmax_dream
+    spec_dream.loader.exec_module(sixmax_dream)
+
     vc = load_module(os.path.join(repo_root, "sixmax", "vocab_config.py"), "vocab_config")
     vocab = vc.load_vocab(args.config, "blueprint")
 
     dc = cfg_data.get("train", {}).get("dream", {})
-    dream_cfg = sixmax.DreamConfig()
+    dream_cfg = sixmax_dream.DreamConfig()
     dream_cfg.hidden_size    = dc.get("hidden_size",    256)
     dream_cfg.hidden_layers  = dc.get("hidden_layers",  3)
     dream_cfg.lr             = dc.get("lr",             1e-3)
@@ -114,8 +135,8 @@ def main():
         seed=abs_cfg.get("seed",                      20260719),
     )
 
-    trainer = sixmax.DreamTrainer(vocab.size(), vocab, abstraction,
-                                  dream_cfg, device_str)
+    trainer = sixmax_dream.DreamTrainer(vocab.size(), vocab, abstraction,
+                                       dream_cfg, device_str)
 
     if args.resume:
         print(f"Resume not yet supported for DreamTrainer (nets only). "
