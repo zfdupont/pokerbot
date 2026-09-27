@@ -1,18 +1,23 @@
 # ── Stage 1: builder ─────────────────────────────────────────────────────────
-FROM --platform=linux/amd64 ubuntu:22.04 AS builder
+FROM --platform=linux/amd64 ubuntu:24.04 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
         build-essential \
-        python3.10 \
-        python3.10-dev \
+        clang \
+        lld \
+        python3.12 \
+        python3.12-dev \
         curl \
         zstd \
     && rm -rf /var/lib/apt/lists/*
 
-# Pin Buck2 to match local version (~/bin/buck2 --version = 2026-06-30)
+# Buck2: GitHub prunes dated release artifacts (the 2026-06-30 tag matching the
+# local ~/bin/buck2 now 404s), so pull the rolling `latest` release. The prelude
+# ships bundled with the binary and .buckconfig uses external_cells=bundled, so a
+# newer buck2 stays compatible with the BUCK rules.
 RUN curl -fL \
-    "https://github.com/facebook/buck2/releases/download/2026-06-30/buck2-x86_64-unknown-linux-gnu.zst" \
+    "https://github.com/facebook/buck2/releases/download/latest/buck2-x86_64-unknown-linux-gnu.zst" \
     | zstd -d - -o /usr/local/bin/buck2 \
     && chmod +x /usr/local/bin/buck2
 
@@ -26,7 +31,7 @@ COPY common/ /build/common/
 COPY BUCK /build/
 
 # Set python include path and cpu_tune for cross-compile (x86-64, not native)
-RUN python3.10 -c \
+RUN python3.12 -c \
     "import sysconfig; p=sysconfig.get_path('include'); \
      open('.buckconfig.local','w').write(f'[python]\n  include_path = {p}\n[build]\n  cpu_tune = x86-64\n')"
 
@@ -41,12 +46,11 @@ RUN find /build/buck-out -name "sixmax.so" -exec cp {} /opt/sixmax.so \; \
     && test -f /opt/sixmax.so
 
 # ── Stage 2: runtime ─────────────────────────────────────────────────────────
-FROM --platform=linux/amd64 ubuntu:22.04
+FROM --platform=linux/amd64 ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
-        python3.10 \
-        python3.10-distutils \
+        python3.12 \
         curl \
         rsync \
     && rm -rf /var/lib/apt/lists/*
@@ -61,7 +65,7 @@ ENV SIXMAX_SO_PATH=/opt/sixmax.so
 
 # Install Python deps (system-wide — no venv needed in container)
 COPY pyproject.toml /tmp/pyproject.toml
-RUN uv pip install --system --python python3.10 \
+RUN uv pip install --system --python python3.12 \
         "numpy>=1.26" \
         "tomli>=2.0" \
         "tqdm>=4.66"
