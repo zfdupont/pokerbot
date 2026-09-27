@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
         lld \
         python3.12 \
         python3.12-dev \
+        python3-pip \
         curl \
         zstd \
     && rm -rf /var/lib/apt/lists/*
@@ -37,6 +38,14 @@ RUN python3.12 -c \
 
 # Copy sixmax source (separate layer so C++ changes don't bust the cache above)
 COPY sixmax/ /build/sixmax/
+
+# pybind11 headers: the repo's third_party/pybind11/include is a machine-local
+# symlink (gitignored), so install pybind11 in-container to keep the build
+# hermetic on any host (CI runner, native amd64).
+RUN pip3 install --no-cache-dir --break-system-packages pybind11 \
+    && PB_INC=$(python3.12 -c "import pybind11, os; print(os.path.join(os.path.dirname(pybind11.__file__), 'include'))") \
+    && mkdir -p third_party/pybind11 \
+    && ln -sfn "$PB_INC" third_party/pybind11/include
 
 # Build the extension
 RUN /usr/local/bin/buck2 build //sixmax:sixmax
