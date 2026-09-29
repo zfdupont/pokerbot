@@ -11,7 +11,9 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 def _load_script():
     path = os.path.join(_ROOT, "scripts", "blueprint_range_chart.py")
     spec = importlib.util.spec_from_file_location("blueprint_range_chart", path)
+    assert spec is not None
     mod = importlib.util.module_from_spec(spec)
+    assert mod is not None
     spec.loader.exec_module(mod)
     return mod
 
