@@ -101,6 +101,20 @@ class MixedTableObserver(GameObserver):
         ci = 1.96 * 100.0 * math.sqrt(var) / (self._bb * math.sqrt(n))
         return bb100, ci
 
+    def paired_bb100_ci(self, seat_a: int, seat_b: int) -> Tuple[float, float]:
+        """Return (BB/100 diff, 95% CI) for seat_a minus seat_b, paired per hand."""
+        da = self._deltas[seat_a]
+        db = self._deltas[seat_b]
+        n = min(len(da), len(db))
+        if n < 2:
+            return 0.0, 0.0
+        diffs = [da[i] - db[i] for i in range(n)]
+        mean = sum(diffs) / n
+        var = sum((d - mean) ** 2 for d in diffs) / (n - 1)
+        bb100 = 100.0 * mean / self._bb
+        ci = 1.96 * 100.0 * math.sqrt(var) / (self._bb * math.sqrt(n))
+        return bb100, ci
+
     @property
     def chip_matrix(self) -> List[List[float]]:
         return self._matrix
@@ -146,11 +160,31 @@ class MixedTableObserver(GameObserver):
             for r in mat_rows:
                 print("  ".join(f"{str(v):>10}" for v in r))
 
+        # Paired CI: sixmax vs each potodds seat
+        potodds_seats = [
+            (i, lbl) for i, lbl in enumerate(self._labels) if lbl.startswith("potodds")
+        ]
+        if potodds_seats:
+            sixmax_seat = self._labels.index("sixmax")
+            paired_rows = []
+            for seat_b, lbl_b in potodds_seats:
+                diff, ci = self.paired_bb100_ci(sixmax_seat, seat_b)
+                paired_rows.append([f"sixmax − {lbl_b}", f"{diff:+.1f}", f"±{ci:.1f}"])
+            print()
+            if _tabulate:
+                print(_tabulate(paired_rows,
+                                headers=["Matchup", "BB/100 diff", "95% CI (paired)"],
+                                tablefmt="simple"))
+            else:
+                print(f"{'Matchup':>20}  {'BB/100 diff':>12}  {'95% CI (paired)':>16}")
+                for r in paired_rows:
+                    print(f"{r[0]:>20}  {r[1]:>12}  {r[2]:>16}")
+
 
 SEAT_LABELS = ["sixmax", "neural", "tabular", "potodds_3", "potodds_4", "potodds_5"]
 _BB = 2
 _SB = 1
-_STACK = 200
+_STACK = 2000
 
 
 def _build_agents(blueprint_path: str, neural_path: str, tabular_path: str):
@@ -203,14 +237,20 @@ def main() -> None:
     obs = MixedTableObserver(SEAT_LABELS, bb=_BB)
     game = PokerGame(players, small_blind=_SB, observers=[obs])
 
+    sixmax_player = players[SEAT_LABELS.index("sixmax")]
+    hands_played = 0
     for i in range(args.hands):
         random.seed(args.seed * 1_000_003 + i)
         game.play_hand()
-        for p in players:          # rebuy to keep 6-handed table
-            if p.stack == 0:
+        hands_played += 1
+        if sixmax_player.stack == 0:
+            print(f"[stopped after {hands_played} hands — sixmax busted]")
+            break
+        for p in players:          # rebuy others to keep 6-handed table
+            if p is not sixmax_player and p.stack == 0:
                 p.stack = _STACK
 
-    print(f"\nMixed-table eval — {args.hands} hands, seed {args.seed}\n")
+    print(f"\nMixed-table eval — {hands_played} hands, seed {args.seed}\n")
     obs.report()
 
     if args.csv:

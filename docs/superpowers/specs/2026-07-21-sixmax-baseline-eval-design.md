@@ -99,9 +99,7 @@ Then over the collected `x_h`:
 
 Decks are independent (distinct seeds); within-deck seat correlation is absorbed
 into the block `x_h`, so this SE is honest. The CLI prints `±1.96·stderr` as the
-95% CI. **This block-statistics computation is the `TODO(human)` contribution
-during implementation** (the independent unit, `ddof`, and CI multiplier are a
-real judgment call).
+95% CI.
 
 ### 3. Curve driver
 
