@@ -7,7 +7,7 @@ last_updated: 2026-07-19
 # pokerbot
 
 ## What This Is
-A Python Texas Hold'em simulator with pluggable agents, plus self-contained CFR training pipelines — tabular MCCFR (`cfr/`) and C++ Deep CFR (`neural_cfr/`), both heads-up — and a six-max blueprint+search subsystem under construction (`sixmax/`, Phase 1a solver core complete). Strategies deploy to openpoker.ai.
+A Python Texas Hold'em simulator with pluggable agents, plus self-contained CFR training pipelines — tabular MCCFR (`cfr/`) and C++ Deep CFR (`neural_cfr/`), both heads-up — and a six-max blueprint+search subsystem (`sixmax/`, Phases 1a–1c merged; tabular blueprint now learning post-deal-loop-fix, +32.5 BB/100 vs PotOdds at 5M iters; a DREAM neural blueprint in `sixmax/src/dream/` is built and ready to merge on `feature/neural-cfr`). Strategies deploy to openpoker.ai.
 
 ## Non-Negotiables
 - `cfr/`, `neural_cfr/`, and `sixmax/` never import `game/poker.py` or each other — bridging lives only in `agents/cfr_agent.py` and `scripts/`; shared C++ lives only in `common/`.
@@ -20,6 +20,8 @@ A Python Texas Hold'em simulator with pluggable agents, plus self-contained CFR 
 - Test: `uv run pytest tests/`
 - Train (tabular): `uv run python scripts/train_cfr.py`
 - Train (neural): `uv run python scripts/train_neural.py --checkpoint neural_cfr/checkpoints/checkpoint.pt`
+- Train (six-max blueprint): `uv run python scripts/train_sixmax.py --iterations 5000000 --checkpoint sixmax/checkpoints/blueprint.bin`
+- Train (DREAM neural blueprint): `uv run python scripts/train_dream.py`
 - Eval: `uv run python scripts/eval_openspiel.py --hands 2000`
 - Build C++: `~/bin/buck2 build //neural_cfr:neural_cfr //sixmax:sixmax`
 - Setup (fresh clone/worktree): `./scripts/setup_dev.sh`

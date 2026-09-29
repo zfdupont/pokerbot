@@ -14,7 +14,7 @@ edges:
     condition: when understanding how to use a technology in this codebase
   - target: context/setup.md
     condition: when installing or building the stack (uv, Buck2, libtorch)
-last_updated: 2026-07-19
+last_updated: 2026-07-25
 ---
 
 # Stack
@@ -29,7 +29,7 @@ last_updated: 2026-07-19
 ## Key Libraries
 
 - **numpy** — regret matching and strategy math in `cfr/regret_table.py`; vectorized equity estimation.
-- **pytest** (not unittest) — full suite in `tests/`, 178 tests; `pythonpath = ["."]` set in `pyproject.toml` so imports are repo-root-relative.
+- **pytest** (not unittest) — full suite in `tests/`, 270 tests; `pythonpath = ["."]` set in `pyproject.toml` so imports are repo-root-relative. The full suite runs green in a single process; C++ bindings that call autograd release the GIL (see `context/conventions.md`).
 - **websockets** — `scripts/openpoker_bot.py` connector to openpoker.ai.
 - **tqdm** — progress bars in the tabular trainer; the C++ trainer uses p-ranav/indicators instead.
 - **cython** — hot-path acceleration for tabular MCCFR traversal (added in the parallel-training perf pass).

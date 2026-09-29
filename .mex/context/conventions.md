@@ -15,7 +15,7 @@ edges:
     condition: when a convention exists because of a past bug or design decision
   - target: patterns/add-agent.md
     condition: when applying the engine↔agent boundary to a new agent
-last_updated: 2026-07-18
+last_updated: 2026-07-25
 ---
 
 # Conventions
@@ -43,6 +43,8 @@ last_updated: 2026-07-18
 
 **Chip normalization at boundaries.** Neural nets were trained at `starting_stack=100, big_blind=1`. Any adapter feeding another engine's chip counts (OpenSpiel, openpoker.ai) must divide every chip quantity by the table's **big blind** before `get_action_probs` (the training frame has `big_blind = 1`; dividing by `their_stack/100` was a bug that only coincided with the right answer at exactly 100BB — fixed in `scripts/openpoker_bot.py`).
 
+**Release the GIL in C++ bindings that call autograd.** Any pybind11 binding that triggers a backward pass (`Trainer.run`/`train_strategy`/`checkpoint` in `neural_cfr/`, `BlueprintTrainer.train`/`DreamTrainer.train` in `sixmax/`) must carry `py::call_guard<py::gil_scoped_release>()`. If the Python `torch` package has been imported into the process, the active autograd engine is `PythonEngine`, which **raises** `RuntimeError: The autograd engine was called while holding the GIL` rather than deadlocking — so holding the GIL across `backward()` crashes. Inference bindings that use `torch::NoGradGuard` don't need this (and must keep the GIL if they build `py::dict` results). Regression guard: `tests/neural_cfr/test_torch_interop.py`.
+
 **Test-time cheapening via conftest.** `tests/conftest.py` patches `MONTE_CARLO_SAMPLES=10` globally and `tests/cfr/conftest.py` stubs `compute_exploitability` — tests must stay fast; don't add tests that run real equity rollouts at full sample counts.
 
 ## Verify Checklist
@@ -53,4 +55,5 @@ Before presenting any code:
 - [ ] Action indices respect the fixed vocabulary order `fold/check/call/b0.5/b1.0/allin`; illegal actions masked, not removed.
 - [ ] Chip values crossing an engine boundary are rescaled to the 100BB training frame.
 - [ ] C++ changes: `~/bin/buck2 build //neural_cfr:neural_cfr` succeeds and any kicker/encoding change preserves the `12 - rank` inversion (lower = better).
+- [ ] New/changed pybind11 bindings that call autograd (`backward()`) release the GIL via `py::call_guard<py::gil_scoped_release>()`; full `uv run pytest tests/` passes in one process after any `torch`-importing test.
 - [ ] No secrets committed; `OPENPOKER_API_KEY` stays in the environment, never in source.

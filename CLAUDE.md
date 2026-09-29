@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Python Texas Hold'em poker simulator. Agents (decision-making policies) play hands against each other under a shared game engine. Two self-contained CFR training pipelines learn Nash-approximate heads-up strategies — tabular MCCFR (`cfr/`) and C++ Deep CFR (`neural_cfr/`, libtorch + pybind11 + Buck2) — plus tooling to play, visualize, evaluate, and deploy the trained bot.
+Python Texas Hold'em poker simulator. Agents (decision-making policies) play hands against each other under a shared game engine. Two self-contained CFR training pipelines learn Nash-approximate heads-up strategies — tabular MCCFR (`cfr/`) and C++ Deep CFR (`neural_cfr/`, libtorch + pybind11 + Buck2) — plus a six-max subsystem (`sixmax/`: config-defined vocab, abstracted MCCFR blueprint now learning, and a DREAM neural blueprint under `sixmax/src/dream/`) and tooling to play, visualize, evaluate, and deploy the trained bot.
 
 ## Context Scaffold — read this first
 
@@ -41,7 +41,7 @@ Always edit  Non-Negotiables after modifying any of these. Condensed from `.mex/
 ## Quick Commands
 
 ```bash
-uv run pytest tests/                                    # full suite (178 tests)
+uv run pytest tests/                                    # full suite (270 tests, all green in one process)
 uv run python scripts/train_cfr.py                      # tabular training
 uv run python scripts/train_neural.py --config neural_cfr/configs/default.toml --checkpoint neural_cfr/checkpoints/checkpoint.pt
 uv run python scripts/eval_openspiel.py --hands 2000    # head-to-head eval (BB/100)
