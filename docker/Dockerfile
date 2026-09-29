@@ -85,7 +85,9 @@ ENV SIXMAX_SO_PATH=/opt/sixmax.so
 
 # Install Python deps (system-wide — no venv needed in container)
 COPY pyproject.toml /tmp/pyproject.toml
-RUN uv pip install --system --python python3.12 \
+# --break-system-packages: ubuntu 24.04's system python3.12 is PEP 668
+# externally-managed; the container is a dedicated system env, so install into it.
+RUN uv pip install --system --break-system-packages --python python3.12 \
         "numpy>=1.26" \
         "tomli>=2.0" \
         "tqdm>=4.66"
