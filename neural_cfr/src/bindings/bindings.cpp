@@ -219,10 +219,18 @@ PYBIND11_MODULE(neural_cfr, m) {
              py::arg("epsilon")         = DEFAULT_EPSILON,
              py::arg("sgd_steps")       = DEFAULT_SGD_STEPS,
              py::arg("reinit_adv")      = DEFAULT_REINIT_ADV)
-        .def("run",            &Trainer::run,            py::arg("iterations"))
+        // Release the GIL around the backward-invoking calls: if the Python
+        // `torch` package has been imported, the active autograd engine is
+        // PythonEngine, which raises "autograd engine was called while
+        // holding the GIL" if the GIL is held during backward(). Mirrors
+        // sixmax/src/bindings/bindings.cpp.
+        .def("run",            &Trainer::run,            py::arg("iterations"),
+             py::call_guard<py::gil_scoped_release>())
         .def("train_strategy", &Trainer::train_strategy, py::arg("sgd_steps") = -1,
+             py::call_guard<py::gil_scoped_release>(),
              "Retrain the strategy net on M_pi (called automatically by checkpoint)")
-        .def("checkpoint",     &Trainer::checkpoint,     py::arg("path"))
+        .def("checkpoint",     &Trainer::checkpoint,     py::arg("path"),
+             py::call_guard<py::gil_scoped_release>())
         .def("load",           &Trainer::load,           py::arg("path"))
         .def("total_iterations", &Trainer::total_iterations,
              "Cumulative traversal-pair count (persists across checkpoints)");

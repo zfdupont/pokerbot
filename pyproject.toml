@@ -9,6 +9,7 @@ dependencies = [
     "numpy>=1.26",
     "setuptools>=82.0.1",
     "tomli>=2.0; python_version < '3.11'",
+    "torch==2.7.0",
     "tqdm>=4.66",
     "websockets>=12.0",
 ]
