@@ -18,7 +18,7 @@ RESUME_CHECKPOINT=""
 MAX_HOURS=24
 IMAGE="ghcr.io/zfdupont/pokerbot-trainer:latest"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-SERVER_NAME="pokerbot-train-${TIMESTAMP}"
+SERVER_NAME="pokerbot-train-${TIMESTAMP//_/-}"  # hostnames disallow underscores
 SERVER_IP=""
 SYNC_PID=""
 WATCHDOG_PID=""
@@ -186,7 +186,7 @@ ssh "root@$SERVER_IP" "docker run \
     -v /tmp/pokerbot/agents:/pokerbot/agents:ro \
     -e SIXMAX_SO_PATH=/opt/sixmax.so \
     $IMAGE \
-    python3.10 /pokerbot/scripts/train_sixmax.py \
+    python3.12 /pokerbot/scripts/train_sixmax.py \
         --iterations $ITERS \
         --checkpoint /pokerbot/sixmax/checkpoints/checkpoint.bin \
         $RESUME_FLAG"

@@ -94,7 +94,7 @@ run_remote() {
     : "${HETZNER_SSH_KEY_NAME:?HETZNER_SSH_KEY_NAME not set — add to .env}"
     : "${GHCR_PAT:?GHCR_PAT not set — add to .env (GitHub PAT with read:packages scope)}"
 
-    SERVER_NAME="pokerbot-bench-${TIMESTAMP}"
+    SERVER_NAME="pokerbot-bench-${TIMESTAMP//_/-}"  # hostnames disallow underscores
     SERVER_IP=""
 
     cleanup() {
@@ -161,7 +161,7 @@ run_remote() {
         --name pokerbot-bench \
         $IMAGE"
 
-    TRAIN_CMD="python3.10 /pokerbot/scripts/train_sixmax.py \
+    TRAIN_CMD="python3.12 /pokerbot/scripts/train_sixmax.py \
         --iterations $ITERS \
         --checkpoint /pokerbot/sixmax/checkpoints/bench_${TIMESTAMP}.bin"
 
