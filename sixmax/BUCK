@@ -1,5 +1,8 @@
 _python_include = read_config("python", "include_path", "")
 _cpu_tune = read_config("build", "cpu_tune", "native")
+# clang accepts -mcpu on Apple Silicon (arm64) but rejects it on x86 linux, which
+# wants -march. host_info() reflects the machine running buck2 (the build host).
+_arch_flag = ("-mcpu=" + _cpu_tune) if host_info().os.is_macos else ("-march=" + _cpu_tune)
 
 cxx_library(
     name = "core",
@@ -16,7 +19,7 @@ cxx_library(
     ],
     headers = glob(["src/**/*.h"]),
     header_namespace = "",
-    compiler_flags = ["-std=c++17", "-O3", "-mcpu=" + _cpu_tune, "-DNDEBUG"],
+    compiler_flags = ["-std=c++17", "-O3", _arch_flag, "-DNDEBUG"],
     exported_preprocessor_flags = ["-Isixmax/src"],
     deps = ["//common:evaluator"],
     exported_deps = ["//common:evaluator"],
@@ -35,7 +38,7 @@ cxx_library(
     ],
     headers = glob(["src/dream/*.h"]),
     header_namespace = "",
-    compiler_flags = ["-std=c++17", "-O3", "-mcpu=" + _cpu_tune, "-DNDEBUG"],
+    compiler_flags = ["-std=c++17", "-O3", _arch_flag, "-DNDEBUG"],
     exported_preprocessor_flags = ["-Isixmax/src"],
     deps = [":core", "//third_party:libtorch"],
     exported_deps = [":core", "//third_party:libtorch"],
@@ -48,7 +51,7 @@ cxx_library(
     srcs = ["src/bindings/bindings.cpp"],
     headers = [],
     header_namespace = "",
-    compiler_flags = ["-std=c++17", "-O3", "-mcpu=" + _cpu_tune, "-DNDEBUG"] +
+    compiler_flags = ["-std=c++17", "-O3", _arch_flag, "-DNDEBUG"] +
                      (["-I" + _python_include] if _python_include else []),
     deps = [":core", "//third_party:pybind11"],
     preferred_linkage = "shared",
@@ -62,7 +65,7 @@ cxx_library(
     srcs = ["src/bindings/bindings_dream.cpp"],
     headers = [],
     header_namespace = "",
-    compiler_flags = ["-std=c++17", "-O3", "-mcpu=" + _cpu_tune, "-DNDEBUG"] +
+    compiler_flags = ["-std=c++17", "-O3", _arch_flag, "-DNDEBUG"] +
                      (["-I" + _python_include] if _python_include else []),
     deps = [":core", ":dream", "//third_party:pybind11", "//third_party:libtorch"],
     preferred_linkage = "shared",
