@@ -95,17 +95,19 @@ run_remote() {
     : "${GHCR_PAT:?GHCR_PAT not set — add to .env (GitHub PAT with read:packages scope)}"
 
     SERVER_NAME="pokerbot-bench-${TIMESTAMP//_/-}"  # hostnames disallow underscores
+    # Ephemeral VPS: never trust/persist host keys (IPs get recycled across runs).
+    SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10"
     SERVER_IP=""
 
     cleanup() {
         echo ""
         echo "[cloud_benchmark] Syncing results..."
         if [ -n "$SERVER_IP" ]; then
-            rsync -avz --ignore-errors \
+            rsync -avz --ignore-errors -e "ssh $SSH_OPTS" \
                 "root@${SERVER_IP}:/tmp/pokerbot/sixmax/checkpoints/" \
                 "${REPO_ROOT}/sixmax/checkpoints/" 2>/dev/null || true
             if $PROFILE; then
-                rsync -avz --ignore-errors \
+                rsync -avz --ignore-errors -e "ssh $SSH_OPTS" \
                     "root@${SERVER_IP}:/tmp/pokerbot/sixmax/checkpoints/callgrind_${TIMESTAMP}.out" \
                     "${REPO_ROOT}/sixmax/checkpoints/callgrind_${TIMESTAMP}.out" 2>/dev/null || true
             fi
@@ -129,27 +131,27 @@ run_remote() {
 
     echo "[cloud_benchmark] Waiting for SSH..."
     _ssh_attempts=0
-    until ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 "root@$SERVER_IP" echo ok 2>/dev/null; do
+    until ssh $SSH_OPTS "root@$SERVER_IP" echo ok 2>/dev/null; do
         sleep 5
         (( _ssh_attempts++ ))
         [[ $_ssh_attempts -ge 24 ]] && { echo "[cloud_benchmark] SSH timeout after 2 min — destroying server"; exit 1; }
     done
 
     echo "[cloud_benchmark] Installing Docker..."
-    ssh "root@$SERVER_IP" "curl -fsSL https://get.docker.com | sh"
+    ssh $SSH_OPTS "root@$SERVER_IP" "curl -fsSL https://get.docker.com | sh"
 
     echo "[cloud_benchmark] Logging in to GHCR..."
-    ssh "root@$SERVER_IP" "echo '$GHCR_PAT' | docker login ghcr.io -u zfdupont --password-stdin"
+    ssh $SSH_OPTS "root@$SERVER_IP" "echo '$GHCR_PAT' | docker login ghcr.io -u zfdupont --password-stdin"
 
     echo "[cloud_benchmark] Syncing repo source..."
-    rsync -avz --exclude='third_party/' --exclude='buck-out/' \
+    rsync -avz -e "ssh $SSH_OPTS" --exclude='third_party/' --exclude='buck-out/' \
         --exclude='sixmax/checkpoints/' --exclude='neural_cfr/checkpoints/' \
         --exclude='cfr/checkpoints/' --exclude='.git/' \
         --exclude='__pycache__/' --exclude='*.pyc' \
         "${REPO_ROOT}/" "root@${SERVER_IP}:/tmp/pokerbot/"
 
     echo "[cloud_benchmark] Pulling Docker image..."
-    ssh "root@$SERVER_IP" "docker pull $IMAGE"
+    ssh $SSH_OPTS "root@$SERVER_IP" "docker pull $IMAGE"
 
     # -v broad ro mount FIRST, then write mount for checkpoints overrides it
     DOCKER_BASE="docker run --rm \
@@ -168,15 +170,15 @@ run_remote() {
     START_REMOTE=$(date +%s)
     if $PROFILE; then
         echo "[cloud_benchmark] Installing valgrind on VM..."
-        ssh "root@$SERVER_IP" "apt-get install -y valgrind -qq"
+        ssh $SSH_OPTS "root@$SERVER_IP" "apt-get install -y valgrind -qq"
         echo "[cloud_benchmark] Running with callgrind profiling inside container (this will be slow)..."
-        ssh "root@$SERVER_IP" "$DOCKER_BASE \
+        ssh $SSH_OPTS "root@$SERVER_IP" "$DOCKER_BASE \
             valgrind --tool=callgrind \
             --callgrind-out-file=/pokerbot/sixmax/checkpoints/callgrind_${TIMESTAMP}.out \
             $TRAIN_CMD"
     else
         echo "[cloud_benchmark] Running timed benchmark..."
-        ssh "root@$SERVER_IP" "$DOCKER_BASE $TRAIN_CMD"
+        ssh $SSH_OPTS "root@$SERVER_IP" "$DOCKER_BASE $TRAIN_CMD"
     fi
     END_REMOTE=$(date +%s)
     ELAPSED=$((END_REMOTE - START_REMOTE))
