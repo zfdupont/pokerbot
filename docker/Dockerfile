@@ -47,6 +47,17 @@ RUN pip3 install --no-cache-dir --break-system-packages pybind11 \
     && mkdir -p third_party/pybind11 \
     && ln -sfn "$PB_INC" third_party/pybind11/include
 
+# third_party/BUCK declares libtorch prebuilt targets used only by the DREAM
+# extension, not the torch-free //sixmax:sixmax build. libtorch is excluded from
+# this image (.dockerignore), but buck2 coerces every target in third_party/BUCK
+# when the package loads (//sixmax:sixmax pulls in //third_party:pybind11), so
+# create empty placeholder paths to satisfy attribute coercion. They are never
+# linked — //sixmax:sixmax has no libtorch dependency.
+RUN mkdir -p third_party/libtorch/lib third_party/libtorch/include/torch/csrc/api/include \
+    && touch third_party/libtorch/lib/libc10.dylib \
+             third_party/libtorch/lib/libtorch_cpu.dylib \
+             third_party/libtorch/lib/libtorch.dylib
+
 # Build the extension
 RUN /usr/local/bin/buck2 build //sixmax:sixmax
 
