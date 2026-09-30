@@ -187,3 +187,6 @@ sixmax/checkpoints/
 
 # IDE
 .vscode/
+
+# Local git worktrees
+.worktrees/
