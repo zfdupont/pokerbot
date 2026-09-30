@@ -124,6 +124,12 @@ def test_single_action_applied_once_then_pauses():
     assert state["current_bet"] == 8
 
 
+def test_snapshot_exposes_big_blind_for_sizing():
+    s = _new_session(_store())
+    _, state = advance(s)
+    assert state["big_blind"] == 2
+
+
 def test_reload_returns_same_pause_state():
     store = _store()
     s = _new_session(store)

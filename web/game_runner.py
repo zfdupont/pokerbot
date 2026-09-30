@@ -189,6 +189,8 @@ def snapshot(session: Session, state, *, hand_complete: bool,
         "community_cards": [str(c) for c in state.community_cards],
         "pot": state.pot,
         "current_bet": state.current_bet,
+        "big_blind": state.big_blind,   # for client-side bet sizing display (BB)
+
         "hero": {
             "seat": 0,
             "position": hero.position.value if hero.position else None,
