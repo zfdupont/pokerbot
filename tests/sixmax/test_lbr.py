@@ -1,0 +1,75 @@
+"""LBR exploitability estimator: engine primitives, policy, decide, run."""
+import importlib.util
+import os
+
+import sixmax
+
+_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+def _load_vocab():
+    spec = importlib.util.spec_from_file_location(
+        "vocab_config", os.path.join(_ROOT, "sixmax", "vocab_config.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.load_vocab(os.path.join(_ROOT, "sixmax", "configs", "default.toml"),
+                          "blueprint")
+
+
+def _card(rank, suit):
+    return (rank - 2) * 4 + suit
+
+
+VOCAB = _load_vocab()
+CFG = sixmax.EngineConfig(num_players=2)
+ABS = sixmax.Abstraction(flop_buckets=10, turn_buckets=10, river_buckets=5,
+                         equity_rollouts=40, quantile_samples=300, seed=42)
+
+
+def _strategy(tmp_path, iters=120, seed=13):
+    t = sixmax.BlueprintTrainer(CFG, VOCAB, ABS, num_threads=1, seed=seed)
+    t.train(iters)
+    path = str(tmp_path / "bp.bin")
+    t.save(path, VOCAB, CFG, ABS)
+    return sixmax.BlueprintStrategy.load(path, VOCAB)
+
+
+def test_blueprint_probs_masks_and_normalizes(tmp_path):
+    strat = _strategy(tmp_path)
+    s = sixmax.EngineGameState(CFG, 0, list(range(52)), VOCAB, [])
+    probs = sixmax.blueprint_probs(strat, s)
+    mask = s.legal_mask()
+    assert len(probs) == VOCAB.size()
+    assert all(p >= 0.0 for p in probs)
+    assert all(probs[i] == 0.0 for i in range(len(probs)) if not mask[i])
+    assert abs(sum(probs) - 1.0) < 1e-9
+
+
+def test_sample_blueprint_respects_the_mask(tmp_path):
+    strat = _strategy(tmp_path)
+    s = sixmax.EngineGameState(CFG, 0, list(range(52)), VOCAB, [])
+    mask = s.legal_mask()
+    for seed in range(20):
+        a = sixmax.sample_blueprint(strat, s, False, seed)
+        assert mask[a] == 1
+
+
+def test_keys_use_the_strategys_own_abstraction(tmp_path):
+    """When the strategy has a stored policy for the state's key, the masked
+    distribution must be exactly that policy (i.e. keyed through the strategy's
+    own abstraction); unseen keys legitimately fall back to uniform."""
+    strat = _strategy(tmp_path, iters=400)
+    premiums = [((14, 0), (14, 1)),    # AA
+                ((13, 0), (13, 1)),    # KK
+                ((12, 0), (12, 1)),    # QQ
+                ((14, 0), (13, 1))]    # AKs
+    seen = 0
+    for (r0, s0), (r1, s1) in premiums:
+        hole = [_card(r0, s0), _card(r1, s1)]
+        deck = hole + [c for c in range(52) if c not in set(hole)]
+        s = sixmax.EngineGameState(CFG, 0, deck, VOCAB, [])
+        stored = strat.probs(s.abstract_key(strat.abstraction()))
+        if stored:
+            assert sixmax.blueprint_probs(strat, s) == stored
+            seen += 1
+    assert seen > 0

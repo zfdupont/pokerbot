@@ -44,6 +44,13 @@ public:
     double to_call()   const { return hand_.to_call(); }
     std::array<uint8_t, 4> raises_per_street() const { return raises_; }
 
+    // True-card / mutable access for the LBR exploiter (never exposed to Python).
+    const HandState& hand() const { return hand_; }
+    HandState& mutable_hand() { return hand_; }
+    std::unique_ptr<EngineGameState> clone_engine() const {
+        return std::make_unique<EngineGameState>(*this);
+    }
+
 private:
     bool size_class_ok(const AbstractAction& a) const;
     HandState hand_;

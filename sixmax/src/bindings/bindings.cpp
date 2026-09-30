@@ -14,6 +14,7 @@
 #include "abstraction/abstraction.h"
 #include "abstraction/abstract_key.h"
 #include "blueprint/checkpoint.h"
+#include "exploit/policy.h"
 
 namespace py = pybind11;
 
@@ -247,6 +248,20 @@ PYBIND11_MODULE(sixmax, m) {
         .def("edges", &sixmax::Abstraction::edges)
         .def("bucket_cache_size", &sixmax::Abstraction::bucket_cache_size)
         .def("hash", &sixmax::Abstraction::hash);
+    m.def("blueprint_probs",
+          [](const sixmax::BlueprintStrategy& st,
+             const sixmax::EngineGameState& s) {
+              return sixmax::blueprint_probs(st, s);
+          },
+          py::arg("strategy"), py::arg("state"));
+    m.def("sample_blueprint",
+          [](const sixmax::BlueprintStrategy& st,
+             const sixmax::EngineGameState& s, bool uniform, uint64_t seed) {
+              std::mt19937_64 rng(seed);
+              return sixmax::sample_blueprint(st, s, uniform, rng);
+          },
+          py::arg("strategy"), py::arg("state"), py::arg("uniform") = false,
+          py::arg("seed") = 1);
     // --- Multithreaded blueprint trainer (Phase 1b Task 3) ---
     py::class_<sixmax::BlueprintTrainer>(m, "BlueprintTrainer")
         .def(py::init([](const sixmax::EngineConfig& cfg,

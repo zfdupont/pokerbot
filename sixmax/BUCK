@@ -16,6 +16,7 @@ cxx_library(
         "src/abstraction/abstraction.cpp",
         "src/abstraction/abstract_key.cpp",
         "src/blueprint/checkpoint.cpp",
+        "src/exploit/policy.cpp",
     ],
     headers = glob(["src/**/*.h"]),
     header_namespace = "",
