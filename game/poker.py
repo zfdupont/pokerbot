@@ -26,15 +26,24 @@ class PokerGame:
     def _assign_positions(self) -> None:
         from models.enums import Position
         num = len(self.state.players)
-        positions = list(Position)[-num:]
+        if num == 2:
+            # Heads-up: the button is the small blind.
+            positions = [Position.SMALL_BLIND, Position.BIG_BLIND]
+        else:
+            positions = list(Position)[-num:]
         for i, player in enumerate(self.state.players):
             idx = (i + self.state.button_pos) % num
             player.position = positions[idx]
 
     def _post_blinds(self, pot_manager: PotManager) -> None:
         num = len(self.state.players)
-        sb_pos = (self.state.button_pos + 1) % num
-        bb_pos = (self.state.button_pos + 2) % num
+        if num == 2:
+            # Heads-up: the button posts the small blind, the other seat the big blind.
+            sb_pos = self.state.button_pos
+            bb_pos = (self.state.button_pos + 1) % num
+        else:
+            sb_pos = (self.state.button_pos + 1) % num
+            bb_pos = (self.state.button_pos + 2) % num
 
         sb = self.state.players[sb_pos]
         bb = self.state.players[bb_pos]
@@ -59,7 +68,12 @@ class PokerGame:
 
     def _first_to_act(self, street: int) -> int:
         num = len(self.state.players)
-        start = (self.state.button_pos + 3) % num if street == 0 else (self.state.button_pos + 1) % num
+        if num == 2:
+            # Heads-up: button (small blind) opens preflop; big blind opens postflop.
+            start = (self.state.button_pos if street == 0
+                     else (self.state.button_pos + 1) % num)
+        else:
+            start = (self.state.button_pos + 3) % num if street == 0 else (self.state.button_pos + 1) % num
         for i in range(num):
             idx = (start + i) % num
             p = self.state.players[idx]
