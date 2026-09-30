@@ -146,3 +146,30 @@ def test_zero_weight_history_falls_back_to_uniform(tmp_path):
     _, weights = ev.debug_sample_deals(initial.clone(), 1, [0], [-1], seed=1)
     assert abs(sum(weights) - 1.0) < 1e-9
     assert all(abs(w - 1.0 / 8) < 1e-12 for w in weights)
+
+
+def test_run_is_deterministic_in_seed(tmp_path):
+    strat = _strategy(tmp_path)
+    ev = _evaluator(strat, samples=8, seed=1)
+    a = ev.run(decks=6, seed=5)
+    b = ev.run(decks=6, seed=5)
+    assert a["gains"] == b["gains"]
+    assert a["stderrs"] == b["stderrs"]
+
+
+def test_run_zero_gain_when_hero_plays_the_blueprint(tmp_path):
+    # hero_action_limit=1 makes the hero follow the blueprint in both passes;
+    # the shared RNG stream makes the trajectories identical, so gain is 0.
+    strat = _strategy(tmp_path)
+    ev = _evaluator(strat, samples=8, seed=1, hero_action_limit=1)
+    r = ev.run(decks=24, seed=5)
+    assert max(abs(g) for g in r["gains"]) < 1e-9
+
+
+def test_run_exploits_uniform_opponents(tmp_path):
+    strat = _strategy(tmp_path)
+    ev = _evaluator(strat, samples=32, seed=1, uniform_opponents=True)
+    r = ev.run(decks=80, seed=5)
+    assert len(r["gains"]) == 2                 # num_players == 2
+    assert r["max_gain"] > 0.0
+    assert all(s >= 0.0 for s in r["stderrs"])

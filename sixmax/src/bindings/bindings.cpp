@@ -310,7 +310,25 @@ PYBIND11_MODULE(sixmax, m) {
              },
              py::arg("hand"), py::arg("hero"),
              py::arg("actors") = std::vector<int>{},
-             py::arg("actions") = std::vector<int>{}, py::arg("seed") = 1);
+             py::arg("actions") = std::vector<int>{}, py::arg("seed") = 1)
+        .def("run",
+             [](sixmax::LbrEvaluator& e, int decks, uint64_t seed) {
+                 auto r = e.run(decks, seed);
+                 py::dict out;
+                 py::list gains, ses;
+                 for (auto& s : r.seats) {
+                     gains.append(s.gain_bb100);
+                     ses.append(s.stderr);
+                 }
+                 out["gains"] = gains;
+                 out["stderrs"] = ses;
+                 out["max_gain"] = r.max_gain_bb100;
+                 out["mean_gain"] = r.mean_gain_bb100;
+                 out["decks"] = r.decks;
+                 out["num_players"] = r.num_players;
+                 return out;
+             },
+             py::arg("decks"), py::arg("seed") = 1);
     // --- Multithreaded blueprint trainer (Phase 1b Task 3) ---
     py::class_<sixmax::BlueprintTrainer>(m, "BlueprintTrainer")
         .def(py::init([](const sixmax::EngineConfig& cfg,
