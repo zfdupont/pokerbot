@@ -1,0 +1,43 @@
+# Heads-up (2-player) blueprint training config, consumed via
+#   uv run python scripts/train_sixmax.py --config sixmax/configs/hu.toml
+# [actions.blueprint] and [abstraction] are identical to default.toml so the
+# vocab + abstraction hashes stay compatible with the deploy bridge
+# (SixmaxAgent / canonical_live_after). Only the player count, iteration
+# budget, and checkpoint path differ.
+
+[actions.blueprint]
+preflop_opens = [ { size = 2.5, unit = "bb" },
+                  { size = 3.5, unit = "bb" },
+                  { size = 5.0, unit = "bb" } ]
+# Every raise after the open (3-bet+, and ALL postflop bets and raises)
+# shares one pot-fraction grid. Raise-to = current_bet + size * (pot + 2*to_call).
+bet_sizes     = [ { size = 0.33, unit = "pot" },
+                  { size = 0.75, unit = "pot" },
+                  { size = 1.5,  unit = "pot" } ]   # includes overbet
+include_allin = true   # legal jam always in the action set, incl. preflop
+
+[actions.search]       # may differ from blueprint; v1 starts identical.
+bet_sizes     = [ { size = 0.33, unit = "pot" },
+                  { size = 0.75, unit = "pot" },
+                  { size = 1.5,  unit = "pot" } ]
+include_allin = true
+
+[abstraction]
+flop_buckets = 50
+turn_buckets = 50
+river_buckets = 20
+equity_rollouts = 100
+quantile_samples = 10000
+seed = 20260719
+
+[train.blueprint]
+num_players = 2
+starting_stack = 100.0
+iterations = 5000000
+num_threads = 0          # 0 = hardware_concurrency
+checkpoint_interval = 500000   # snapshot every 500k iters (never lose a run)
+checkpoint = "sixmax/checkpoints/hu_blueprint.bin"
+seed = 7
+selection_enabled = false
+selection_hands = 2000
+report_interval = 60
