@@ -1,9 +1,10 @@
 #pragma once
 #include <array>
+#include <cstddef>
 #include <cstdint>
-#include <mutex>
-#include <unordered_map>
+#include <memory>
 #include <vector>
+#include "abstraction/bucket_cache.h"
 
 namespace sixmax {
 
@@ -35,15 +36,18 @@ struct AbstractionConfig {
 // size (3=flop, 4=turn, 5=river).
 class Abstraction {
 public:
-    explicit Abstraction(const AbstractionConfig& cfg);  // builds edges
+    // Per-shard cap for the memo cache (see bucket_cache.h). A runtime-only
+    // tuning knob: never hashed, serialised, or otherwise part of the artifact.
+    static constexpr size_t kDefaultBucketCacheCap = 4096;
+
+    explicit Abstraction(const AbstractionConfig& cfg,
+                         size_t cache_cap = kDefaultBucketCacheCap);  // builds edges
     Abstraction(const AbstractionConfig& cfg,
-                std::array<std::vector<double>, 3> edges);  // from artifact
-    // The runtime bucket cache below holds a std::mutex per shard, which would
-    // implicitly delete the move constructor and break the by-value/std::move
-    // handoff in BlueprintStrategy. Provide moves that transfer only the
-    // artifact state (cfg_/edges_) and leave the destination's cache freshly
-    // empty — the cache is a deterministic accelerator, so an empty cache after
-    // a move is always correct. Copies stay deleted (mutex is non-copyable);
+                std::array<std::vector<double>, 3> edges,
+                size_t cache_cap = kDefaultBucketCacheCap);  // from artifact
+    // Moves transfer the cache pointer alongside cfg_/edges_. That is always
+    // correct: the cache is a deterministic accelerator (a stale or shared
+    // entry still equals the value it would recompute). Copies stay deleted;
     // nothing copies an Abstraction.
     Abstraction(Abstraction&& other) noexcept;
     Abstraction& operator=(Abstraction&& other) noexcept;
@@ -55,23 +59,16 @@ public:
     const AbstractionConfig& config() const { return cfg_; }
     const std::array<std::vector<double>, 3>& edges() const { return edges_; }
     uint64_t hash() const;  // config + edges; part of the artifact contract
+    size_t bucket_cache_size() const;  // diagnostics / tests
 
 private:
     AbstractionConfig cfg_;
     std::array<std::vector<double>, 3> edges_;  // [0]=flop [1]=turn [2]=river
 
-    // Deterministic (hole, board) -> bucket memo. bucket() is const and hit
-    // concurrently by up to 8 traversal workers, so the cache is mutable and
-    // sharded (mutex+map per shard, keyed by cache_key % kBucketCacheShards)
-    // to keep lock contention low — a single global lock would serialise every
-    // lookup and defeat the optimisation. Purely a runtime accelerator: NOT
-    // hashed, serialised, copied, or moved with the artifact (see hash()).
-    static constexpr size_t kBucketCacheShards = 64;
-    struct BucketCacheShard {
-        std::mutex mu;
-        std::unordered_map<uint64_t, int> map;
-    };
-    mutable std::array<BucketCacheShard, kBucketCacheShards> bucket_cache_;
+    // Deterministic (hole, board) -> bucket memo, sharded + size-bounded. An
+    // accelerator only: NOT hashed, serialised, or reconstructed from an
+    // artifact (the owning pointer moves with the object; see hash()).
+    std::unique_ptr<BucketCache> bucket_cache_;
 };
 
 }  // namespace sixmax

@@ -1,6 +1,6 @@
 #include "abstraction/abstraction.h"
 #include <algorithm>
-#include <mutex>
+#include <memory>
 #include <random>
 #include <stdexcept>
 #include "game/safe_eval.h"
@@ -74,7 +74,10 @@ double hand_equity(const std::array<int, 2>& hole,
     return score / rollouts;
 }
 
-Abstraction::Abstraction(const AbstractionConfig& cfg) : cfg_(cfg) {
+Abstraction::Abstraction(const AbstractionConfig& cfg, size_t cache_cap)
+    : cfg_(cfg),
+      bucket_cache_(std::make_unique<BucketCache>(
+          cache_cap, std::make_unique<ClearOnFullPolicy>())) {
     std::mt19937_64 rng(cfg.seed);
     const int nbuckets[3] = {cfg.flop_buckets, cfg.turn_buckets,
                              cfg.river_buckets};
@@ -103,28 +106,24 @@ Abstraction::Abstraction(const AbstractionConfig& cfg) : cfg_(cfg) {
 }
 
 Abstraction::Abstraction(const AbstractionConfig& cfg,
-                         std::array<std::vector<double>, 3> edges)
-    : cfg_(cfg), edges_(std::move(edges)) {}
+                         std::array<std::vector<double>, 3> edges,
+                         size_t cache_cap)
+    : cfg_(cfg), edges_(std::move(edges)),
+      bucket_cache_(std::make_unique<BucketCache>(
+          cache_cap, std::make_unique<ClearOnFullPolicy>())) {}
 
-// Move only the artifact state; bucket_cache_ is left default-constructed
-// (empty) on both this and the moved-from object. The cache is a deterministic
-// per-instance accelerator, so it correctly repopulates lazily on the new
-// owner. The per-shard mutexes are never moved (they are non-movable).
+// Transfers the cache pointer alongside cfg_/edges_. Always correct: the cache
+// is a deterministic accelerator, so a shared/stale entry equals the value it
+// would recompute.
 Abstraction::Abstraction(Abstraction&& other) noexcept
-    : cfg_(std::move(other.cfg_)), edges_(std::move(other.edges_)) {}
+    : cfg_(std::move(other.cfg_)), edges_(std::move(other.edges_)),
+      bucket_cache_(std::move(other.bucket_cache_)) {}
 
 Abstraction& Abstraction::operator=(Abstraction&& other) noexcept {
     if (this != &other) {
         cfg_ = std::move(other.cfg_);
         edges_ = std::move(other.edges_);
-        // bucket_cache_ intentionally untouched: its mutexes cannot be moved,
-        // and any previously cached entries remain valid only if they match the
-        // new cfg_/edges_. Since edges_ changed, clear stale entries so future
-        // lookups recompute against the new distribution.
-        for (auto& shard : bucket_cache_) {
-            std::lock_guard<std::mutex> lk(shard.mu);
-            shard.map.clear();
-        }
+        bucket_cache_ = std::move(other.bucket_cache_);
     }
     return *this;
 }
@@ -146,12 +145,8 @@ int Abstraction::bucket(const std::array<int, 2>& hole,
     // the original code uses, so the cache can never change an output.
     const uint64_t key = fnv_mix(equity_seed(hole, board, cfg_.seed),
                                  (uint64_t)s);
-    auto& shard = bucket_cache_[key % kBucketCacheShards];
-    {
-        std::lock_guard<std::mutex> lk(shard.mu);
-        auto it = shard.map.find(key);
-        if (it != shard.map.end()) return it->second;
-    }
+    int cached = 0;
+    if (bucket_cache_->get(key, cached)) return cached;
 
     // Miss: compute exactly as before. Salt MUST be cfg_.seed — the same salt
     // used when sampling the quantile edges in the constructor. Lookup-time
@@ -164,11 +159,8 @@ int Abstraction::bucket(const std::array<int, 2>& hole,
     const int bkt = (int)(std::upper_bound(e.begin(), e.end(), eq) - e.begin());
 
     // Two threads that miss the same key concurrently both compute the same
-    // deterministic bkt; insert-if-absent keeps the map consistent either way.
-    {
-        std::lock_guard<std::mutex> lk(shard.mu);
-        shard.map.emplace(key, bkt);
-    }
+    // deterministic bkt; last-write-wins in the cache is harmless.
+    bucket_cache_->put(key, bkt);
     return bkt;
 }
 
@@ -199,6 +191,10 @@ uint64_t Abstraction::hash() const {
         for (double v : e) mix_d(v);
     }
     return h;
+}
+
+size_t Abstraction::bucket_cache_size() const {
+    return bucket_cache_ ? bucket_cache_->size() : 0;
 }
 
 }  // namespace sixmax

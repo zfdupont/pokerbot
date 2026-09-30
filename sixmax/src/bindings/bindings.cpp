@@ -218,16 +218,17 @@ PYBIND11_MODULE(sixmax, m) {
     py::class_<sixmax::Abstraction>(m, "Abstraction")
         .def(py::init([](int flop_buckets, int turn_buckets, int river_buckets,
                          int equity_rollouts, int quantile_samples,
-                         uint64_t seed) {
+                         uint64_t seed, size_t cache_cap) {
                  return sixmax::Abstraction(sixmax::AbstractionConfig{
                      flop_buckets, turn_buckets, river_buckets,
-                     equity_rollouts, quantile_samples, seed});
+                     equity_rollouts, quantile_samples, seed}, cache_cap);
              }),
              py::kw_only(), py::arg("flop_buckets") = 50,
              py::arg("turn_buckets") = 50, py::arg("river_buckets") = 20,
              py::arg("equity_rollouts") = 100,
              py::arg("quantile_samples") = 10000,
-             py::arg("seed") = 20260719)
+             py::arg("seed") = 20260719,
+             py::arg("cache_cap") = sixmax::Abstraction::kDefaultBucketCacheCap)
         .def("bucket",
              [](const sixmax::Abstraction& a, const std::vector<int>& hole,
                 const std::vector<int>& board) {
@@ -236,6 +237,7 @@ PYBIND11_MODULE(sixmax, m) {
              })
         .def("num_buckets", &sixmax::Abstraction::num_buckets)
         .def("edges", &sixmax::Abstraction::edges)
+        .def("bucket_cache_size", &sixmax::Abstraction::bucket_cache_size)
         .def("hash", &sixmax::Abstraction::hash);
     // --- Multithreaded blueprint trainer (Phase 1b Task 3) ---
     py::class_<sixmax::BlueprintTrainer>(m, "BlueprintTrainer")
