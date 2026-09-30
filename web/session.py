@@ -49,6 +49,10 @@ class Session:
     bot_agent: object = None
     last_events: list = field(default_factory=list)
     last_state: Optional[dict] = None
+    # Serializes request handling for this session (FastAPI runs sync endpoints
+    # in a threadpool, so a double-click would otherwise race the seq guard).
+    lock: threading.Lock = field(default_factory=threading.Lock,
+                                 repr=False, compare=False)
 
     def start_hand(self, seed: Optional[int] = None) -> None:
         if seed is None:

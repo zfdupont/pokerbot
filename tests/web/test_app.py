@@ -65,6 +65,50 @@ def test_illegal_action_rejected_and_hand_unchanged():
     assert state2["seq"] == state["seq"]
 
 
+def test_concurrent_duplicate_actions_serialized():
+    # A double-click must advance the hand once. A blocking bot holds the first
+    # request inside advance() so a second request can race the seq guard.
+    import threading
+    import time
+
+    entered = threading.Event()
+    release = threading.Event()
+
+    class BlockingBot:
+        def get_action(self, player, state):
+            entered.set()
+            release.wait(2.0)
+            if state.current_bet - player.current_bet > 0:
+                return Action.FOLD, None
+            return Action.CHECK, None
+
+    c = TestClient(build_app(load_config(env={}), BlockingBot))
+    body = c.post("/api/session").json()
+    token, state = body["token"], body["state"]
+    legal = {a["action"] for a in state["legal_actions"]}
+    pick = "check" if "check" in legal else ("call" if "call" in legal else None)
+    if pick is None:
+        return
+
+    results = []
+
+    def post():
+        results.append(c.post(f"/api/session/{token}/action",
+                              json={"seq": state["seq"], "action": pick}).status_code)
+
+    t1 = threading.Thread(target=post)
+    t1.start()
+    assert entered.wait(2.0)          # t1 is now inside advance(), past the guard
+    t2 = threading.Thread(target=post)
+    t2.start()
+    time.sleep(0.1)                   # let t2 attempt the guard while t1 holds
+    release.set()
+    t1.join(5.0)
+    t2.join(5.0)
+    assert results.count(200) == 1
+    assert results.count(409) == 1
+
+
 def test_cors_header_present():
     c = _client()
     r = c.options("/api/session", headers={

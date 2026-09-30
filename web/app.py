@@ -76,50 +76,57 @@ def build_app(config: Config, bot_factory) -> FastAPI:
     @app.get("/api/session/{token}")
     def get_session(token: str):
         s = _get(token)
-        if s.last_state is None:          # freshly created, not yet advanced
-            events, state = advance(s)
-            return {"token": s.token, "events": events, "state": state}
-        return {"token": s.token, "events": s.last_events, "state": s.last_state}
+        with s.lock:
+            if s.last_state is None:      # freshly created, not yet advanced
+                events, state = advance(s)
+                return {"token": s.token, "events": events, "state": state}
+            return {"token": s.token, "events": s.last_events,
+                    "state": s.last_state}
 
     @app.post("/api/session/{token}/action")
     def do_action(token: str, body: _ActionBody):
         s = _get(token)
         if body.action not in _CLIENT_ACTIONS:
             raise HTTPException(status_code=422, detail="unknown action")
-        if not s.hand_active or s.last_state is None:
-            raise HTTPException(status_code=409, detail="no active hand")
-        current = s.last_state
-        if body.seq != current["seq"]:
-            raise HTTPException(status_code=409, detail="stale action")
-        if not current["hero"]["is_actor"]:
-            raise HTTPException(status_code=409, detail="not your turn")
-        engine_action = _to_engine(current, body)
-        try:
-            events, state = advance(s, engine_action)
-        except IllegalAction as exc:
-            raise HTTPException(status_code=409, detail=str(exc))
+        # Hold the session lock across read-check-advance so concurrent requests
+        # (double-click / retry) cannot both pass the seq guard.
+        with s.lock:
+            if not s.hand_active or s.last_state is None:
+                raise HTTPException(status_code=409, detail="no active hand")
+            current = s.last_state
+            if body.seq != current["seq"]:
+                raise HTTPException(status_code=409, detail="stale action")
+            if not current["hero"]["is_actor"]:
+                raise HTTPException(status_code=409, detail="not your turn")
+            engine_action = _to_engine(current, body)
+            try:
+                events, state = advance(s, engine_action)
+            except IllegalAction as exc:
+                raise HTTPException(status_code=409, detail=str(exc))
         return {"events": events, "state": state}
 
     @app.post("/api/session/{token}/next-hand")
     def next_hand(token: str):
         s = _get(token)
-        if s.hand_active:
-            raise HTTPException(status_code=409, detail="hand in progress")
-        s.start_hand()
-        events, state = advance(s)
+        with s.lock:
+            if s.hand_active:
+                raise HTTPException(status_code=409, detail="hand in progress")
+            s.start_hand()
+            events, state = advance(s)
         return {"events": events, "state": state}
 
     @app.post("/api/session/{token}/rebuy")
     def rebuy(token: str):
         s = _get(token)
-        if s.hand_active:
-            raise HTTPException(status_code=409, detail="hand in progress")
-        if s.hero_stack <= 0:
-            s.hero_stack = config.stack
-        if s.bot_stack <= 0:
-            s.bot_stack = config.stack
-        s.start_hand()
-        events, state = advance(s)
+        with s.lock:
+            if s.hand_active:
+                raise HTTPException(status_code=409, detail="hand in progress")
+            if s.hero_stack <= 0:
+                s.hero_stack = config.stack
+            if s.bot_stack <= 0:
+                s.bot_stack = config.stack
+            s.start_hand()
+            events, state = advance(s)
         return {"events": events, "state": state}
 
     @app.delete("/api/session/{token}")
