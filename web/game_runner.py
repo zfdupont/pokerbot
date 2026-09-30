@@ -108,6 +108,7 @@ class _HeroAgent(PokerAgent):
         if self._new_action is None:
             raise _AwaitHuman(state)
         action, amount = self._new_action
+        self._new_action = None  # consume once; later hero turns must pause
         amount = _validate(state, player, action, amount)
         self._cursor.record("hero", action, amount)
         return action, amount

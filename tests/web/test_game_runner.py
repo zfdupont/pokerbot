@@ -96,6 +96,34 @@ def test_validate_rejects_below_min_raise():
         _validate(state, player, Action.BET, 5)   # min is 10 + max(10, 2) = 20
 
 
+class _RaiseBot:
+    """Raises once when it acts, so the hero is asked twice in one request."""
+
+    def __init__(self):
+        self._raised = False
+
+    def get_action(self, player, state):
+        to_call = state.current_bet - player.current_bet
+        if not self._raised:
+            self._raised = True
+            return Action.BET, state.current_bet + 6
+        return (Action.CALL, None) if to_call > 0 else (Action.CHECK, None)
+
+
+def test_single_action_applied_once_then_pauses():
+    # Regression: a re-raising bot must send the hero back to a FRESH decision,
+    # not re-apply the previous action. History should hold exactly the hero's
+    # call and the bot's raise.
+    store = SessionStore(ttl_s=100, bot_factory=_RaiseBot)
+    s = _new_session(store)
+    state = advance(s)[1]                       # hero (SB) to act preflop
+    assert state["hero"]["is_actor"]
+    state = advance(s, (Action.CALL, None))[1]
+    assert len(s.history) == 2                  # hero:call, bot:raise
+    assert state["hero"]["is_actor"] is True
+    assert state["current_bet"] == 8
+
+
 def test_reload_returns_same_pause_state():
     store = _store()
     s = _new_session(store)
