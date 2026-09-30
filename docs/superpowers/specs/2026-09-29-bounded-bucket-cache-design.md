@@ -1,7 +1,7 @@
 # Bounded `bucket()` Cache — Design
 
 **Date:** 2026-09-29
-**Status:** Approved (bounded path) — implemented; correctness-verified, cap to be sized by measurement
+**Status:** Approved (bounded path) — implemented; correctness-verified; cap sized by local sweep (default 4096 kept)
 **Path:** bounded (single private cache in `sixmax/src/abstraction/`; no interface/artifact change)
 **Author:** brainstormed with Claude
 
@@ -157,10 +157,40 @@ the checkpoint format.
   where iters/s stops improving; confirm throughput is flat over time rather than decaying.
 - If the cap is wrong, revisit with the sweep before merging.
 
+### Cap sweep result (2026-09-29, local — evidence)
+
+Throwaway micro-benchmark driving `bucket()` under a training-like access pattern (fresh
+hand per iteration; the same `(hole, board)` queried `NODES` times per street to emulate the
+betting lines that hit one bucket key): 40,000 hands × 8 repeats × 3 streets = **960,000
+calls, ~120,000 distinct keys**, `equity_rollouts=25` (lowered only to afford repeats), min
+of 3 trials. This isolates the cache; it is not end-to-end trainer throughput.
+
+| cap/sh | cap×64 (entries) | run | ns/call | final cache size | ≈ memory |
+|-------:|-----------------:|----:|--------:|-----------------:|---------:|
+| 16 | 1,024 | 53.4 s | 55,596 | 591 | <0.1 MB |
+| 64 | 4,096 | 47.8 s | 49,779 | 2,046 | ~0.1 MB |
+| 256 | 16,384 | 46.8 s | 48,710 | 5,817 | ~0.3 MB |
+| 1024 | 65,536 | 47.5 s | 49,444 | 54,447 | ~2.6 MB |
+| 8192 | 524,288 | 49.0 s | 51,033 | 119,969 | ~6 MB |
+| 65536 | 4,194,304 | 48.8 s | 50,811 | 119,969 | ~6 MB |
+
+**Findings**
+- Throughput is **flat for caps ≥ 64** (46.8–49.0 s); only cap=16 is clearly worse. Raising
+  the cap buys no speed.
+- Memory scales with the cap and nothing else; `size ≤ cap×64` in every row (the bound holds).
+- Confirms the hypothesis: reuse is **within-hand**, so a small cache captures essentially
+  all of it — the unbounded growth was pure overhead (and the source of the multi-GB RSS and
+  the L3/DRAM throughput decay seen on the 2026-09-29 cloud run).
+
+**Decision:** keep `kDefaultBucketCacheCap = 4096` (~13 MB) — 16× above the knee, still
+negligible, with headroom for deeper per-hand node counts / more cross-hand reuse. 1024 would
+also suffice. The real end-to-end confirmation is a cloud run showing flat RSS and a
+non-decaying iteration rate.
+
 ## Risks / open questions
 
-1. **Cap size** — too small ⇒ recompute cost; too large ⇒ the cliff returns. Sized by the
-   sweep (D1). Start `kDefaultBucketCacheCap = 4096`.
+1. **Cap size** — RESOLVED by the local sweep (below): throughput is flat for caps ≥64/shard,
+   so `kDefaultBucketCacheCap = 4096` (~13 MB) is kept — 16× above the knee, still trivial.
 2. **Eviction policy** — clear-shard chosen (D2); clock/second-chance is the documented
    upgrade if clear-storms appear.
 3. **Confirm the hypothesis** — the size readout + short-run RSS slope confirm the cache is
