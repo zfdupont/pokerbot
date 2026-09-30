@@ -4,6 +4,7 @@
 #
 # Usage: scripts/cloud_train.sh [--type ccx53] [--iters 10000000] \
 #            [--checkpoint-interval 1000000] [--no-snapshots] \
+#            [--config sixmax/configs/hu.toml] [--checkpoint-name out.bin] \
 #            [--resume path/to/ckpt.bin] [--max-hours 24]
 #
 # Run long jobs with: nohup caffeinate scripts/cloud_train.sh ... &
@@ -19,6 +20,8 @@ RESUME_CHECKPOINT=""
 MAX_HOURS=24
 CKPT_INTERVAL=1000000   # save every N iters (never 0 = save-at-end-only)
 SNAPSHOTS=true          # keep a numbered <checkpoint>_<iters>.bin per save
+CONFIG=""               # e.g. sixmax/configs/hu.toml (empty = trainer default)
+CKPT_NAME="checkpoint.bin"  # output file name under sixmax/checkpoints/
 IMAGE="ghcr.io/zfdupont/pokerbot-trainer:latest"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 SERVER_NAME="pokerbot-train-${TIMESTAMP//_/-}"  # hostnames disallow underscores
@@ -52,8 +55,10 @@ while [[ $# -gt 0 ]]; do
         --checkpoint-interval) CKPT_INTERVAL="$2";  shift 2 ;;
         --snapshots)           SNAPSHOTS=true;      shift ;;
         --no-snapshots)        SNAPSHOTS=false;     shift ;;
+        --config)              CONFIG="$2";         shift 2 ;;
+        --checkpoint-name)     CKPT_NAME="$2";      shift 2 ;;
         --help)
-            echo "Usage: scripts/cloud_train.sh [--type ccx53] [--iters 10000000] [--checkpoint-interval 1000000] [--no-snapshots] [--resume path/to/ckpt.bin] [--max-hours 24]"
+            echo "Usage: scripts/cloud_train.sh [--type ccx53] [--iters 10000000] [--checkpoint-interval 1000000] [--no-snapshots] [--config path/to/cfg.toml] [--checkpoint-name out.bin] [--resume path/to/ckpt.bin] [--max-hours 24]"
             exit 0
             ;;
         *)
@@ -193,6 +198,9 @@ RESUME_FLAG=""
 CKPT_FLAG="--checkpoint-interval $CKPT_INTERVAL"
 SNAP_FLAG=""
 [ "$SNAPSHOTS" = true ] && SNAP_FLAG="--snapshots"
+CONFIG_FLAG=""
+[ -n "$CONFIG" ] && CONFIG_FLAG="--config /pokerbot/$CONFIG"
+CKPT_PATH="/pokerbot/sixmax/checkpoints/$CKPT_NAME"
 
 echo "[cloud_train] Starting training ($ITERS iterations)..."
 # Broad ro mount FIRST, then narrow rw checkpoints mount overrides it (Task 4 pattern)
@@ -207,8 +215,8 @@ ssh $SSH_OPTS "root@$SERVER_IP" "docker run \
     $IMAGE \
     python3.12 -u /pokerbot/scripts/train_sixmax.py \
         --iterations $ITERS \
-        --checkpoint /pokerbot/sixmax/checkpoints/checkpoint.bin \
-        $CKPT_FLAG $SNAP_FLAG \
+        --checkpoint $CKPT_PATH \
+        $CKPT_FLAG $SNAP_FLAG $CONFIG_FLAG \
         $RESUME_FLAG"
 
 # Watchdog no longer needed (training completed normally)
