@@ -173,3 +173,12 @@ def test_run_exploits_uniform_opponents(tmp_path):
     assert len(r["gains"]) == 2                 # num_players == 2
     assert r["max_gain"] > 0.0
     assert all(s >= 0.0 for s in r["stderrs"])
+
+
+def test_run_zero_decks_is_finite(tmp_path):
+    strat = _strategy(tmp_path)
+    ev = _evaluator(strat, samples=4, seed=1)
+    r = ev.run(decks=0, seed=5)
+    assert len(r["gains"]) == 2
+    assert all(math.isfinite(g) for g in r["gains"])
+    assert math.isfinite(r["max_gain"]) and math.isfinite(r["mean_gain"])
