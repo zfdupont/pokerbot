@@ -290,6 +290,15 @@ class SixmaxAgent(PokerAgent):
         self._deploy = SixmaxDeployStrategy.load(checkpoint_path, config_toml)
         self._rng = random.Random()
 
+    @classmethod
+    def from_strategy(cls, strategy, config_toml=_DEFAULT_TOML):
+        """Build an agent over an already-loaded strategy (shares the loaded
+        checkpoint; each agent gets its own decision RNG)."""
+        agent = cls.__new__(cls)
+        agent._deploy = strategy
+        agent._rng = random.Random()
+        return agent
+
     def get_action(self, player, game_state):
         bb = game_state.big_blind
         players = game_state.players

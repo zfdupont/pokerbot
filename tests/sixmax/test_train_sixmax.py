@@ -36,6 +36,15 @@ def test_resolve_config_precedence(tmp_path):
     assert cfg["turn_buckets"] == 50         # builtin default survives
 
 
+def test_hu_config_sets_two_players():
+    mod = _load_script()
+    cfg = mod.resolve_config(
+        _Args(config=os.path.join(_ROOT, "sixmax", "configs", "hu.toml")), _ROOT)
+    assert cfg["num_players"] == 2
+    assert cfg["checkpoint"].endswith("hu_blueprint.bin")
+    assert cfg["checkpoint_interval"] > 0
+
+
 def test_resolve_config_rejects_unknown_keys(tmp_path):
     mod = _load_script()
     toml = tmp_path / "bad.toml"

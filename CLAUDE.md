@@ -32,7 +32,7 @@ After meaningful work, update the scaffold (GROW step in `.mex/ROUTER.md`) — k
 
 Always edit  Non-Negotiables after modifying any of these. Condensed from `.mex/AGENTS.md` — never violate these:
 
-- `cfr/`, `neural_cfr/`, and `sixmax/` never import `game/poker.py` or each other; bridging lives only in `agents/cfr_agent.py` and `scripts/`; shared C++ only via `common/`.
+- `cfr/`, `neural_cfr/`, and `sixmax/` never import `game/poker.py` or each other; hosts (`agents/`, `scripts/`, `web/`) bridge them; shared C++ only via `common/`.
 - In `cfr/`/`neural_cfr/` the 6-action vocabulary order is fixed (`0=fold 1=check 2=call 3=b0.5 4=b1.0 5=allin`); in `sixmax/` the vocab is config-defined and checkpoints embed its hash. Everywhere: mask illegal actions, never reorder or filter storage.
 - The C++ evaluator's (`common/`) `12 - rank` kicker inversion (lower = better) must be preserved — removing it inverts learned hand strength; new consumers use the opaque `safe_eval` API only.
 - Chip values crossing an engine boundary must be rescaled to the `starting_stack=100, big_blind=1` training frame.
@@ -46,6 +46,7 @@ uv run python scripts/train_cfr.py                      # tabular training
 uv run python scripts/train_neural.py --config neural_cfr/configs/default.toml --checkpoint neural_cfr/checkpoints/checkpoint.pt
 uv run python scripts/eval_openspiel.py --hands 2000    # head-to-head eval (BB/100)
 uv run python scripts/play.py                           # interactive CLI vs the bot
+uv run python -m web.main --port 8100                   # serve the heads-up web API
 ~/bin/buck2 build //neural_cfr:neural_cfr               # rebuild C++ extension
 ```
 
