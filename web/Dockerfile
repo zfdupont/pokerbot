@@ -10,7 +10,11 @@ RUN curl -fL \
     "https://github.com/facebook/buck2/releases/download/latest/buck2-x86_64-unknown-linux-gnu.zst" \
     | zstd -d - -o /usr/local/bin/buck2 && chmod +x /usr/local/bin/buck2
 WORKDIR /build
-COPY .buckconfig toolchains/ third_party/ common/ BUCK ./
+COPY .buckconfig /build/
+COPY toolchains/ /build/toolchains/
+COPY third_party/ /build/third_party/
+COPY common/ /build/common/
+COPY BUCK /build/
 RUN python3.12 -c \
     "import sysconfig; p=sysconfig.get_path('include'); \
      open('.buckconfig.local','w').write(f'[python]\n  include_path = {p}\n[build]\n  cpu_tune = x86-64\n')"
