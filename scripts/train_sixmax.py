@@ -13,11 +13,14 @@ import argparse
 import ctypes
 import importlib.util
 import json
+import logging
 import os
 import re
 import shutil
 import subprocess
 import sys
+import threading
+import time
 from datetime import datetime, timezone
 
 try:
@@ -86,6 +89,7 @@ BUILTIN_DEFAULTS = {
     "num_players": 6, "starting_stack": 100.0,
     "iterations": 100_000, "num_threads": 0,
     "checkpoint_interval": 0,
+    "report_interval": 60,  # heartbeat log line every N seconds (0 = off)
     "checkpoint": "sixmax/checkpoints/blueprint.bin",
     "seed": 7,
     "selection_enabled": False, "selection_hands": 2000,
@@ -178,7 +182,8 @@ def run_selection(cfg: dict, repo_root: str, trainer) -> None:
     try:
         if not os.path.exists(best):
             update_best(None, ckpt, trainer.iterations())
-            print("[selection] first checkpoint promoted to best_checkpoint.bin")
+            logging.info("[selection] first checkpoint promoted to "
+                         "best_checkpoint.bin")
             return
         result = subprocess.run(
             [sys.executable,
@@ -189,17 +194,95 @@ def run_selection(cfg: dict, repo_root: str, trainer) -> None:
             capture_output=True, text=True, cwd=repo_root, timeout=3600)
         bb100 = parse_bb100(result.stdout)
         if result.returncode != 0 or bb100 is None:
-            print(f"[selection] eval failed (exit {result.returncode}); "
-                  f"skipping. stderr tail: {result.stderr[-300:]}")
+            logging.info(f"[selection] eval failed (exit {result.returncode}); "
+                         f"skipping. stderr tail: {result.stderr[-300:]}")
             return
         replaced = update_best(bb100, ckpt, trainer.iterations())
-        print(f"[selection] {bb100:+.2f} BB/100 vs best — "
-              f"{'NEW BEST' if replaced else 'kept existing best'}")
+        logging.info(f"[selection] {bb100:+.2f} BB/100 vs best — "
+                     f"{'NEW BEST' if replaced else 'kept existing best'}")
     except Exception as e:  # noqa: BLE001 — advisory path, never fatal
-        print(f"[selection] skipped ({type(e).__name__}: {e})")
+        logging.info(f"[selection] skipped ({type(e).__name__}: {e})")
+
+
+def _format_duration(seconds) -> str:
+    """Human-readable ETA. NaN/infinite → '?'; negative clamps to '0s'."""
+    if seconds is None or seconds != seconds or seconds == float("inf"):
+        return "?"
+    total = int(round(max(0.0, seconds)))
+    hours, rem = divmod(total, 3600)
+    minutes, secs = divmod(rem, 60)
+    if hours:
+        return f"{hours}h {minutes:02d}m"
+    if minutes:
+        return f"{minutes}m {secs:02d}s"
+    return f"{secs}s"
+
+
+def format_progress(done: int, total: int, rate: float,
+                    infosets: "int | None" = None) -> str:
+    """One heartbeat line: [done/total]  rate it/s  ETA  [infosets]."""
+    remaining = max(0, total - done)
+    eta = _format_duration(remaining / rate) if rate > 0 else "?"
+    line = f"[{done:,}/{total:,}]  {rate:,.0f} it/s  ETA {eta}"
+    if infosets is not None:
+        line += f"  {infosets:,} infosets"
+    return line
+
+
+class _ProgressReporter:
+    """Daemon thread that logs a heartbeat every `interval_s` seconds while
+    `trainer.train(...)` runs. train() releases the GIL, so the atomic
+    iterations() counter is readable from another thread — giving live progress
+    WITHOUT splitting train() calls (which would reseed the trainer's per-call
+    RNG and change the training trajectory)."""
+
+    def __init__(self, trainer, total_iters: int, interval_s: float,
+                 log=logging.info):
+        self.trainer = trainer
+        self.total_iters = total_iters
+        self.interval_s = interval_s
+        self._log = log
+        self._stop = threading.Event()
+        self._thread = None
+        self._base = 0
+        self._t0 = 0.0
+
+    def start(self) -> None:
+        self._base = self.trainer.iterations()
+        self._t0 = time.monotonic()
+        if self.interval_s <= 0:
+            return  # disabled — report_once() remains callable
+        self._stop.clear()
+        self._thread = threading.Thread(
+            target=self._run, daemon=True, name="sixmax-progress")
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=max(1.0, self.interval_s))
+            self._thread = None
+
+    def report_once(self) -> str:
+        done = max(0, self.trainer.iterations() - self._base)
+        elapsed = time.monotonic() - self._t0
+        rate = done / elapsed if elapsed > 0 else 0.0
+        try:
+            infosets = self.trainer.num_infosets()
+        except Exception:  # noqa: BLE001 — progress must never kill training
+            infosets = None
+        line = format_progress(done, self.total_iters, rate, infosets)
+        self._log(line)
+        return line
+
+    def _run(self) -> None:
+        while not self._stop.wait(self.interval_s):
+            self.report_once()
 
 
 def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(message)s",
+                        stream=sys.stderr)
     repo_root = _get_repo_root()
     sixmax = _force_load_sixmax(repo_root)
 
@@ -213,6 +296,9 @@ def main() -> None:
     parser.add_argument("--checkpoint", type=str, default=None)
     parser.add_argument("--checkpoint-interval", type=int, default=None,
                         dest="checkpoint_interval")
+    parser.add_argument("--report-interval", type=int, default=None,
+                        dest="report_interval",
+                        help="heartbeat log line every N seconds (0 = off)")
     parser.add_argument("--resume", type=str, default=None)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--selection-enabled",
@@ -226,8 +312,8 @@ def main() -> None:
     args = parser.parse_args()
 
     cfg = resolve_config(args, repo_root)
-    print("Effective config: "
-          + ", ".join(f"{k}={v}" for k, v in sorted(cfg.items())))
+    logging.info("Effective config: "
+                 + ", ".join(f"{k}={v}" for k, v in sorted(cfg.items())))
     vocab = _load_vocab(repo_root, cfg["config_path"])
     engine_cfg = sixmax.EngineConfig(num_players=cfg["num_players"],
                                      starting_stack=cfg["starting_stack"])
@@ -235,13 +321,13 @@ def main() -> None:
                 exist_ok=True)
 
     if args.resume:
-        print(f"Resuming from {args.resume}")
+        logging.info(f"Resuming from {args.resume}")
         abstraction = sixmax.load_abstraction(args.resume)
         trainer = sixmax.resume_blueprint(
             args.resume, engine_cfg, vocab, abstraction,
             num_threads=cfg["num_threads"], seed=cfg["seed"])
     else:
-        print("Building abstraction (quantile edges) …")
+        logging.info("Building abstraction (quantile edges) …")
         abstraction = sixmax.Abstraction(
             flop_buckets=cfg["flop_buckets"],
             turn_buckets=cfg["turn_buckets"],
@@ -255,24 +341,31 @@ def main() -> None:
 
     ckpt_interval = cfg["checkpoint_interval"] or cfg["iterations"]
     completed = 0
-    print(f"Running {cfg['iterations']:,} iterations …")
-    while completed < cfg["iterations"]:
-        chunk = min(ckpt_interval, cfg["iterations"] - completed)
-        trainer.train(chunk)
-        completed += chunk
-        trainer.save(cfg["checkpoint"], vocab, engine_cfg, abstraction)
-        write_config_snapshot(cfg, cfg["checkpoint"])
-        if cfg["snapshots"]:
-            base, ext = os.path.splitext(cfg["checkpoint"])
-            snap = f"{base}_{completed:08d}{ext}"
-            shutil.copy2(cfg["checkpoint"], snap)
-            print(f"  snapshot -> {snap}")
-        if cfg["selection_enabled"]:
-            run_selection(cfg, repo_root, trainer)
-        print(f"[{completed:,}/{cfg['iterations']:,}] "
-              f"{trainer.num_infosets():,} infosets — saved {cfg['checkpoint']}")
-    print(f"Done: {trainer.iterations():,} total iterations, "
-          f"{trainer.num_infosets():,} infosets.")
+    logging.info(f"Running {cfg['iterations']:,} iterations …")
+    reporter = _ProgressReporter(trainer, cfg["iterations"],
+                                 cfg["report_interval"])
+    reporter.start()
+    try:
+        while completed < cfg["iterations"]:
+            chunk = min(ckpt_interval, cfg["iterations"] - completed)
+            trainer.train(chunk)
+            completed += chunk
+            trainer.save(cfg["checkpoint"], vocab, engine_cfg, abstraction)
+            write_config_snapshot(cfg, cfg["checkpoint"])
+            if cfg["snapshots"]:
+                base, ext = os.path.splitext(cfg["checkpoint"])
+                snap = f"{base}_{completed:08d}{ext}"
+                shutil.copy2(cfg["checkpoint"], snap)
+                logging.info(f"  snapshot -> {snap}")
+            if cfg["selection_enabled"]:
+                run_selection(cfg, repo_root, trainer)
+            logging.info(f"[{completed:,}/{cfg['iterations']:,}] "
+                         f"{trainer.num_infosets():,} infosets — "
+                         f"saved {cfg['checkpoint']}")
+    finally:
+        reporter.stop()
+    logging.info(f"Done: {trainer.iterations():,} total iterations, "
+                 f"{trainer.num_infosets():,} infosets.")
 
 
 if __name__ == "__main__":

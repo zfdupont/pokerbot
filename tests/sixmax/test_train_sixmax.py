@@ -71,3 +71,57 @@ def test_end_to_end_smoke(tmp_path):
     import sixmax  # conftest already force-loaded the extension
     abs_ = sixmax.load_abstraction(str(ckpt))
     assert abs_.num_buckets(1) == 6
+
+
+# ── Progress observability (heartbeat) ────────────────────────────────────────
+
+def test_format_duration():
+    mod = _load_script()
+    assert mod._format_duration(0) == "0s"
+    assert mod._format_duration(73) == "1m 13s"
+    assert mod._format_duration(63 * 3600 + 5 * 60) == "63h 05m"
+    assert mod._format_duration(float("inf")) == "?"
+    assert mod._format_duration(-5) == "0s"
+
+
+def test_format_progress():
+    mod = _load_script()
+    assert mod.format_progress(3000, 10000, 96.0, 143102) == \
+        "[3,000/10,000]  96 it/s  ETA 1m 13s  143,102 infosets"
+    assert mod.format_progress(10000, 10000, 50.0) == \
+        "[10,000/10,000]  50 it/s  ETA 0s"
+    assert mod.format_progress(0, 100, 0.0) == "[0/100]  0 it/s  ETA ?"
+
+
+def test_progress_reporter_reports_once():
+    mod = _load_script()
+
+    class _FakeTrainer:
+        def __init__(self):
+            self.n = 1000
+        def iterations(self):
+            return self.n
+        def num_infosets(self):
+            return 143102
+
+    lines = []
+    tr = _FakeTrainer()
+    rep = mod._ProgressReporter(tr, 30_000_000, 60, log=lines.append)
+    rep.start()                      # base = 1000
+    tr.n = 1_001_000
+    rep.report_once()
+    rep.stop()
+    assert len(lines) == 1, lines
+    assert lines[0].startswith("[1,000,000/30,000,000]"), lines[0]
+    assert lines[0].endswith("143,102 infosets"), lines[0]
+
+
+def test_resolve_config_report_interval_precedence(tmp_path):
+    mod = _load_script()
+    assert mod.BUILTIN_DEFAULTS["report_interval"] == 60
+    toml = tmp_path / "cfg.toml"
+    toml.write_text("[train.blueprint]\nreport_interval = 5\n")
+    cfg = mod.resolve_config(_Args(config=str(toml)), _ROOT)
+    assert cfg["report_interval"] == 5
+    cfg = mod.resolve_config(_Args(config=str(toml), report_interval=9), _ROOT)
+    assert cfg["report_interval"] == 9

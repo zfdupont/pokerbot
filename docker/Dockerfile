@@ -82,6 +82,9 @@ ENV PATH="/root/.local/bin:$PATH"
 # Copy compiled extension
 COPY --from=builder /opt/sixmax.so /opt/sixmax.so
 ENV SIXMAX_SO_PATH=/opt/sixmax.so
+# Progress/status lines must appear in the log immediately (not block-buffered
+# when stdout is a pipe); logging already targets line-buffered stderr.
+ENV PYTHONUNBUFFERED=1
 
 # Install Python deps (system-wide — no venv needed in container)
 COPY pyproject.toml /tmp/pyproject.toml

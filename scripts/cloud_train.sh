@@ -203,8 +203,9 @@ ssh $SSH_OPTS "root@$SERVER_IP" "docker run \
     -v /tmp/pokerbot/scripts:/pokerbot/scripts:ro \
     -v /tmp/pokerbot/agents:/pokerbot/agents:ro \
     -e SIXMAX_SO_PATH=/opt/sixmax.so \
+    -e PYTHONUNBUFFERED=1 \
     $IMAGE \
-    python3.12 /pokerbot/scripts/train_sixmax.py \
+    python3.12 -u /pokerbot/scripts/train_sixmax.py \
         --iterations $ITERS \
         --checkpoint /pokerbot/sixmax/checkpoints/checkpoint.bin \
         $CKPT_FLAG $SNAP_FLAG \
