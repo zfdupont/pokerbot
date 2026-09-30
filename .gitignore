@@ -190,3 +190,6 @@ sixmax/checkpoints/
 
 # Local git worktrees
 .worktrees/
+
+# Local SDD/executing-plans scratch workspace
+.superpowers/
