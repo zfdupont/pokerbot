@@ -15,6 +15,7 @@
 #include "abstraction/abstract_key.h"
 #include "blueprint/checkpoint.h"
 #include "exploit/policy.h"
+#include "exploit/lbr.h"
 
 namespace py = pybind11;
 
@@ -262,6 +263,38 @@ PYBIND11_MODULE(sixmax, m) {
           },
           py::arg("strategy"), py::arg("state"), py::arg("uniform") = false,
           py::arg("seed") = 1);
+    py::class_<sixmax::LbrConfig>(m, "LbrConfig")
+        .def(py::init([](int samples, bool condition_on_history,
+                         bool uniform_opponents, int hero_action_limit,
+                         int max_steps, uint64_t seed) {
+                 return sixmax::LbrConfig{samples, condition_on_history,
+                                          uniform_opponents, hero_action_limit,
+                                          max_steps, seed};
+             }),
+             py::kw_only(), py::arg("samples") = 64,
+             py::arg("condition_on_history") = true,
+             py::arg("uniform_opponents") = false,
+             py::arg("hero_action_limit") = 0,
+             py::arg("max_steps") = 4096, py::arg("seed") = 1);
+    py::class_<sixmax::LbrEvaluator>(m, "LbrEvaluator")
+        .def(py::init<const sixmax::BlueprintStrategy&,
+                      const sixmax::ActionVocab&, const sixmax::EngineConfig&,
+                      sixmax::LbrConfig>(),
+             py::arg("strategy"), py::arg("vocab"), py::arg("cfg"),
+             py::arg("lbr") = sixmax::LbrConfig{},
+             py::keep_alive<1, 2>(), py::keep_alive<1, 3>())
+        .def("decide",
+             [](sixmax::LbrEvaluator& e, const sixmax::HandState& s, int hero,
+                const std::vector<int>& actors,
+                const std::vector<int>& actions, uint64_t seed) {
+                 std::mt19937_64 rng(seed);
+                 return e.decide(s, hero, actors, actions, rng);
+             },
+             py::arg("hand"), py::arg("hero"),
+             py::arg("actors") = std::vector<int>{},
+             py::arg("actions") = std::vector<int>{}, py::arg("seed") = 1)
+        .def("sampled_rollouts_exhausted",
+             &sixmax::LbrEvaluator::sampled_rollouts_exhausted);
     // --- Multithreaded blueprint trainer (Phase 1b Task 3) ---
     py::class_<sixmax::BlueprintTrainer>(m, "BlueprintTrainer")
         .def(py::init([](const sixmax::EngineConfig& cfg,
