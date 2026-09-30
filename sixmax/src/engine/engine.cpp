@@ -8,6 +8,20 @@
 
 namespace sixmax {
 
+void HandState::reroll_hidden(int hero, std::vector<int> pool,
+                              std::mt19937_64& rng) {
+    std::shuffle(pool.begin(), pool.end(), rng);
+    size_t p = 0;
+    const int n = num_players();
+    for (int i = 0; i < n; ++i) {
+        if (i == hero) continue;
+        deck_[2 * i] = pool[p++];
+        deck_[2 * i + 1] = pool[p++];
+    }
+    const int revealed = (int)board().size();
+    for (int j = revealed; j < 5; ++j) deck_[2 * n + j] = pool[p++];
+}
+
 std::vector<double> settle_pots(const std::vector<double>& total_bets,
                                 const std::vector<uint8_t>& folded,
                                 const std::vector<int>& rank_order) {

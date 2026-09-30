@@ -150,7 +150,15 @@ PYBIND11_MODULE(sixmax, m) {
         .def("apply_raise_to", [](sixmax::HandState& s, double amount) {
             s.apply({sixmax::EngineActionType::RaiseTo, amount});
         })
-        .def("payoffs", &sixmax::HandState::payoffs);
+        .def("payoffs", &sixmax::HandState::payoffs)
+        .def("clone", &sixmax::HandState::clone)
+        .def("reroll_hidden",
+             [](sixmax::HandState& s, int hero, std::vector<int> pool,
+                uint64_t seed) {
+                 std::mt19937_64 rng(seed);
+                 s.reroll_hidden(hero, std::move(pool), rng);
+             },
+             py::arg("hero"), py::arg("pool"), py::arg("seed") = 1);
     m.def("settle_pots",
           [](const std::vector<double>& totals, const std::vector<bool>& folded,
              const std::vector<int>& ranks) {

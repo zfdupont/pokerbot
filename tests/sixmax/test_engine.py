@@ -145,3 +145,37 @@ def test_deal_is_seed_deterministic():
     a = sixmax.HandState.deal(cfg, 2, 99)
     b = sixmax.HandState.deal(cfg, 2, 99)
     assert [a.hole_cards(i) for i in range(6)] == [b.hole_cards(i) for i in range(6)]
+
+
+def test_clone_is_independent():
+    s = _hu()
+    c = s.clone()
+    c.apply_fold()
+    assert c.is_terminal()
+    assert not s.is_terminal()          # parent untouched
+    assert s.hole_cards(0) == c.hole_cards(0)
+
+
+def test_reroll_hidden_keeps_hero_and_revealed_board():
+    cfg = sixmax.EngineConfig(num_players=6)
+    s = sixmax.HandState(cfg, 0, list(range(52)))
+    hero_hole = s.hole_cards(3)
+    pool = [c for c in range(52) if c not in set(hero_hole)]
+    s.reroll_hidden(3, pool, 7)
+    assert s.hole_cards(3) == hero_hole             # hero fixed
+    assert s.board() == []                          # still preflop
+    opp = [s.hole_cards(i) for i in range(6) if i != 3]
+    flat = [c for h in opp for c in h]
+    assert len(set(flat)) == 10                     # distinct cards
+    assert not (set(flat) & set(hero_hole))         # no overlap with hero
+
+
+def test_reroll_hidden_preserves_revealed_board():
+    s = _hu()
+    s.apply_check_call(); s.apply_check_call()      # to flop
+    revealed = s.board()
+    hero_hole = s.hole_cards(0)
+    pool = [c for c in range(52) if c not in set(hero_hole) | set(revealed)]
+    s.reroll_hidden(0, pool, 3)
+    assert s.board() == revealed
+    assert s.hole_cards(0) == hero_hole

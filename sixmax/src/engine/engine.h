@@ -63,6 +63,14 @@ public:
     std::array<int, 2> hole_cards(int i) const;
     std::vector<int> board() const;    // cards revealed so far (0/3/4/5)
 
+    HandState clone() const { return *this; }
+    // Reassign every seat's hole cards except `hero`, plus every not-yet-
+    // revealed board card, from a uniformly shuffled `pool` (cards beyond the
+    // needed count stay unused). Public state - chips, street, folded/all-in,
+    // to-act - is untouched. `pool` must hold at least
+    // 2*(num_players()-1) + (5 - revealed) distinct cards.
+    void reroll_hidden(int hero, std::vector<int> pool, std::mt19937_64& rng);
+
     void apply(const EngineAction& a);
     // Net result per player (final stack minus starting stack), BB.
     // Valid iff is_terminal().
