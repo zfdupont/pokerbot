@@ -1,5 +1,6 @@
 """LBR exploitability estimator: engine primitives, policy, decide, run."""
 import importlib.util
+import math
 import os
 
 import sixmax
@@ -115,3 +116,33 @@ def test_rollouts_terminate_for_short_stacks(tmp_path):
         s = sixmax.HandState(CFG, 0, _hu_deck(_AA, _KK), [stack, stack])
         ev.decide(s.clone(), hero=0, actors=[], actions=[], seed=3)
     assert ev.sampled_rollouts_exhausted() == 0
+
+
+def test_sample_weights_normalize(tmp_path):
+    strat = _strategy(tmp_path)
+    ev = _evaluator(strat, samples=16, seed=1)
+    _, weights = ev.debug_sample_deals(
+        sixmax.HandState(CFG, 0, _hu_deck(_KK, _AA)), 1, [0], [_OPEN25], seed=1)
+    assert len(weights) == 16
+    assert all(w >= 0.0 and math.isfinite(w) for w in weights)
+    assert abs(sum(weights) - 1.0) < 1e-9
+
+
+def test_conditioning_changes_the_weights(tmp_path):
+    strat = _strategy(tmp_path)
+    initial = sixmax.HandState(CFG, 0, _hu_deck(_KK, _AA))
+    ev = _evaluator(strat, samples=32, seed=1)
+    _, cond = ev.debug_sample_deals(initial.clone(), 1, [0], [_OPEN25], seed=1)
+    _, uncond = ev.debug_sample_deals(initial.clone(), 1, [], [], seed=1)
+    assert not all(abs(a - b) < 1e-12 for a, b in zip(cond, uncond))
+
+
+def test_zero_weight_history_falls_back_to_uniform(tmp_path):
+    strat = _strategy(tmp_path)
+    initial = sixmax.HandState(CFG, 0, _hu_deck(_KK, _AA))
+    ev = _evaluator(strat, samples=8, seed=1)
+    # Action index -1 matches no bucket: every weight is 0, so the sampler must
+    # fall back to uniform weights rather than divide by zero.
+    _, weights = ev.debug_sample_deals(initial.clone(), 1, [0], [-1], seed=1)
+    assert abs(sum(weights) - 1.0) < 1e-9
+    assert all(abs(w - 1.0 / 8) < 1e-12 for w in weights)

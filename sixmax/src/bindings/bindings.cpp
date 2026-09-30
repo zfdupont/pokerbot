@@ -294,7 +294,23 @@ PYBIND11_MODULE(sixmax, m) {
              py::arg("actors") = std::vector<int>{},
              py::arg("actions") = std::vector<int>{}, py::arg("seed") = 1)
         .def("sampled_rollouts_exhausted",
-             &sixmax::LbrEvaluator::sampled_rollouts_exhausted);
+             &sixmax::LbrEvaluator::sampled_rollouts_exhausted)
+        .def("debug_sample_deals",
+             [](sixmax::LbrEvaluator& e, const sixmax::HandState& s, int hero,
+                const std::vector<int>& actors,
+                const std::vector<int>& actions, uint64_t seed) {
+                 std::mt19937_64 rng(seed);
+                 py::list hands, weights;
+                 for (auto& smp : e.debug_sample_deals(s, hero, actors, actions,
+                                                       rng)) {
+                     hands.append(smp.current);
+                     weights.append(smp.weight);
+                 }
+                 return py::make_tuple(hands, weights);
+             },
+             py::arg("hand"), py::arg("hero"),
+             py::arg("actors") = std::vector<int>{},
+             py::arg("actions") = std::vector<int>{}, py::arg("seed") = 1);
     // --- Multithreaded blueprint trainer (Phase 1b Task 3) ---
     py::class_<sixmax::BlueprintTrainer>(m, "BlueprintTrainer")
         .def(py::init([](const sixmax::EngineConfig& cfg,
