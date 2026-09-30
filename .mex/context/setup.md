@@ -17,7 +17,7 @@ edges:
     condition: when running or resuming tabular training
   - target: patterns/debug-bot-misplay.md
     condition: when a trained bot behaves nonsensically after setup
-last_updated: 2026-07-22
+last_updated: 2026-09-30
 ---
 
 # Setup
@@ -39,7 +39,10 @@ Manual equivalents, if you need one piece: `uv sync`; `uv run pytest tests/`; `~
 ## Environment Variables
 
 - `OPENPOKER_API_KEY` (required only for `scripts/openpoker_bot.py`) — bearer token for `wss://openpoker.ai/ws`. Never commit it.
-- No other environment variables are used; training and evaluation are configured via CLI flags.
+- `POKERBOT_CHECKPOINT` (web service) — path to a sixmax `.bin`; required by `web.main`.
+- `POKERBOT_STACK` / `POKERBOT_SMALL_BLIND` (web service, defaults `200` / `1` = 100 BB), `POKERBOT_SESSION_TTL` (default `3600`), `POKERBOT_CORS_ORIGINS` (default `https://zfdupont.com`).
+- `SIXMAX_SO_PATH` — prebuilt `sixmax.so` path; when set, scripts and the web service skip the Buck2 build (used in containers).
+- Otherwise training and evaluation are configured via CLI flags.
 
 ## Common Commands
 
@@ -53,6 +56,7 @@ Manual equivalents, if you need one piece: `uv sync`; `uv run pytest tests/`; `~
 - `uv run python scripts/openpoker_bot.py --checkpoint sixmax/checkpoints/blueprint.bin` — deploy the six-max blueprint (`.bin` auto-detected → `SixmaxHandTracker`).
 - `uv run python scripts/eval_openspiel.py --hands 2000` — head-to-head eval (BB/100); `eval_openspiel_neural.py` for `.pt` checkpoints.
 - `uv run python scripts/play.py [--stack 1000] [--big-blind 10]` — interactive heads-up CLI vs the bot.
+- `uv run python -m web.main --port 8100` — serve the heads-up **web API** (FastAPI). Requires `POKERBOT_CHECKPOINT` (a sixmax `.bin`); loads `sixmax.so` from `SIXMAX_SO_PATH` or builds it via Buck2. Single uvicorn worker (in-memory TTL sessions). Endpoints: `GET /health`, `POST /api/session`, `GET /api/session/{token}`, `POST /api/session/{token}/{action|next-hand|rebuy}`, `DELETE /api/session/{token}`. Browser UI lives in the separate `blogfolio` site.
 - `uv run python scripts/range_chart.py [--scenario sb-open|bb-vs-raise]` — 13×13 ANSI preflop range chart.
 - `uv run python scripts/run_simulation.py [--hands 100] [--agent simple|position|cfr]` — agent-vs-agent simulation; `python main.py` runs one demo hand at a 4-player table.
 - `./scripts/run_openpoker.sh {start|stop|status}` — managed openpoker deployment: tracks the python PID (pidfile `.openpoker.pid`), `caffeinate -w` alongside, SIGTERM sends `leave_table` before exit (banks the table stack). Env overrides: `CHECKPOINT`, `BUY_IN`. Needs `OPENPOKER_API_KEY` in `.env`.

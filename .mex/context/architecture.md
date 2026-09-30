@@ -16,7 +16,7 @@ edges:
     condition: when working on the tabular MCCFR pipeline, abstraction, or exploitability
   - target: context/neural-cfr.md
     condition: when working on the C++ Deep CFR subsystem (neural_cfr/)
-last_updated: 2026-07-25
+last_updated: 2026-09-30
 ---
 
 # Architecture
@@ -58,6 +58,7 @@ Trained strategies flow outward to consumers: `scripts/play.py` (interactive CLI
   - `src/dream/` — DREAM-style neural blueprint (Steinberger et al. 2020; branch `feature/neural-cfr`, not yet merged): `features.{h,cpp}` (154-dim infoset tensor), `nets.{h,cpp}` (libtorch MLP adv + strategy nets), `reservoir.{h,cpp}` (thread-safe weighted M_v/M_π), `trainer.{h,cpp}` (`DreamTrainer`, outcome-sampling MCCFR + IS-weighted advantage targets), `checkpoint.{h,cpp}` (SIXDM001 magic + `DreamStrategy` inference). Generalizes over variable stacks (20–250 BB) and player counts (2–6) — the intended replacement for the tabular blueprint, which is locked to `starting_stack=100, num_players=6`. `guidelines`: `docs/superpowers/specs/2026-07-24-dream-blueprint-design.md`, ledger `.superpowers/sdd/dream-progress.md`
 - `util/` — `evaluator.py` (live showdown), `util.py` + `lookup_table.py` (fast evaluator for CFR equity)
 - `scripts/` — all runnable entry points (training, play, eval, deploy)
+- `web/` — heads-up **web service** (a host, not a training subsystem): FastAPI + REST, a replay-based turn driver over `game/poker.py`, an in-memory TTL session store, and `SixmaxAgent` loaded once and shared per session. Imports `game/`/`agents/`; never imported by `cfr/`, `neural_cfr/`, or `sixmax/`. Design: `docs/superpowers/specs/2026-09-30-poker-web-design.md`.
 - `tests/` — mirrors source layout; conftests make tests fast (see `context/conventions.md`)
 
 ## External Dependencies
@@ -71,5 +72,5 @@ Trained strategies flow outward to consumers: `scripts/play.py` (interactive CLI
 
 - No multiplayer (>2) CFR training — both CFR pipelines are strictly heads-up; only the live engine supports N-player tables.
 - No shared state between the three subsystems — `cfr/` and `neural_cfr/` deliberately do not import `game/poker.py`; each has its own game-state implementation.
-- No web UI or HTTP server — interaction is CLI scripts and the outbound WebSocket connector.
+- No web **UI**, and no HTTP server beyond the new `web/` API host (which has no browser UI — that lives in the separate `blogfolio` site). Interaction is otherwise CLI scripts and the outbound WebSocket connector.
 - No GPU training assumptions — training runs on CPU (threaded traversal in C++); no CUDA configuration exists.
