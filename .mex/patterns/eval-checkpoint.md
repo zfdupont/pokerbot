@@ -12,9 +12,11 @@ edges:
     condition: for what the exploitability metric does and does not measure
   - target: context/neural-cfr.md
     condition: for the chip-scaling rule when evaluating .pt checkpoints
+  - target: patterns/eval-checkpoint-ab.md
+    condition: when comparing two checkpoints (or search on/off) rather than measuring against a fixed baseline
   - target: patterns/debug-bot-misplay.md
     condition: when eval results look absurd (large negative win rate)
-last_updated: 2026-07-21
+last_updated: 2026-10-06
 ---
 
 # Evaluate a Checkpoint

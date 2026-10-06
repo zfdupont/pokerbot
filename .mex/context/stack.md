@@ -29,7 +29,7 @@ last_updated: 2026-07-25
 ## Key Libraries
 
 - **numpy** — regret matching and strategy math in `cfr/regret_table.py`; vectorized equity estimation.
-- **pytest** (not unittest) — full suite in `tests/`, 270 tests; `pythonpath = ["."]` set in `pyproject.toml` so imports are repo-root-relative. The full suite runs green in a single process; C++ bindings that call autograd release the GIL (see `context/conventions.md`).
+- **pytest** (not unittest) — full suite in `tests/`, 333 tests; `pythonpath = ["."]` set in `pyproject.toml` so imports are repo-root-relative. The full suite runs in a single process (~3 min; one known flaky sixmax mixed-table test); C++ bindings that call autograd release the GIL (see `context/conventions.md`).
 - **websockets** — `scripts/openpoker_bot.py` connector to openpoker.ai.
 - **tqdm** — progress bars in the tabular trainer; the C++ trainer uses p-ranav/indicators instead.
 - **cython** — hot-path acceleration for tabular MCCFR traversal (added in the parallel-training perf pass).

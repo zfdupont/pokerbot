@@ -17,7 +17,13 @@ edges:
     condition: when running or resuming tabular training
   - target: patterns/debug-bot-misplay.md
     condition: when a trained bot behaves nonsensically after setup
-last_updated: 2026-09-30
+  - target: patterns/eval-checkpoint-ab.md
+    condition: when deciding whether one checkpoint (or search on/off) beats another before deploying it
+  - target: patterns/eval-checkpoint.md
+    condition: when measuring a checkpoint against OpenSpiel or random baselines
+  - target: patterns/deploy-openpoker.md
+    condition: when deploying a bot to openpoker.ai over WebSocket
+last_updated: 2026-10-06
 ---
 
 # Setup
@@ -50,9 +56,10 @@ Manual equivalents, if you need one piece: `uv sync`; `uv run pytest tests/`; `~
 - `uv run python scripts/train_cfr.py --iterations 1000000` — tabular training; `--resume cfr/checkpoints/checkpoint_XXXXXXXX.pkl` to continue.
 - `uv run python scripts/train_neural.py --iterations 5_000_000 --checkpoint neural_cfr/checkpoints/checkpoint.pt` — neural training (add `--resume` to continue).
 - `uv run python scripts/train_sixmax.py` — six-max blueprint training (`[abstraction]` + `[train.blueprint]` in `sixmax/configs/default.toml`; CLI overrides; `--resume PATH` restores table + iteration counter; `--checkpoint-interval N` saves every N iters (`0` = save-at-end-only; add `--snapshots` to keep each save as `<base>_<iters>.bin`); `--report-interval S` logs a live `[done/total] rate it/s ETA infosets` heartbeat every S seconds (`0` = off, default 60); `--selection-enabled` maintains `best_checkpoint.bin` via A/B vs previous best). All progress goes to stderr via `logging` (byte-identical message text, so log greps/watcher regexes are unaffected).
+- `./scripts/cloud_train.sh --config sixmax/configs/hu.toml --checkpoint-name hu_blueprint.bin --iters 50000000 --type ccx33 --max-hours 48` — provision a Hetzner VPS, train, rsync snapshots back every 30 min + on exit, then self-destroy. **The Hetzner account is capped at 8 dedicated cores**: ccx33 (8 cores) works, ccx43/ccx53 are rejected with `resource_limit_exceeded` — do not plan around ccx53. Measured **~840–895 it/s on ccx33** ⇒ **50M iters ≈ 16.7 h ≈ $3.50** (ccx33 @ $0.21/h). Needs `HCLOUD_TOKEN`, `HETZNER_SSH_KEY_NAME`, `GHCR_PAT` in `.env`; run detached (`nohup caffeinate -i ... &`) so a closed terminal doesn't abort the run. **Watch out for the plan-level rate figures**: the "~55 it/s" in older plans is *total* wall time divided by iters and is dominated by the one-time ~48 s abstraction build — the actual trainer rate is ~415 it/s locally, ~850 it/s on ccx33.
 - `uv run python scripts/eval_sixmax.py --a CKPT [--b CKPT|uniform] --hands 500` — duplicate-deal seat-rotated A/B eval; prints `Blueprint A win rate: ±X.XX BB/100`.
 - `uv run python scripts/diagnose_blueprint.py [--checkpoints "sixmax/checkpoints/blueprint_0*.bin"] [--top-frac 0.05] [--csv PATH]` — offline blueprint plateau autopsy over a checkpoint series; prints per-checkpoint visit-weight/entropy/probe metrics + a trend-based `VERDICT` (undertraining | structural | mixed). Reads `sixmax.dump_infosets`; run from repo root.
-- `uv run python scripts/eval_hu_sanity.py --blueprint sixmax/checkpoints/blueprint_hu.bin --tabular cfr/checkpoints/checkpoint_09040000.pkl --neural neural_cfr/checkpoints/checkpoint.pt` — HU-mode sanity eval: the six-max blueprint (2-player) vs the frozen tabular/neural bots in the live engine (BB/100). `--tabular`/`--neural` optional.
+- `uv run python scripts/eval_hu_sanity.py --blueprint sixmax/checkpoints/hu_blueprint.bin --tabular cfr/checkpoints/checkpoint_09040000.pkl --neural neural_cfr/checkpoints/checkpoint.pt` — HU-mode sanity eval: the six-max blueprint (2-player) vs the frozen tabular/neural bots in the live engine (BB/100). `--tabular`/`--neural` optional.
 - `uv run python scripts/openpoker_bot.py --checkpoint sixmax/checkpoints/blueprint.bin` — deploy the six-max blueprint (`.bin` auto-detected → `SixmaxHandTracker`).
 - `uv run python scripts/eval_openspiel.py --hands 2000` — head-to-head eval (BB/100); `eval_openspiel_neural.py` for `.pt` checkpoints.
 - `uv run python scripts/play.py [--stack 1000] [--big-blind 10]` — interactive heads-up CLI vs the bot.
@@ -74,3 +81,13 @@ Manual equivalents, if you need one piece: `uv sync`; `uv run pytest tests/`; `~
 **`buck2: command not found`:** it's at `~/bin/buck2`, not on PATH.
 
 **`pybind11/pybind11.h not found` when building `//sixmax` or `//neural_cfr`:** `third_party/pybind11/include` is a machine-local symlink that rots when the Python env it points at is rebuilt. Run `./scripts/setup_dev.sh` — since Phase 1b it detects dead third_party symlinks and repoints `pybind11/include` at the venv's pybind11 package automatically.
+
+**`hcloud: no active context or token`:** `cloud_train.sh` sources `.env` itself (`set -a; source .env; set +a`); running `hcloud` by hand needs the same prefix, or the token is simply absent from the environment.
+
+**Checkpoint A/B results that flip between runs:** the eval is far noisier than it looks — 4 000-hand runs swing by tens of BB/100. Always use the paired multi-seed harness in `patterns/eval-checkpoint-ab.md` before concluding anything.
+
+## Production (droplet)
+
+- `poker.zfdupont.com` → a docker-compose stack on the droplet under `/var/www/poker-service` (image `ghcr.io/zfdupont/pokerbot-web:latest`, bound to `127.0.0.1:8100`, the checkpoint directory bind-mounted read-only at `/checkpoints`, `POKERBOT_CHECKPOINT=/checkpoints/blueprint.bin`, single uvicorn worker). nginx vhost at `/etc/nginx/sites-enabled/poker` (Cloudflare terminates TLS at the edge).
+- **Swapping the served checkpoint:** back up, overwrite `checkpoints/blueprint.bin`, then `docker compose restart pokerbot-web` — no image rebuild. The dedicated HU artifact is already staged there as `blueprint-hu.bin` (inactive, deliberately not wired up).
+- **Rebuild the image:** push to `main` triggers `.github/workflows/build-web-image.yml` → `ghcr.io/zfdupont/pokerbot-web:latest` (it cannot be built locally — linux/amd64 buck2 SIGILLs under QEMU on arm64).
