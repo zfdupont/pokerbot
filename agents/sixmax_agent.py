@@ -277,6 +277,78 @@ class DreamDeployStrategy:
         return idx, raise_to
 
 
+_SEARCH_BUILTIN = {
+    "enabled": False,
+    "budget_ms": 5000.0,
+    "max_nodes": 20000,
+    "max_iters": 2000,
+    "leaf_samples": 256,
+    "seed": 1,
+}
+
+
+def _as_bool(value):
+    if isinstance(value, str):
+        return value.strip().lower() in ("1", "true", "yes", "on")
+    return bool(value)
+
+
+def _load_search_config(config_toml, section="search"):
+    """Merge the [search] block into a sixmax.SearchConfig.
+
+    Precedence: builtin < TOML < env (SIXMAX_SEARCH_<KEY>). Unknown TOML keys
+    are rejected, mirroring scripts/train_sixmax.py::resolve_config."""
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # pragma: no cover - py<3.11
+        import tomli as tomllib
+    cfg = dict(_SEARCH_BUILTIN)
+    if os.path.exists(config_toml):
+        with open(config_toml, "rb") as f:
+            data = tomllib.load(f)
+        for key, value in data.get(section, {}).items():
+            if key not in cfg:
+                raise KeyError(
+                    f"Unknown config key [{section}].{key} in {config_toml}")
+            cfg[key] = value
+    for key in list(cfg):
+        env = os.environ.get("SIXMAX_SEARCH_" + key.upper())
+        if env is not None:
+            cfg[key] = env
+    out = sixmax.SearchConfig()
+    out.enabled = _as_bool(cfg["enabled"])
+    out.budget_ms = float(cfg["budget_ms"])
+    out.max_nodes = int(cfg["max_nodes"])
+    out.max_iters = int(cfg["max_iters"])
+    out.leaf_samples = int(cfg["leaf_samples"])
+    out.seed = int(cfg["seed"])
+    return out
+
+
+class SearchStrategy:
+    """Thin host-side wrapper: translation and fallback live in C++."""
+
+    def __init__(self, checkpoint, config_toml, section="blueprint"):
+        vocab = _load_vocab(config_toml, "search")
+        blueprint_vocab = _load_vocab(config_toml, section)
+        if vocab.hash() != blueprint_vocab.hash():
+            raise ValueError(
+                "search vocab must match the blueprint vocab "
+                f"(search={vocab.hash()} blueprint={blueprint_vocab.hash()})")
+        bp = sixmax.BlueprintStrategy.load(checkpoint, vocab)
+        self._cfg = _load_search_config(config_toml)
+        self._impl = sixmax.SearchStrategy(
+            bp, vocab, sixmax.EngineConfig(num_players=2), self._cfg)
+        self._vocab = vocab
+
+    @property
+    def enabled(self):
+        return bool(self._cfg.enabled)
+
+    def probs(self, *args, **kwargs):
+        return list(self._impl.probs(*args, **kwargs))
+
+
 class SixmaxAgent(PokerAgent):
     """Live-engine adapter over SixmaxDeployStrategy. Computes the legal mask,
     (live, after), and BB rescale from GameState; translates the blueprint's
@@ -286,9 +358,11 @@ class SixmaxAgent(PokerAgent):
     so we clamp it to the abstraction's cap (3) here at consumption — the same
     pattern neural_cfr uses (it clamps to 2). No observer plumbing needed."""
 
-    def __init__(self, checkpoint_path, config_toml=_DEFAULT_TOML):
+    def __init__(self, checkpoint_path, config_toml=_DEFAULT_TOML, search_toml=None):
         self._deploy = SixmaxDeployStrategy.load(checkpoint_path, config_toml)
         self._rng = random.Random()
+        self._search = (SearchStrategy(checkpoint_path, search_toml)
+                        if search_toml is not None else None)
 
     @classmethod
     def from_strategy(cls, strategy, config_toml=_DEFAULT_TOML):
@@ -297,6 +371,7 @@ class SixmaxAgent(PokerAgent):
         agent = cls.__new__(cls)
         agent._deploy = strategy
         agent._rng = random.Random()
+        agent._search = None
         return agent
 
     def get_action(self, player, game_state):
@@ -323,6 +398,28 @@ class SixmaxAgent(PokerAgent):
         legal = self._legal_mask(game_state, player, to_call_chips,
                                  current_bet_bb, pot_bb, to_call_bb, stack_bb)
 
+        if self._search is not None and self._search.enabled and street != 0:
+            # v1: reconstruct the current postflop decision as the subgame root
+            # and search from there (observed_actions=[]; in-street Bayes
+            # updates are a follow-up). Falls back to the blueprint on empty.
+            engine_state = self._reconstruct_search_state(game_state, hole, board)
+            if engine_state is not None:
+                p = self._search.probs(engine_state, 0, [])
+                idx = self._sample_search(p, legal)
+                if idx is not None:
+                    action = self._deploy._vocab.at(idx)
+                    if action.type in (sixmax.ActionType.Bet,
+                                       sixmax.ActionType.AllIn):
+                        ctx = sixmax.BetContext(pot=pot_bb,
+                                                current_bet=current_bet_bb,
+                                                to_call=to_call_bb,
+                                                stack=stack_bb)
+                        raise_to_bb = self._deploy._vocab.target_bb(idx, ctx)
+                    else:
+                        raise_to_bb = 0.0
+                    return self._translate(idx, to_call_chips, raise_to_bb, bb,
+                                           player)
+
         raises = [min(r, _RAISE_CAP) for r in game_state.raises_per_street]
         idx, raise_to_bb = self._deploy.decide(
             hole=hole, board=board, street=street,
@@ -331,6 +428,57 @@ class SixmaxAgent(PokerAgent):
             stack_bb=stack_bb, live=live, after=after, legal=legal,
             rng=self._rng)
         return self._translate(idx, to_call_chips, raise_to_bb, bb, player)
+
+    def _reconstruct_search_state(self, game_state, hole, board):
+        """Best-effort EngineGameState at the current postflop decision.
+
+        Same deck-reconstruction technique as DreamDeployStrategy; the hero is
+        engine seat 0. We advance a fresh hand to the live street and then to the
+        hero's turn with checks. Chip amounts are approximate (a canonical
+        check-down pot), which v1 search tolerates."""
+        players = game_state.players
+        n = len(players)
+        used = set(hole) | set(board)
+        placeholders = (c for c in range(52) if c not in used)
+        deck = list(range(52))
+        deck[0], deck[1] = hole[0], hole[1]
+        for i in range(1, n):
+            deck[2 * i] = next(placeholders)
+            deck[2 * i + 1] = next(placeholders)
+        for j, c in enumerate(board):
+            deck[2 * n + j] = c
+        for j in range(len(board), 5):
+            deck[2 * n + j] = next(placeholders)
+        cfg = sixmax.EngineConfig(num_players=n)
+        stacks = [float(p.stack + p.current_bet) for p in players]
+        eng = sixmax.EngineGameState(cfg, 0, deck, self._deploy._vocab, stacks)
+        guard = 0
+        # Repeated CALL is CheckCall when not facing a bet; it advances a street
+        # once every player has acted.
+        while (eng.street() < game_state.betting_round and not eng.is_terminal()
+               and guard < 256):
+            eng.apply(2)   # CALL
+            guard += 1
+        while (not eng.is_terminal() and eng.current_player() != 0
+               and guard < 512):
+            eng.apply(1)   # CHECK
+            guard += 1
+        return eng
+
+    def _sample_search(self, probs, legal):
+        """Sample a vocab index over the live-legal support of `probs`."""
+        idxs = [i for i, m in enumerate(legal)
+                if m and i < len(probs) and probs[i] > 0.0]
+        if not idxs:
+            return None
+        total = sum(probs[i] for i in idxs)
+        r = self._rng.random() * total
+        acc = 0.0
+        for i in idxs:
+            acc += probs[i]
+            if r <= acc:
+                return i
+        return idxs[-1]
 
     def _legal_mask(self, game_state, player, to_call_chips, current_bet_bb,
                     pot_bb, to_call_bb, stack_bb):
