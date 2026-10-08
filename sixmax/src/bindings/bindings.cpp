@@ -16,6 +16,8 @@
 #include "blueprint/checkpoint.h"
 #include "exploit/policy.h"
 #include "exploit/lbr.h"
+#include "search/vector_cfr.h"
+#include "search/kuhn_vector.h"
 
 namespace py = pybind11;
 
@@ -445,5 +447,44 @@ PYBIND11_MODULE(sixmax, m) {
         .def("num_players", &sixmax::BlueprintStrategy::num_players)
         .def("abstraction", &sixmax::BlueprintStrategy::abstraction,
              py::return_value_policy::reference_internal);
+    // --- Phase 2 search: vector CFR+ core (Task 1) ---
+    py::class_<sixmax::VectorCfrConfig>(m, "VectorCfrConfig")
+        .def(py::init<>())
+        .def_readwrite("seed", &sixmax::VectorCfrConfig::seed)
+        .def_readwrite("max_iters", &sixmax::VectorCfrConfig::max_iters)
+        .def_readwrite("budget_ms", &sixmax::VectorCfrConfig::budget_ms);
+
+    py::class_<sixmax::VectorCfrResult>(m, "VectorCfrResult")
+        .def_readonly("root_value", &sixmax::VectorCfrResult::root_value)
+        .def_readonly("iterations", &sixmax::VectorCfrResult::iterations)
+        .def_readonly("deadline_hit", &sixmax::VectorCfrResult::deadline_hit);
+
+    // Register the abstract bases so derived classes (KuhnVectorGame, Subgame)
+    // and their states are usable from Python. VectorState exposes just the
+    // read-only tree accessors the Subgame tests touch.
+    py::class_<sixmax::VectorState>(m, "VectorState")
+        .def("actor", &sixmax::VectorState::actor)
+        .def("is_leaf", &sixmax::VectorState::is_leaf)
+        .def("num_actions", &sixmax::VectorState::num_actions)
+        .def("legal_mask", [](const sixmax::VectorState& s) {
+            std::vector<uint8_t> m2;
+            s.legal_mask(m2);
+            return std::vector<int>(m2.begin(), m2.end());
+        })
+        .def("id", &sixmax::VectorState::id);
+    py::class_<sixmax::VectorGame>(m, "VectorGame");
+
+    py::class_<sixmax::KuhnVectorGame, sixmax::VectorGame>(m, "KuhnVectorGame")
+        .def(py::init<>());
+
+    py::class_<sixmax::VectorCfr>(m, "VectorCfr")
+        .def(py::init<sixmax::VectorCfrConfig>(), py::arg("cfg"))
+        .def("solve", &sixmax::VectorCfr::solve,
+             py::arg("game"), py::arg("query_player"), py::arg("query_hand"))
+        .def("average_strategy", &sixmax::VectorCfr::average_strategy,
+             py::arg("node_id"), py::arg("hand"))
+        .def("rank_root_action", &sixmax::VectorCfr::rank_root_action,
+             py::arg("query_player"), py::arg("hand"))
+        .def("root_id", &sixmax::VectorCfr::root_id);
 
 }

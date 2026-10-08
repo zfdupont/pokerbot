@@ -18,6 +18,8 @@ cxx_library(
         "src/blueprint/checkpoint.cpp",
         "src/exploit/policy.cpp",
         "src/exploit/lbr.cpp",
+        "src/search/vector_cfr.cpp",
+        "src/search/kuhn_vector.cpp",
     ],
     headers = glob(["src/**/*.h"]),
     header_namespace = "",
