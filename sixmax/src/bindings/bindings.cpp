@@ -20,6 +20,7 @@
 #include "search/kuhn_vector.h"
 #include "search/range_tracker.h"
 #include "search/subgame.h"
+#include "search/leaf_eval.h"
 
 namespace py = pybind11;
 
@@ -511,12 +512,30 @@ PYBIND11_MODULE(sixmax, m) {
         .def(py::init<>())
         .def_readwrite("max_nodes", &sixmax::SubgameConfig::max_nodes);
 
+    // --- Phase 2 search: leaf evaluation (Task 4) ---
+    // Registered before Subgame: its ctor takes a LeafEvalConfig default.
+    py::class_<sixmax::LeafEvalConfig>(m, "LeafEvalConfig")
+        .def(py::init<>())
+        .def_readwrite("samples", &sixmax::LeafEvalConfig::samples)
+        .def_readwrite("seed", &sixmax::LeafEvalConfig::seed);
+
+    py::class_<sixmax::LeafEval>(m, "LeafEval")
+        .def(py::init<sixmax::LeafEvalConfig>(), py::arg("cfg"))   // exact-only
+        .def(py::init<const sixmax::BlueprintStrategy&, sixmax::LeafEvalConfig>(),
+             py::arg("bp"), py::arg("cfg"))
+        .def("matrix", &sixmax::LeafEval::matrix,
+             py::arg("leaf"), py::arg("actor"), py::arg("our_hands"),
+             py::arg("opp_hands"));
+
     py::class_<sixmax::Subgame, sixmax::VectorGame>(m, "Subgame")
         .def(py::init<const sixmax::EngineGameState&, const sixmax::ActionVocab&,
                       const sixmax::RangeTracker&, int, std::array<int, 2>,
-                      sixmax::SubgameConfig>(),
+                      sixmax::SubgameConfig, const sixmax::BlueprintStrategy*,
+                      sixmax::LeafEvalConfig>(),
              py::arg("street_root"), py::arg("vocab"), py::arg("ranges"),
              py::arg("hero"), py::arg("hero_hole"), py::arg("cfg"),
+             py::arg("bp") = nullptr,
+             py::arg("leaf_cfg") = sixmax::LeafEvalConfig{},
              py::keep_alive<1, 3>())   // subgame holds ActionVocab*
         .def("num_hands", &sixmax::Subgame::num_hands)
         .def("compatible", &sixmax::Subgame::compatible)

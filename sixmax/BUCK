@@ -22,6 +22,7 @@ cxx_library(
         "src/search/kuhn_vector.cpp",
         "src/search/range_tracker.cpp",
         "src/search/subgame.cpp",
+        "src/search/leaf_eval.cpp",
     ],
     headers = glob(["src/**/*.h"]),
     header_namespace = "",

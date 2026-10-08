@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include "blueprint/engine_game.h"
+#include "search/leaf_eval.h"
 #include "search/range_tracker.h"
 #include "search/vector_game.h"
 #include "vocab/vocab.h"
@@ -29,7 +30,8 @@ class Subgame : public VectorGame {
 public:
     Subgame(const EngineGameState& street_root, const ActionVocab& vocab,
             const RangeTracker& ranges, int hero, std::array<int, 2> hero_hole,
-            SubgameConfig cfg);
+            SubgameConfig cfg, const BlueprintStrategy* bp = nullptr,
+            LeafEvalConfig leaf_cfg = LeafEvalConfig{});
     ~Subgame() override;
 
     int num_hands(int player) const override {
@@ -68,6 +70,7 @@ private:
     std::vector<double> opp_prior_;            // posterior over opp_hands_, renormalised
     Street street_ = Street::Preflop;
     const ActionVocab* vocab_ = nullptr;
+    LeafEval leaf_eval_;
     std::vector<Node> nodes_;
     SubgameConfig cfg_;
 };
