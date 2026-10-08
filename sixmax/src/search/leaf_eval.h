@@ -1,4 +1,5 @@
 #pragma once
+#include <chrono>
 #include <cstdint>
 #include <random>
 #include <vector>
@@ -26,6 +27,11 @@ public:
     // Exact-only mode (board-complete leaves): no blueprint required.
     explicit LeafEval(LeafEvalConfig cfg) : bp_(nullptr), cfg_(cfg) {}
     bool has_blueprint() const { return bp_ != nullptr; }
+    // Bound the (expensive) sampled continuation: matrix() stops early once the
+    // deadline passes, leaving the remaining entries at 0. Set before a solve;
+    // defaults to no deadline so direct/test use is unaffected.
+    void set_deadline(std::chrono::steady_clock::time_point t) { deadline_ = t; }
+    bool expired() const { return std::chrono::steady_clock::now() >= deadline_; }
     // Full mode: adds the sampled flop/turn continuation.
     LeafEval(const BlueprintStrategy& bp, LeafEvalConfig cfg)
         : bp_(&bp), cfg_(cfg) {}
@@ -44,6 +50,8 @@ private:
 
     const BlueprintStrategy* bp_;   // null in exact-only mode
     LeafEvalConfig cfg_;
+    std::chrono::steady_clock::time_point deadline_ =
+        std::chrono::steady_clock::time_point::max();
 };
 
 }  // namespace sixmax

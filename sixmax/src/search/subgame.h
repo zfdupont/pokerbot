@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -31,7 +32,9 @@ public:
     Subgame(const EngineGameState& street_root, const ActionVocab& vocab,
             const RangeTracker& ranges, int hero, std::array<int, 2> hero_hole,
             SubgameConfig cfg, const BlueprintStrategy* bp = nullptr,
-            LeafEvalConfig leaf_cfg = LeafEvalConfig{});
+            LeafEvalConfig leaf_cfg = LeafEvalConfig{},
+            std::chrono::steady_clock::time_point deadline =
+                std::chrono::steady_clock::time_point::max());
     ~Subgame() override;
 
     int num_hands(int player) const override {

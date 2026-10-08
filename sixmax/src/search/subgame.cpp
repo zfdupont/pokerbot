@@ -8,9 +8,11 @@ namespace sixmax {
 Subgame::Subgame(const EngineGameState& street_root, const ActionVocab& vocab,
                  const RangeTracker& ranges, int hero, std::array<int, 2> hero_hole,
                  SubgameConfig cfg, const BlueprintStrategy* bp,
-                 LeafEvalConfig leaf_cfg)
+                 LeafEvalConfig leaf_cfg,
+                 std::chrono::steady_clock::time_point deadline)
     : hero_seat_(hero), street_(street_root.street()), vocab_(&vocab),
       leaf_eval_(bp, leaf_cfg), cfg_(cfg) {
+    leaf_eval_.set_deadline(deadline);
     // Asymmetric hand spaces: the hero holds one exact combo; the opponent
     // ranges over the combos the posterior left alive, and that posterior becomes
     // the opponent prior (renormalised over the surviving support).
@@ -54,7 +56,8 @@ int Subgame::build(const EngineGameState& s, int depth) {
             n.actor = -1;
             // Fill the leaf's value matrix (hero row x opponent columns) unless
             // it needs the sampled continuation and no blueprint was supplied.
-            if (leaf_eval_.has_blueprint() || s.board().size() == 5)
+            if (!leaf_eval_.expired() &&
+                (leaf_eval_.has_blueprint() || s.board().size() == 5))
                 n.leaf_matrix = leaf_eval_.matrix(s, hero_seat_, {hero_combo_},
                                                   opp_hands_);
             return idx;

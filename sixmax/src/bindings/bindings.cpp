@@ -21,6 +21,7 @@
 #include "search/range_tracker.h"
 #include "search/subgame.h"
 #include "search/leaf_eval.h"
+#include "search/search_strategy.h"
 
 namespace py = pybind11;
 
@@ -528,10 +529,17 @@ PYBIND11_MODULE(sixmax, m) {
              py::arg("opp_hands"));
 
     py::class_<sixmax::Subgame, sixmax::VectorGame>(m, "Subgame")
-        .def(py::init<const sixmax::EngineGameState&, const sixmax::ActionVocab&,
-                      const sixmax::RangeTracker&, int, std::array<int, 2>,
-                      sixmax::SubgameConfig, const sixmax::BlueprintStrategy*,
-                      sixmax::LeafEvalConfig>(),
+        .def(py::init([](const sixmax::EngineGameState& sr,
+                         const sixmax::ActionVocab& v,
+                         const sixmax::RangeTracker& r, int hero,
+                         std::array<int, 2> hh, sixmax::SubgameConfig c,
+                         const sixmax::BlueprintStrategy* bp,
+                         sixmax::LeafEvalConfig lc) {
+                 // Python callers never pass a deadline; search sets it C++-side.
+                 return sixmax::Subgame(
+                     sr, v, r, hero, hh, c, bp, lc,
+                     std::chrono::steady_clock::time_point::max());
+             }),
              py::arg("street_root"), py::arg("vocab"), py::arg("ranges"),
              py::arg("hero"), py::arg("hero_hole"), py::arg("cfg"),
              py::arg("bp") = nullptr,
@@ -544,5 +552,29 @@ PYBIND11_MODULE(sixmax, m) {
         .def("node_count", &sixmax::Subgame::node_count)
         .def("node_ids", &sixmax::Subgame::node_ids)
         .def("query_node_id", &sixmax::Subgame::query_node_id);
+    // --- Phase 2 search: orchestration (Task 5) ---
+    py::class_<sixmax::SearchConfig>(m, "SearchConfig")
+        .def(py::init<>())
+        .def_readwrite("enabled", &sixmax::SearchConfig::enabled)
+        .def_readwrite("budget_ms", &sixmax::SearchConfig::budget_ms)
+        .def_readwrite("max_nodes", &sixmax::SearchConfig::max_nodes)
+        .def_readwrite("max_iters", &sixmax::SearchConfig::max_iters)
+        .def_readwrite("leaf_samples", &sixmax::SearchConfig::leaf_samples)
+        .def_readwrite("seed", &sixmax::SearchConfig::seed);
+
+    py::class_<sixmax::SearchStrategy>(m, "SearchStrategy")
+        .def(py::init<const sixmax::BlueprintStrategy&, const sixmax::ActionVocab&,
+                      const sixmax::EngineConfig&, sixmax::SearchConfig>(),
+             py::arg("blueprint"), py::arg("vocab"), py::arg("cfg"),
+             py::arg("search_cfg"),
+             py::keep_alive<1, 2>(),   // strategy holds BlueprintStrategy&
+             py::keep_alive<1, 3>())   // strategy holds ActionVocab&
+        .def("probs", &sixmax::SearchStrategy::probs,
+             py::arg("decision_state"), py::arg("hero"),
+             py::arg("observed_actions"))
+        .def("last_decision_searched",
+             &sixmax::SearchStrategy::last_decision_searched)
+        .def("searches", &sixmax::SearchStrategy::searches)
+        .def("fallbacks", &sixmax::SearchStrategy::fallbacks);
 
 }

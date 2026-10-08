@@ -75,9 +75,12 @@ std::vector<double> LeafEval::matrix(const EngineGameState& leaf, int actor,
                 out[i * m + j] = hr.beats(orr) ? stake : (orr.beats(hr) ? -stake : 0.0);
             } else {
                 if (!bp_) throw std::logic_error("sampled leaf needs a blueprint");
+                if (expired()) return out;   // budget exhausted: leave the rest at 0
                 double acc = 0.0;
-                for (int s = 0; s < cfg_.samples; ++s)
+                for (int s = 0; s < cfg_.samples; ++s) {
                     acc += rollout(leaf, actor, our_hands[i], opp_hands[j], rng);
+                    if ((s & 15) == 15 && expired()) break;
+                }
                 out[i * m + j] = cfg_.samples > 0 ? acc / cfg_.samples : 0.0;
             }
         }
