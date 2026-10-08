@@ -44,7 +44,7 @@ Inputs and failure modes the spec implies but that no single task's happy-path t
 | `sixmax/src/search/subgame.{h,cpp}` | Builds the current street's public betting tree over `[actions.search]`; node cap |
 | `sixmax/src/search/leaf_eval.{h,cpp}` | End-of-street leaf value matrices via blueprint continuation |
 | `sixmax/src/search/search_strategy.{h,cpp}` | Orchestration, `SearchConfig`, deadline, fallback, telemetry |
-| `sixmax/src/bindings/bindings.cpp` | Modify: register each search type as its task lands |
+| `sixmax/src/bindings/bindings.cpp` | Modify: register each search type as its task lands; also expose `EngineGameState.street/board/hole_cards` (Task 3) |
 | `sixmax/BUCK` | Modify: add the `search/` sources to `core` |
 | `agents/sixmax_agent.py` | Modify: `SearchStrategy` wrapper + one consult branch |
 | `sixmax/configs/default.toml`, `hu.toml` | Modify: `[search]` section |
@@ -163,6 +163,16 @@ public:
     virtual ~VectorGame() = default;
     virtual int num_hands(int player) const = 0;   // 3 (Kuhn), <=1326 (NLHE)
     virtual std::unique_ptr<VectorState> root() const = 0;
+    // True if hero hand h0 and opponent hand h1 can co-occur (share no card).
+    // Kuhn: h0 != h1. Subgame: the two combos share no card. Used both to zero
+    // conflicting pairs in the leaf and to normalise the root game value.
+    virtual bool compatible(int h0, int h1) const = 0;
+    // Prior reach for each of `player`'s hands at the root — this is how the
+    // tracked opponent range ENTERS the solve. Kuhn: uniform (1/num_hands).
+    // Subgame: the hero seat is a point mass [1.0] over its one exact hand; the
+    // opponent seat is the RangeTracker posterior, renormalised over surviving
+    // combos. Need not be normalised; the solver treats it as a weight vector.
+    virtual std::vector<double> prior_reach(int player) const = 0;
 };
 
 }  // namespace sixmax
@@ -187,7 +197,9 @@ struct VectorCfrConfig {
 };
 
 struct VectorCfrResult {
-    double root_value = 0.0;      // counterfactual value at the root for `query_player`
+    // Expected value to `query_player` under the recovered average strategy
+    // (the Kuhn -1/18 gate; card-removal-normalised). Not a single hand's value.
+    double root_value = 0.0;
     int iterations = 0;
     bool deadline_hit = false;
 };
@@ -223,8 +235,14 @@ private:
     std::array<std::vector<double>, 2> walk(
             const VectorState& s, int depth,
             const std::array<std::vector<double>, 2>& reach, double weight);
+    // Expected value to `query_player` under the recovered AVERAGE strategy over
+    // the joint prior, restricted to compatible pairs. This is the gate value;
+    // it does not depend on the solver's internal reach bookkeeping.
+    double average_game_value(const VectorGame& game, int query_player) const;
+    double ev_under_avg(const VectorState& s, int query_player, int h0, int h1) const;
 
     VectorCfrConfig cfg_;
+    const VectorGame* game_ = nullptr;   // non-owning; valid only during solve()
     int num_hands_[2] = {0, 0};
     int query_player_ = 0;
     uint64_t root_id_ = 0;
@@ -260,6 +278,7 @@ VectorCfrResult VectorCfr::solve(const VectorGame& game, int query_player,
     num_hands_[1] = game.num_hands(1);
     if (query_hand < 0 || query_hand >= num_hands_[query_player])
         throw std::invalid_argument("query_hand out of range");
+    game_ = &game;             // non-owning; used by walk() and average_game_value()
     table_.clear();
     node_actions_.clear();
     node_actor_.clear();
@@ -270,28 +289,69 @@ VectorCfrResult VectorCfr::solve(const VectorGame& game, int query_player,
     node_actions_[root_id_] = root->num_actions();
     node_actor_[root_id_] = root->actor();
 
-    // Root reaches: every hand equally likely, normalised per player. Card
-    // removal is the game's job (conflicting pairs contribute 0 utility).
+    // Root reaches come from the game's priors: uniform for Kuhn, the tracked
+    // opponent range (and the hero point mass) for a Subgame. Card removal is
+    // the game's job (conflicting pairs contribute 0 utility).
     std::array<std::vector<double>, 2> reach;
-    for (int p = 0; p < 2; ++p)
-        reach[p].assign(num_hands_[p], 1.0 / std::max(1, num_hands_[p]));
+    for (int p = 0; p < 2; ++p) {
+        reach[p] = game.prior_reach(p);
+        if ((int)reach[p].size() != num_hands_[p])
+            throw std::invalid_argument("prior_reach size != num_hands");
+    }
 
     const auto start = std::chrono::steady_clock::now();
-    double value = 0.0;
     int it = 0;
     for (; it < cfg_.max_iters; ++it) {
         const auto now = std::chrono::steady_clock::now();
         const double ms = std::chrono::duration<double, std::milli>(now - start).count();
         if (ms >= cfg_.budget_ms) { deadline_hit_ = true; break; }
         const double w = static_cast<double>(it + 1);   // linear CFR+ weighting
-        auto v = walk(*root, 0, reach, w);
-        value = v[query_player][query_hand];
+        walk(*root, 0, reach, w);
     }
     VectorCfrResult r;
-    r.root_value = value;
+    // The gate value is computed from the AVERAGE strategy by an exact walk over
+    // compatible deals, mirroring kuhn_exact_value_lookup (mccfr.cpp) — NOT read
+    // from the solver's per-hand reach-weighted values.
+    r.root_value = average_game_value(game, query_player);
     r.iterations = it;
     r.deadline_hit = deadline_hit_;
     return r;
+}
+
+double VectorCfr::average_game_value(const VectorGame& game, int qp) const {
+    const int nq = num_hands_[qp], no = num_hands_[1 - qp];
+    const std::vector<double> pq = game.prior_reach(qp);
+    const std::vector<double> po = game.prior_reach(1 - qp);
+    double num = 0.0, Z = 0.0;
+    for (int hq = 0; hq < nq; ++hq)
+        for (int ho = 0; ho < no; ++ho) {
+            const int h0 = (qp == 0) ? hq : ho, h1 = (qp == 0) ? ho : hq;
+            if (!game.compatible(h0, h1)) continue;
+            const double wt = pq[hq] * po[ho];   // joint prior over this pair
+            if (wt == 0.0) continue;
+            Z += wt;
+            num += wt * ev_under_avg(*game.root(), qp, h0, h1);
+        }
+    return Z > 0.0 ? num / Z : 0.0;
+}
+
+double VectorCfr::ev_under_avg(const VectorState& s, int qp, int h0, int h1) const {
+    if (s.is_leaf()) return s.utility(qp, h0, h1);
+    const int actor = s.actor();
+    const int actor_hand = (actor == 0) ? h0 : h1;
+    std::vector<uint8_t> mask;
+    s.legal_mask(mask);
+    std::vector<double> sigma = average_strategy(s.id(), actor_hand);
+    double ev = 0.0;
+    int legal = 0;
+    for (int a = 0; a < (int)mask.size(); ++a) legal += mask[a] ? 1 : 0;
+    for (int a = 0; a < (int)mask.size(); ++a) {
+        if (!mask[a]) continue;
+        const double p = sigma.empty() ? 1.0 / legal : sigma[a];
+        if (p <= 0.0) continue;
+        ev += p * ev_under_avg(*s.apply(a), qp, h0, h1);
+    }
+    return ev;
 }
 
 std::array<std::vector<double>, 2> VectorCfr::walk(
@@ -304,10 +364,14 @@ std::array<std::vector<double>, 2> VectorCfr::walk(
         out[1].assign(n1, 0.0);
         for (int h0 = 0; h0 < n0; ++h0)
             for (int h1 = 0; h1 < n1; ++h1) {
-                const double p = reach[0][h0] * reach[1][h1];
-                if (p == 0.0) continue;
-                out[0][h0] += p * s.utility(0, h0, h1);
-                out[1][h1] += p * s.utility(1, h0, h1);
+                if (!game_->compatible(h0, h1)) continue;   // card removal
+                // Counterfactual value: weight each player's hand by the
+                // OPPONENT's reach only. Folding in a player's own reach cancels
+                // in per-hand regret-matching (so the learned strategy is
+                // unaffected) but corrupts the root value readout.
+                const double r0 = reach[0][h0], r1 = reach[1][h1];
+                if (r1 != 0.0) out[0][h0] += r1 * s.utility(0, h0, h1);
+                if (r0 != 0.0) out[1][h1] += r0 * s.utility(1, h0, h1);
             }
         return out;
     }
@@ -418,6 +482,13 @@ int VectorCfr::rank_root_action(int, int hand) const {
 }  // namespace sixmax
 ```
 
+> **Note for the implementer:** the three Task 1 tests are unchanged — `root_value` now
+> *means* the average-strategy game value, so `abs(root_value - (-1/18)) < 0.01` is the right
+> assertion. This is the gate the whole plan rests on: run Task 1 in isolation and confirm the
+> `-1/18` number **before** starting Task 2. If CFR+ current-iterate convergence makes it
+> flaky, raise `max_iters` or widen the tolerance to match the existing tabular gate's margin —
+> do not fall back to reading a single hand's value.
+
 - [ ] **Step 5: Write the Kuhn fixture**
 
 ```cpp
@@ -458,6 +529,8 @@ private:
 class KuhnVectorGame : public VectorGame {
 public:
     int num_hands(int) const override { return 3; }
+    bool compatible(int h0, int h1) const override { return h0 != h1; }
+    std::vector<double> prior_reach(int) const override { return {1.0/3, 1.0/3, 1.0/3}; }
     std::unique_ptr<VectorState> root() const override {
         return std::make_unique<KuhnVectorState>("");
     }
@@ -507,6 +580,21 @@ Add to `sixmax/src/bindings/bindings.cpp` (with the other class registrations, b
         .def_readonly("root_value", &sixmax::VectorCfrResult::root_value)
         .def_readonly("iterations", &sixmax::VectorCfrResult::iterations)
         .def_readonly("deadline_hit", &sixmax::VectorCfrResult::deadline_hit);
+
+    // Register the abstract bases so derived classes (KuhnVectorGame, Subgame)
+    // and their states are usable from Python. VectorState exposes just the
+    // read-only tree accessors the Subgame tests touch.
+    py::class_<sixmax::VectorState>(m, "VectorState")
+        .def("actor", &sixmax::VectorState::actor)
+        .def("is_leaf", &sixmax::VectorState::is_leaf)
+        .def("num_actions", &sixmax::VectorState::num_actions)
+        .def("legal_mask", [](const sixmax::VectorState& s) {
+            std::vector<uint8_t> m2;
+            s.legal_mask(m2);
+            return std::vector<int>(m2.begin(), m2.end());
+        })
+        .def("id", &sixmax::VectorState::id);
+    py::class_<sixmax::VectorGame>(m, "VectorGame");
 
     py::class_<sixmax::KuhnVectorGame, sixmax::VectorGame>(m, "KuhnVectorGame")
         .def(py::init<>());
@@ -662,10 +750,12 @@ Expected: FAIL — `module 'sixmax' has no attribute 'RangeTracker'`.
 
 namespace sixmax {
 
-// Opponent range over the 1,326 two-card combos, canonically indexed by
-// (min,max) card code. One tracker serves both seats; `player` selects whose
-// distribution is read. v1 only ever tracks a single opponent, so the vector
-// for the hero's own seat is a point mass after `reset`.
+// The OPPONENT's range over the 1,326 two-card combos, canonically indexed by
+// (min,max) card code. v1 tracks exactly one opponent: `reset`/`observe` build a
+// single posterior and `range()` returns it. The hero's own hand is NOT tracked
+// here — it is a known point mass supplied straight to the Subgame (see #6). The
+// `int player` argument on `range()`/`combo_prob()` is vestigial (kept for the
+// binding) and ignored; both always return the opponent posterior.
 class RangeTracker {
 public:
     RangeTracker(const EngineConfig& cfg, const ActionVocab& vocab)
@@ -811,16 +901,17 @@ git commit -m "feat(sixmax): heads-up range tracker with blueprint Bayes updates
 
 **Files:**
 - Create: `sixmax/src/search/subgame.h`, `sixmax/src/search/subgame.cpp`
-- Modify: `sixmax/BUCK`, `sixmax/src/bindings/bindings.cpp`
+- Modify: `sixmax/src/blueprint/engine_game.h` (add a const `hand()` accessor), `sixmax/BUCK`, `sixmax/src/bindings/bindings.cpp`
 - Test: `tests/sixmax/test_subgame.py`
 
 **Interfaces:**
 - Consumes: `HandState`, `ActionVocab`, `VectorGame`/`VectorState` (Task 1), `RangeTracker` (Task 2).
 - Produces:
   - `struct SubgameConfig { int max_nodes = 20000; }`
-  - `class Subgame : public VectorGame` — `Subgame(const EngineGameState& street_root, const ActionVocab&, const RangeTracker&, SubgameConfig)` (accepts the bridge state, not `HandState`, so legality and `bet_context()` come from one place and cannot drift)
-  - `num_hands(int)` (HU only in v1), `root()`, `size_t node_count() const`, `std::vector<uint64_t> node_ids() const` (deterministic; the solver's regret keys and the tests use it)
-  - `SubgameState : VectorState` with `utility` = the cached leaf matrix (empty until Task 4 fills it) and `id()` = a hash of (board, pot, stacks, history).
+  - `class Subgame : public VectorGame` — `Subgame(const EngineGameState& street_root, const ActionVocab&, const RangeTracker&, int hero, std::array<int,2> hero_hole, SubgameConfig)` (accepts the bridge state, not `HandState`, so legality and `bet_context()` come from one place and cannot drift; `hero`/`hero_hole` fix the asymmetric hand spaces — see #6)
+  - **Asymmetric hand spaces (#6):** the hero seat holds its *one* exact combo (`num_hands(hero)==1`); the opponent seat ranges over the combos the `RangeTracker` posterior left alive (`num_hands(opp)==opp_hands_.size()`). `prior_reach(hero)=={1.0}`; `prior_reach(opp)==` the renormalised posterior over `opp_hands_`. This is what makes the tracked range actually drive the solve — the old single `legal_hands_` both conflated the seats and discarded the posterior weights.
+  - `num_hands(int)`, `compatible(int,int)`, `prior_reach(int)` (the three `VectorGame` overrides), `root()`, `size_t node_count() const`, `std::vector<uint64_t> node_ids() const` (deterministic; the solver's regret keys and the tests use it)
+  - `SubgameState : VectorState` with `utility(player,i,j)` mapping the compact per-seat indices back to combos (hero index 0 → `hero_combo_`; opp index j → `opp_hands_[j]`) via the cached leaf matrix (empty until Task 4 fills it) and `id()` = a hash of (board, pot, stacks, history).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -863,7 +954,8 @@ def _flop_state():
 
 def test_subgame_legality_matches_engine_exactly():
     eng, vocab, tracker = _flop_state()
-    sg = sixmax.Subgame(eng, vocab, tracker, sixmax.SubgameConfig())
+    hole = tuple(eng.hole_cards(0))
+    sg = sixmax.Subgame(eng, vocab, tracker, 0, hole, sixmax.SubgameConfig())
     root = sg.root()
     assert list(root.legal_mask()) == list(eng.legal_mask())
     assert root.actor() == eng.current_player()
@@ -871,16 +963,29 @@ def test_subgame_legality_matches_engine_exactly():
 
 def test_subgame_respects_node_cap():
     eng, vocab, tracker = _flop_state()
+    hole = tuple(eng.hole_cards(0))
     cfg = sixmax.SubgameConfig()
     cfg.max_nodes = 2
-    sg = sixmax.Subgame(eng, vocab, tracker, cfg)
+    sg = sixmax.Subgame(eng, vocab, tracker, 0, hole, cfg)
     assert sg.node_count() <= 2
+
+
+def test_subgame_hand_spaces_are_asymmetric():
+    """#6: the hero seat holds exactly one combo; the opponent ranges over the
+    posterior's surviving combos, and the hero's own combo is excluded from it."""
+    eng, vocab, tracker = _flop_state()
+    hole = tuple(eng.hole_cards(0))
+    sg = sixmax.Subgame(eng, vocab, tracker, 0, hole, sixmax.SubgameConfig())
+    assert sg.num_hands(0) == 1          # hero seat: point mass
+    assert sg.num_hands(1) > 1           # opponent seat: a real range
+    assert sg.prior_reach(0) == [1.0]
 
 
 def test_subgame_construction_is_deterministic():
     eng, vocab, tracker = _flop_state()
-    a = sixmax.Subgame(eng, vocab, tracker, sixmax.SubgameConfig())
-    b = sixmax.Subgame(eng, vocab, tracker, sixmax.SubgameConfig())
+    hole = tuple(eng.hole_cards(0))
+    a = sixmax.Subgame(eng, vocab, tracker, 0, hole, sixmax.SubgameConfig())
+    b = sixmax.Subgame(eng, vocab, tracker, 0, hole, sixmax.SubgameConfig())
     assert a.node_ids() == b.node_ids()
     assert list(a.root().legal_mask()) == list(b.root().legal_mask())
 ```
@@ -892,9 +997,21 @@ Expected: FAIL — `module 'sixmax' has no attribute 'Subgame'`.
 
 - [ ] **Step 3: Write the builder**
 
+**Prerequisite — add a const hand accessor to `EngineGameState`.** The builder recurses
+on `HandState`, but `EngineGameState` only offers the non-const `mutable_hand()`
+(`engine_game.h:49`); a `const EngineGameState&` subgame root has no path to its
+`HandState`. In `sixmax/src/blueprint/engine_game.h`, next to `mutable_hand()`, add:
+
+```cpp
+    const HandState& hand() const { return hand_; }
+```
+
+No binding required (C++-internal).
+
 ```cpp
 // sixmax/src/search/subgame.h
 #pragma once
+#include <array>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -911,17 +1028,28 @@ struct SubgameConfig {
 
 // The current street's public betting tree, as a VectorGame. Depth-limited:
 // every node past the street's last action is a LEAF whose utility matrix is
-// supplied by LeafEval (Task 4). Hand indices are the caller's combo indices
-// (RangeTracker's canonical ordering), filtered to the legal set.
+// supplied by LeafEval (Task 4). Asymmetric hand spaces (#6): the hero seat
+// holds one exact combo; the opponent seat ranges over the surviving combos of
+// the RangeTracker posterior, which also supplies the opponent's prior reach.
 class Subgame : public VectorGame {
 public:
     Subgame(const EngineGameState& street_root, const ActionVocab& vocab,
-            const RangeTracker& ranges, SubgameConfig cfg);
+            const RangeTracker& ranges, int hero, std::array<int, 2> hero_hole,
+            SubgameConfig cfg);
 
-    int num_hands(int player) const override { return (int)legal_hands_.size(); }
+    int num_hands(int player) const override {
+        return player == hero_seat_ ? 1 : (int)opp_hands_.size();
+    }
+    bool compatible(int h0, int h1) const override;        // no shared card
+    std::vector<double> prior_reach(int player) const override;
     std::unique_ptr<VectorState> root() const override;
     size_t node_count() const { return nodes_.size(); }
     std::vector<uint64_t> node_ids() const;
+
+    // Index translation used by SubgameState::utility and LeafEval wiring.
+    int combo_for(int player, int hand) const {            // compact index -> 1326-combo
+        return player == hero_seat_ ? hero_combo_ : opp_hands_[hand];
+    }
 
 private:
     struct Node {
@@ -932,7 +1060,10 @@ private:
         std::vector<int> children;            // node indices
     };
     std::vector<Node> nodes_;
-    std::vector<int> legal_hands_;            // combo indices surviving card removal
+    int hero_seat_ = 0;
+    int hero_combo_ = -1;                      // the hero's one exact combo (1326-space)
+    std::vector<int> opp_hands_;               // opponent combos surviving card removal
+    std::vector<double> opp_prior_;            // posterior over opp_hands_, renormalised
     std::unordered_map<uint64_t, int> by_id_;
     SubgameConfig cfg_;
 };
@@ -949,15 +1080,31 @@ private:
 namespace sixmax {
 
 Subgame::Subgame(const EngineGameState& street_root, const ActionVocab& vocab,
-                 const RangeTracker& ranges, SubgameConfig cfg)
-    : cfg_(cfg) {
+                 const RangeTracker& ranges, int hero, std::array<int, 2> hero_hole,
+                 SubgameConfig cfg)
+    : hero_seat_(hero), cfg_(cfg) {
+    const Street street = street_root.street();
+    // #6: the hero holds one exact combo; the opponent ranges over the combos
+    // the posterior left alive, and that posterior becomes the opponent prior.
+    hero_combo_ = RangeTracker::combo_index(hero_hole[0], hero_hole[1]);
+    const std::vector<double>& post = ranges.range(0);   // opponent posterior
+    double total = 0.0;
     for (int i = 0; i < 1326; ++i)
-        if (ranges.range(0)[i] > 0.0) legal_hands_.push_back(i);
+        if (post[i] > 0.0 && i != hero_combo_) {
+            opp_hands_.push_back(i);
+            opp_prior_.push_back(post[i]);
+            total += post[i];
+        }
+    if (total > 0.0)
+        for (double& v : opp_prior_) v /= total;
 
+    // Recurse on HandState (obtained via the new const accessor). Legality and
+    // the vocab->amount translation are read back through a throwaway
+    // EngineGameState so they can never drift from the live engine.
     std::function<int(const HandState&)> build = [&](const HandState& s) -> int {
         Node n;
-        n.id = /* hash of (board, street, pot, stacks, history) */ 0;
-        n.leaf = s.is_terminal() || s.street() != street_root.street();
+        n.id = /* hash of (board, street, pot, rounded stacks, history) */ 0;
+        n.leaf = s.is_terminal() || s.street() != street;
         n.actor = s.is_terminal() ? -1 : s.current_player();
         if (n.leaf || (int)nodes_.size() >= cfg_.max_nodes) {
             n.leaf = true;
@@ -965,23 +1112,42 @@ Subgame::Subgame(const EngineGameState& street_root, const ActionVocab& vocab,
             nodes_.push_back(n);
             return (int)nodes_.size() - 1;
         }
+        EngineGameState probe(s.clone(), &vocab, nullptr);  // legality + bet_context
         std::vector<uint8_t> mask;
-        // Rebuild the masking through EngineGameState so legality can never drift.
-        EngineGameState gs(s, &vocab, nullptr);
-        gs.legal_mask(mask);
+        probe.legal_mask(mask);
+        const BetContext ctx = probe.bet_context();
         for (int a = 0; a < (int)mask.size(); ++a) {
             if (!mask[a]) continue;
             HandState child = s.clone();
-            // Translate vocab index -> EngineAction via ActionVocab::target_bb,
-            // then recurse; ids/amounts stored for the solver and leaf eval.
-            auto act = vocab.at(a);
-            (void)act;
+            const AbstractAction act = vocab.at(a);
+            switch (act.type) {
+                case ActionType::Fold:
+                    child.apply({EngineActionType::Fold, 0.0}); break;
+                case ActionType::Check:
+                case ActionType::Call:
+                    child.apply({EngineActionType::CheckCall, 0.0}); break;
+                default:  // Bet / AllIn -> raise-to in BB
+                    child.apply({EngineActionType::RaiseTo, vocab.target_bb(a, ctx)});
+            }
             n.children.push_back(build(child));
         }
         nodes_.push_back(n);
         return (int)nodes_.size() - 1;
     };
-    build(street_root);
+    build(street_root.hand());   // was build(street_root) — type error: EngineGameState != HandState
+}
+
+bool Subgame::compatible(int h0, int h1) const {
+    // h0/h1 are compact per-seat indices; map to combos and check no shared card.
+    const int c0 = combo_for(0, h0), c1 = combo_for(1, h1);
+    auto a = RangeTracker::combo_cards(c0);
+    auto b = RangeTracker::combo_cards(c1);
+    return a[0] != b[0] && a[0] != b[1] && a[1] != b[0] && a[1] != b[1];
+}
+
+std::vector<double> Subgame::prior_reach(int player) const {
+    if (player == hero_seat_) return {1.0};   // point mass on the hero's one hand
+    return opp_prior_;                         // tracked posterior over opp_hands_
 }
 
 std::unique_ptr<VectorState> Subgame::root() const {
@@ -993,13 +1159,15 @@ std::unique_ptr<VectorState> Subgame::root() const {
 }  // namespace sixmax
 ```
 
-> **Note for the implementer:** Step 3b completes this file: (a) implement the id hash over
-> `(board, street, pot, rounded stack/street-bet, raise count, actor)` — deterministic, no
-> pointers; (b) apply actions with `HandState::apply(EngineAction)` after translating the vocab
-> index through `ActionVocab::target_bb(idx, bet_context)`, exactly as `EngineGameState::apply`
-> does (read it and reuse its translation, do not re-derive); (c) return a
-> `SubgameState` wrapper whose `apply(i)` indexes `children[i]` and whose `utility` reads the
-> leaf matrix (empty until Task 4 — return 0 and let Task 4's test catch it).
+> **Note for the implementer:** the action translation above is complete (it mirrors
+> `EngineGameState::apply` via the throwaway `probe` — read that method and confirm the
+> `AbstractAction::type` → `EngineActionType` mapping matches before trusting it). Two pieces
+> remain: (a) implement the id hash over `(board, street, pot, rounded stack/street-bet, raise
+> count, actor)` — deterministic, no pointers; (b) return a `SubgameState` wrapper whose
+> `apply(i)` indexes `children[i]` and whose `utility(player, i, j)` reads the leaf matrix at the
+> compact per-seat indices (map back to combos with `Subgame::combo_for` — hero index 0 →
+> `hero_combo_`, opp index j → `opp_hands_[j]` — when Task 4 fills the matrix; return 0 until
+> then and let Task 4's test catch it).
 
 - [ ] **Step 4: Register bindings and BUCK sources; run the tests**
 
@@ -1007,7 +1175,38 @@ std::unique_ptr<VectorState> Subgame::root() const {
     py::class_<sixmax::SubgameConfig>(m, "SubgameConfig")
         .def(py::init<>())
         .def_readwrite("max_nodes", &sixmax::SubgameConfig::max_nodes);
+
+    py::class_<sixmax::Subgame, sixmax::VectorGame>(m, "Subgame")
+        .def(py::init<const sixmax::EngineGameState&, const sixmax::ActionVocab&,
+                      const sixmax::RangeTracker&, int, std::array<int, 2>,
+                      sixmax::SubgameConfig>(),
+             py::arg("street_root"), py::arg("vocab"), py::arg("ranges"),
+             py::arg("hero"), py::arg("hero_hole"), py::arg("cfg"))
+        .def("num_hands", &sixmax::Subgame::num_hands)
+        .def("compatible", &sixmax::Subgame::compatible)
+        .def("prior_reach", &sixmax::Subgame::prior_reach)
+        .def("root", &sixmax::Subgame::root)
+        .def("node_count", &sixmax::Subgame::node_count)
+        .def("node_ids", &sixmax::Subgame::node_ids);
 ```
+
+**Prerequisite binding (this task's tests depend on it; reused by Tasks 4-5).**
+`EngineGameState` currently exposes only `bet_context`/`abstract_key` on top of
+`GameState` (`bindings.cpp:172`); the search tests call `eng.street()`,
+`eng.board()`, `eng.hole_cards(0)`, which exist in C++ but are unbound. Add these
+`.def`s to the **existing** `EngineGameState` registration (do not create a second
+`py::class_`):
+
+```cpp
+        .def("street", [](const sixmax::EngineGameState& s) { return (int)s.street(); })
+        .def("board", &sixmax::EngineGameState::board)
+        .def("hole_cards", [](const sixmax::EngineGameState& s, int p) {
+            auto hc = s.hole_cards(p);
+            return std::vector<int>{hc[0], hc[1]};
+        });
+```
+
+`street()` is bound as `int` (the tests compare `eng.street() == 1`).
 
 Add `"src/search/subgame.cpp"` to `core`'s `srcs`.
 
@@ -1032,18 +1231,22 @@ git commit -m "feat(sixmax): depth-limited street subgame builder"
 - Test: `tests/sixmax/test_leaf_eval.py`
 
 **Interfaces:**
-- Consumes: `BlueprintStrategy`, `EngineGameState`, `HandState::reroll_hidden`, `safe_eval`.
+- Consumes: `BlueprintStrategy`, `EngineGameState` (+ its `.hand()` accessor from Task 3), `HandState::reroll_hidden`, `safe_eval::rank7`/`HandRank::beats`/`ties`, `RangeTracker::combo_cards`, `policy.h`'s `sample_blueprint`.
 - Produces:
   - `struct LeafEvalConfig { int samples = 256; uint64_t seed = 1; }`
-  - `std::vector<double> LeafEval::matrix(const HandState& leaf, int n_hands, const std::vector<int>& legal_hands, const std::vector<int>& opp_legal_hands)` — a flat `n_hands*n_hands` value matrix for the acting player, deterministic given `seed`.
+  - **Two ctors:** `LeafEval(LeafEvalConfig)` — exact-only (board-complete river/showdown leaves; no blueprint needed) — and `LeafEval(const BlueprintStrategy&, LeafEvalConfig)` — adds the sampled flop/turn continuation. Implement as one ctor taking `const BlueprintStrategy* bp = nullptr`.
+  - `std::vector<double> LeafEval::matrix(const EngineGameState& leaf, int actor, const std::vector<int>& our_hands, const std::vector<int>& opp_hands)` — a row-major `our_hands.size() * opp_hands.size()` value matrix (payoff to `actor`), deterministic given `seed`. Takes the bridge state (reaches mechanics via `.hand()`), not a bare `HandState`, matching `Subgame`/`SearchStrategy`.
+  - **Card removal (T4-5):** any `(i, j)` whose two combos share a card, or whose cards overlap the leaf board, contributes exactly 0 — not just `our_hands[i] == opp_hands[j]`.
 
 - [ ] **Step 1: Write the failing test**
 
 ```python
 # tests/sixmax/test_leaf_eval.py
-"""Leaf-evaluation contract. The terminal (river) branch is exact and needs no
-blueprint, so these tests never depend on the gitignored checkpoint; the
-sampled branch is covered by a module-level skip when it is absent."""
+"""Leaf-evaluation contract. The board-complete (river) branch is an EXACT
+showdown via safe_eval — it needs no blueprint and no engine settlement (the
+state is NOT terminal; betting has not closed), so these tests never depend on
+the gitignored checkpoint. The sampled flop/turn branch is covered by a
+module-level skip when the checkpoint is absent."""
 import importlib.util
 import math
 import os
@@ -1080,7 +1283,7 @@ def _street_state(target_street):
 
 def test_terminal_leaf_zeroes_conflicting_hands():
     eng = _street_state(3)
-    ev = sixmax.LeafEval(sixmax.LeafEvalConfig())      # terminal-only mode
+    ev = sixmax.LeafEval(sixmax.LeafEvalConfig())      # exact-only (board-complete)
     hands = [0, 1, 2, 3]
     m = list(ev.matrix(eng, 0, hands, hands))
     n = len(hands)
@@ -1108,6 +1311,27 @@ def test_terminal_leaf_is_deterministic():
     a = list(ev.matrix(eng, 0, [0, 1, 2], [3, 4, 5]))
     b = list(ev.matrix(eng, 0, [0, 1, 2], [3, 4, 5]))
     assert a == b
+
+
+def test_leaf_zeroes_card_removal_conflicts():
+    """T4-5: a combo that overlaps the board, or shares a card with the
+    opponent's combo (without being identical), must contribute exactly 0 —
+    not only the h0==h1 diagonal. Without this the solver sees impossible hands."""
+    ci = sixmax.RangeTracker.combo_index
+    eng = _street_state(3)
+    board = list(eng.board())                       # 5 cards on the river
+    free = [c for c in range(52) if c not in board]
+    ev = sixmax.LeafEval(sixmax.LeafEvalConfig())
+
+    # (a) our combo uses a board card -> impossible -> 0
+    our = [ci(min(board[0], free[0]), max(board[0], free[0]))]
+    opp = [ci(min(free[1], free[2]), max(free[1], free[2]))]
+    assert list(ev.matrix(eng, 0, our, opp))[0] == 0.0
+
+    # (b) our and opp share one card (not identical combos) -> 0
+    our = [ci(free[0], free[1])]
+    opp = [ci(free[1], free[2])]                     # shares free[1]
+    assert list(ev.matrix(eng, 0, our, opp))[0] == 0.0
 
 
 @pytest.mark.skipif(not os.path.exists(_CKPT),
@@ -1146,23 +1370,27 @@ struct LeafEvalConfig {
     uint64_t seed = 1;
 };
 
-// End-of-street leaf values. Both players continue with the blueprint for the
-// rest of the hand; the value of a leaf is the expected payoff over sampled
-// opponent hands and board runouts. Replaced wholesale by the Phase-3 value
-// net, so keep the interface to one matrix call.
+// End-of-street leaf values. A board-complete (river) leaf is an EXACT showdown
+// (safe_eval, no blueprint, NOT engine-terminal); earlier leaves roll the
+// blueprint to showdown over sampled runouts. Replaced wholesale by the Phase-3
+// value net, so keep the interface to one matrix call.
 class LeafEval {
 public:
+    // Exact-only mode (board-complete leaves): no blueprint required.
+    explicit LeafEval(LeafEvalConfig cfg) : bp_(nullptr), cfg_(cfg) {}
+    // Full mode: adds the sampled flop/turn continuation.
     LeafEval(const BlueprintStrategy& bp, LeafEvalConfig cfg)
-        : bp_(bp), cfg_(cfg) {}
+        : bp_(&bp), cfg_(cfg) {}
 
-    // Row-major [our_hand][opp_hand] payoff to the player to act at `leaf`.
-    // Terminal (river) leaves are exact; earlier leaves are estimates.
-    std::vector<double> matrix(const HandState& leaf, int actor,
+    // Row-major [our_hand][opp_hand] payoff to `actor`. Takes the bridge state
+    // (mechanics via .hand()), matching Subgame/SearchStrategy. Board-complete
+    // leaves are exact; earlier leaves are blueprint estimates.
+    std::vector<double> matrix(const EngineGameState& leaf, int actor,
                                const std::vector<int>& our_hands,
                                const std::vector<int>& opp_hands) const;
 
 private:
-    const BlueprintStrategy& bp_;
+    const BlueprintStrategy* bp_;   // null in exact-only mode
     LeafEvalConfig cfg_;
 };
 
@@ -1172,34 +1400,51 @@ private:
 ```cpp
 // sixmax/src/search/leaf_eval.cpp
 #include "search/leaf_eval.h"
+#include <array>
 #include <random>
+#include <stdexcept>
+#include "game/safe_eval.h"
+#include "search/range_tracker.h"
 
 namespace sixmax {
 
-std::vector<double> LeafEval::matrix(const HandState& leaf, int actor,
+std::vector<double> LeafEval::matrix(const EngineGameState& leaf, int actor,
                                      const std::vector<int>& our_hands,
                                      const std::vector<int>& opp_hands) const {
     const size_t n = our_hands.size(), m = opp_hands.size();
     std::vector<double> out(n * m, 0.0);
-    std::mt19937_64 rng(cfg_.seed ^ (leaf.street() * 0x9E3779B97F4A7C15ull));
+    const std::vector<int> board = leaf.board();
+    const bool board_complete = board.size() == 5;
+    std::array<bool, 52> on_board{};
+    for (int c : board) on_board[c] = true;
+    // HU showdown swing: the winner nets +pot/2 (contributed half, takes all).
+    // A single per-leaf constant; CFR only uses relative action values.
+    const double stake = leaf.hand().pot() / 2.0;
+    std::array<int, 7> hero7{}, opp7{};
+    if (board_complete)
+        for (int b = 0; b < 5; ++b) { hero7[2 + b] = board[b]; opp7[2 + b] = board[b]; }
+    std::mt19937_64 rng(cfg_.seed ^
+                        (static_cast<uint64_t>(leaf.street()) * 0x9E3779B97F4A7C15ull));
+
     for (size_t i = 0; i < n; ++i) {
+        const auto a = RangeTracker::combo_cards(our_hands[i]);
+        if (on_board[a[0]] || on_board[a[1]]) continue;        // card removal: board
         for (size_t j = 0; j < m; ++j) {
-            if (our_hands[i] == opp_hands[j]) continue;   // card removal
-            if (leaf.is_terminal()) {
-                // River (or a fold): exact. Probe with a concrete hand assignment.
-                HandState probe = leaf.clone();
-                probe.set_hole_for_test(actor, our_hands[i], 1 - actor, opp_hands[j]);
-                out[i * m + j] = probe.payoffs()[actor];
+            const auto b = RangeTracker::combo_cards(opp_hands[j]);
+            if (on_board[b[0]] || on_board[b[1]]) continue;    // card removal: board
+            if (a[0] == b[0] || a[0] == b[1] || a[1] == b[0] || a[1] == b[1])
+                continue;                                       // shared card (incl. identical)
+            if (board_complete) {
+                // Exact showdown. NOTE: not engine-terminal; do NOT call payoffs().
+                hero7[0] = a[0]; hero7[1] = a[1];
+                opp7[0]  = b[0]; opp7[1]  = b[1];
+                const auto hr = safe_eval::rank7(hero7);
+                const auto orr = safe_eval::rank7(opp7);
+                out[i * m + j] = hr.beats(orr) ? stake : (orr.beats(hr) ? -stake : 0.0);
             } else {
-                // Sample runouts and roll the blueprint to showdown; average.
-                double acc = 0.0;
-                for (int k = 0; k < cfg_.samples; ++k) {
-                    HandState probe = leaf.clone();
-                    probe.set_hole_for_test(actor, our_hands[i], 1 - actor, opp_hands[j]);
-                    // deal remaining board + play blueprint to showdown
-                    acc += /* rollout(probe, actor, rng) */ 0.0;
-                }
-                out[i * m + j] = acc / cfg_.samples;
+                if (!bp_) throw std::logic_error("sampled leaf needs a blueprint");
+                // Sample runouts, roll the blueprint to showdown, average.
+                out[i * m + j] = /* rollout(leaf.hand(), actor, a, b, rng) */ 0.0;
             }
         }
     }
@@ -1209,18 +1454,37 @@ std::vector<double> LeafEval::matrix(const HandState& leaf, int actor,
 }  // namespace sixmax
 ```
 
-> **Note for the implementer:** two pieces are intentionally left for you to write because they
-> are mechanical and are what the tests pin: (1) `HandState::set_hole_for_test(actor, c0, c1, ...)`
-> — you may instead use the existing `reroll_hidden` with a constructed pool; pick one and keep
-> it out of production paths; (2) `rollout(...)` — deal the remaining board from the deck, then
-> advance the hand with blueprint actions (`policy.h`'s `sample_blueprint`) until
-> `is_terminal()`, returning `payoffs()[actor]`. Determinism is the tested contract: the same
-> `(leaf, actor, hands, seed)` must return the same matrix.
+> **Note for the implementer:** the board-complete branch is complete and is what the exact
+> tests pin — it values the showdown straight from `safe_eval::rank7` (preserving the
+> lower-score-wins inversion via `beats`), never `is_terminal()`/`payoffs()`, because a street
+> leaf is not engine-terminal. One piece remains: `rollout(hand, actor, hero_combo, opp_combo,
+> rng)` for flop/turn leaves — place the two holes (via `reroll_hidden` with a constructed pool,
+> kept out of production paths), deal the remaining board, advance with blueprint actions
+> (`policy.h`'s `sample_blueprint`) until `is_terminal()`, and return `payoffs()[actor]`,
+> averaged over `cfg_.samples`. Seed from `cfg_.seed` so the matrix is deterministic (the tested
+> contract). `set_hole_for_test` from the earlier draft is no longer needed — the exact branch
+> reads cards directly from the combo indices.
 
 - [ ] **Step 4: Wire leaf matrices into `Subgame`, register bindings, run tests**
 
-Add `"src/search/leaf_eval.cpp"` to `core`'s `srcs`; register `LeafEvalConfig`/`LeafEval`; have
-`Subgame` own a `LeafEval` and fill each leaf's matrix at construction.
+Add `"src/search/leaf_eval.cpp"` to `core`'s `srcs`; register both `LeafEval` ctors (the tests
+use the 1-arg exact-only form and the 2-arg blueprint form); have `Subgame` own a `LeafEval` and
+fill each leaf's matrix — hero side `combo_for(hero, ·)` (one row), opponent side `opp_hands_` —
+at construction.
+
+```cpp
+    py::class_<sixmax::LeafEvalConfig>(m, "LeafEvalConfig")
+        .def(py::init<>())
+        .def_readwrite("samples", &sixmax::LeafEvalConfig::samples)
+        .def_readwrite("seed", &sixmax::LeafEvalConfig::seed);
+
+    py::class_<sixmax::LeafEval>(m, "LeafEval")
+        .def(py::init<sixmax::LeafEvalConfig>(), py::arg("cfg"))   // exact-only
+        .def(py::init<const sixmax::BlueprintStrategy&, sixmax::LeafEvalConfig>(),
+             py::arg("bp"), py::arg("cfg"))
+        .def("matrix", &sixmax::LeafEval::matrix,
+             py::arg("leaf"), py::arg("actor"), py::arg("our_hands"), py::arg("opp_hands"));
+```
 
 Run: `uv run pytest tests/sixmax/test_leaf_eval.py tests/sixmax/test_subgame.py -v`
 Expected: all pass.
@@ -1247,7 +1511,7 @@ git commit -m "feat(sixmax): blueprint-continuation leaf evaluation"
 - Consumes: everything above, plus `policy.h`'s `blueprint_probs`.
 - Produces:
   - `struct SearchConfig { bool enabled; double budget_ms; int max_nodes; int max_iters; int leaf_samples; uint64_t seed; }`
-  - `class SearchStrategy { SearchStrategy(const BlueprintStrategy&, const ActionVocab&, const EngineConfig&, SearchConfig); std::vector<double> probs(const EngineGameState& decision_state, int hero, const std::vector<int>& observed_actions_since_street_start); bool last_decision_searched() const; }`
+  - `class SearchStrategy { SearchStrategy(const BlueprintStrategy&, const ActionVocab&, const EngineConfig&, SearchConfig); std::vector<double> probs(const EngineGameState& decision_state, int hero, const std::vector<int>& observed_actions); bool last_decision_searched() const; }`
   - Returns the `[actions.search]`-indexed distribution over the hero's legal actions; **empty vector means "fall back to the blueprint"**.
 
 - [ ] **Step 1: Write the failing test**
@@ -1371,11 +1635,12 @@ public:
     SearchStrategy(const BlueprintStrategy& bp, const ActionVocab& vocab,
                    const EngineConfig& cfg, SearchConfig sc);
 
-    std::vector<double> probs(const HandState& initial, int hero,
-                              const std::vector<int>& actors,
-                              const std::vector<int>& actions,
-                              const std::vector<int>& board,
-                              const std::array<int, 2>& hero_hole);
+    // [actions.search]-indexed distribution over the hero's legal actions.
+    // EMPTY means "fall back to the blueprint". Never throws. board + hole are
+    // read from `decision_state`; `observed_actions` is the street prefix used to
+    // replay the RangeTracker and locate the query node.
+    std::vector<double> probs(const EngineGameState& decision_state, int hero,
+                              const std::vector<int>& observed_actions);
 
     bool last_decision_searched() const { return last_searched_; }
     int searches() const { return searches_; }
@@ -1404,17 +1669,18 @@ SearchStrategy::SearchStrategy(const BlueprintStrategy& bp, const ActionVocab& v
                               const EngineConfig& cfg, SearchConfig sc)
     : bp_(bp), vocab_(vocab), cfg_(cfg), sc_(sc) {}
 
-std::vector<double> SearchStrategy::probs(const HandState& initial, int hero,
-                                          const std::vector<int>& actors,
-                                          const std::vector<int>& actions,
-                                          const std::vector<int>& board,
-                                          const std::array<int, 2>& hero_hole) {
+std::vector<double> SearchStrategy::probs(const EngineGameState& decision_state,
+                                          int hero,
+                                          const std::vector<int>& observed_actions) {
     last_searched_ = false;
     if (!sc_.enabled) { ++fallbacks_; return {}; }
     try {
         const auto t0 = std::chrono::steady_clock::now();
-        // 1. Replay the observed prefix to reach the current decision node,
-        //    and remember it as the subgame root for this street.
+        const std::vector<int> board = decision_state.board();
+        const auto hc = decision_state.hole_cards(hero);
+        const std::array<int, 2> hero_hole{hc[0], hc[1]};
+        // 1. Replay `observed_actions` to reach the current decision node and
+        //    remember it as the subgame root for this street.
         // 2. RangeTracker::reset(board, hero_hole); for each observed action
         //    call RangeTracker::observe(...) to get entry beliefs.
         RangeTracker tracker(cfg_, vocab_);
@@ -1423,12 +1689,14 @@ std::vector<double> SearchStrategy::probs(const HandState& initial, int hero,
         //    it with VectorCfr over the remaining budget.
         SubgameConfig sg_cfg;
         sg_cfg.max_nodes = sc_.max_nodes;
-        // Subgame sg(street_root, vocab_, tracker, sg_cfg);
+        // Subgame sg(street_root, vocab_, tracker, hero, hero_hole, sg_cfg);
+        // The hero seat holds its one exact combo, so the query hand index is 0
+        // (#6): Subgame::combo_for(hero, 0) == combo_index(hero_hole).
         // VectorCfrConfig vc; vc.max_iters = sc_.max_iters;
         // vc.budget_ms = sc_.budget_ms - elapsed_ms(t0);
         // VectorCfr solver(vc);
-        // auto res = solver.solve(sg, hero, query_hand_index);
-        // std::vector<double> p = solver.average_strategy(query_node_id, query_hand_index);
+        // auto res = solver.solve(sg, hero, /*query_hand=*/0);
+        // std::vector<double> p = solver.average_strategy(query_node_id, /*hand=*/0);
         std::vector<double> p;   // filled by the four steps above
         if (p.empty()) { ++fallbacks_; return {}; }
         double total = 0.0;
@@ -1447,13 +1715,35 @@ std::vector<double> SearchStrategy::probs(const HandState& initial, int hero,
 }  // namespace sixmax
 ```
 
-> **Note for the implementer:** Step 3's four numbered sub-steps are the remaining work in this
-> file and each is small: replaying the prefix uses `HandState::apply` with the same
-> `target_bb` translation as `EngineGameState`; the query hand index is
-> `RangeTracker::combo_index(hero_hole[0], hero_hole[1])` mapped into `Subgame`'s
-> `legal_hands_`; `query_node_id` is the id of the node the prefix ends on. The `try/catch(...)`
-> and the `total > 0` guard are the tested contract — do not remove them. Wire `SearchConfig`
-> into `sixmax/BUCK` and register it plus `SearchStrategy` in the bindings.
+> **Note for the implementer:** Step 3's numbered sub-steps are the remaining work and each is
+> small. `board`/`hero_hole` now come from `decision_state` (so the host no longer threads them
+> in). To reach the street root for the prefix replay, clone the decision state back to the start
+> of the street (or have the host pass the street-root engine state — pick one and keep it
+> consistent with Task 6). Replaying the prefix uses the same vocab→`target_bb` translation as
+> `Subgame`'s builder. The query hand index is **0** — with #6 resolved, the hero seat holds its
+> one exact combo (`Subgame::combo_for(hero, 0) == combo_index(hero_hole)`), and the tracked
+> opponent posterior enters the solve as `Subgame::prior_reach(opp)`. The `try/catch(...)` and
+> the `total > 0` guard are the tested contract — do not remove
+> them. Wire `SearchConfig` into `sixmax/BUCK` and register it plus `SearchStrategy` in the
+> bindings:
+>
+> ```cpp
+>     py::class_<sixmax::SearchConfig>(m, "SearchConfig")
+>         .def(py::init<>())
+>         .def_readwrite("enabled", &sixmax::SearchConfig::enabled)
+>         .def_readwrite("budget_ms", &sixmax::SearchConfig::budget_ms)
+>         .def_readwrite("max_nodes", &sixmax::SearchConfig::max_nodes)
+>         .def_readwrite("max_iters", &sixmax::SearchConfig::max_iters)
+>         .def_readwrite("leaf_samples", &sixmax::SearchConfig::leaf_samples)
+>         .def_readwrite("seed", &sixmax::SearchConfig::seed);
+>
+>     py::class_<sixmax::SearchStrategy>(m, "SearchStrategy")
+>         .def(py::init<const sixmax::BlueprintStrategy&, const sixmax::ActionVocab&,
+>                       const sixmax::EngineConfig&, sixmax::SearchConfig>())
+>         .def("probs", &sixmax::SearchStrategy::probs,
+>              py::arg("decision_state"), py::arg("hero"), py::arg("observed_actions"))
+>         .def("last_decision_searched", &sixmax::SearchStrategy::last_decision_searched);
+> ```
 
 - [ ] **Step 4: Run the tests**
 
@@ -1572,7 +1862,10 @@ before the blueprint path:
 
 ```python
         if self._search is not None and self._search.enabled and street != "preflop":
-            p = self._search.probs(...)
+            # probs() takes exactly (decision_state, hero, observed_actions);
+            # board/hole are read from decision_state inside C++. The agent must
+            # track observed_actions since the start of the current street.
+            p = self._search.probs(engine_state, hero, observed_actions)
             if p:
                 return self._index_to_action(p)
         return self._blueprint_decision(...)
@@ -1762,6 +2055,6 @@ the tests that pin them.
 (2) degenerate/unseen infosets → Task 2 `observe_with_probs` zero-total guard + Task 5 empty/`total>0`
 guard + `test_result_is_empty_or_a_legal_distribution`. (3) card removal → Task 1
 `utility(h0==h1)==0` + `test_kuhn_vector_average_strategy_sums_to_one`, Task 2
-`test_reset_zeroes_blocked_cards`, Task 4 `test_leaf_values_are_zero_sum`. (4) off-tree sizes →
+`test_reset_zeroes_blocked_cards_and_normalises`, Task 4 `test_terminal_leaf_is_antisymmetric_between_players` + `test_leaf_zeroes_card_removal_conflicts`. (4) off-tree sizes →
 Task 3 `test_subgame_legality_matches_engine` (uses the same `ActionVocab`/`nearest` path as the
 deploy bridge). (5) node cap → Task 3 `test_subgame_respects_node_cap`.
