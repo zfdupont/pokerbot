@@ -20,6 +20,7 @@ cxx_library(
         "src/exploit/lbr.cpp",
         "src/search/vector_cfr.cpp",
         "src/search/kuhn_vector.cpp",
+        "src/search/range_tracker.cpp",
     ],
     headers = glob(["src/**/*.h"]),
     header_namespace = "",

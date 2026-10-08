@@ -71,6 +71,14 @@ public:
     // 2*(num_players()-1) + (5 - revealed) distinct cards.
     void reroll_hidden(int hero, std::vector<int> pool, std::mt19937_64& rng);
 
+    // Test/internal accessor: force `seat`'s two hole cards (writes deck_ slots).
+    // Used by search's RangeTracker probe and LeafEval rollouts; never exposed
+    // to Python.
+    void set_hole_cards(int seat, int c0, int c1) {
+        deck_[2 * seat] = c0;
+        deck_[2 * seat + 1] = c1;
+    }
+
     void apply(const EngineAction& a);
     // Net result per player (final stack minus starting stack), BB.
     // Valid iff is_terminal().

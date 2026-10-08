@@ -18,6 +18,7 @@
 #include "exploit/lbr.h"
 #include "search/vector_cfr.h"
 #include "search/kuhn_vector.h"
+#include "search/range_tracker.h"
 
 namespace py = pybind11;
 
@@ -486,5 +487,17 @@ PYBIND11_MODULE(sixmax, m) {
         .def("rank_root_action", &sixmax::VectorCfr::rank_root_action,
              py::arg("query_player"), py::arg("hand"))
         .def("root_id", &sixmax::VectorCfr::root_id);
+    // --- Phase 2 search: HU range tracker (Task 2) ---
+    py::class_<sixmax::RangeTracker>(m, "RangeTracker")
+        .def(py::init<sixmax::EngineConfig, const sixmax::ActionVocab&>(),
+             py::arg("cfg"), py::arg("vocab"),
+             py::keep_alive<1, 3>())   // tracker holds ActionVocab&
+        .def_static("combo_index", &sixmax::RangeTracker::combo_index)
+        .def_static("combo_cards", &sixmax::RangeTracker::combo_cards)
+        .def("reset", &sixmax::RangeTracker::reset)
+        .def("range", [](const sixmax::RangeTracker& t, int p) { return t.range(p); })
+        .def("combo_prob", &sixmax::RangeTracker::combo_prob)
+        .def("set_range_for_test", &sixmax::RangeTracker::set_range_for_test)
+        .def("observe_with_probs", &sixmax::RangeTracker::observe_with_probs);
 
 }
