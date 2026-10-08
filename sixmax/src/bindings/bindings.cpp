@@ -19,6 +19,7 @@
 #include "search/vector_cfr.h"
 #include "search/kuhn_vector.h"
 #include "search/range_tracker.h"
+#include "search/subgame.h"
 
 namespace py = pybind11;
 
@@ -188,7 +189,13 @@ PYBIND11_MODULE(sixmax, m) {
              py::keep_alive<1, 5>(),   // state holds ActionVocab*
              py::keep_alive<1, 7>())   // state holds Abstraction*
         .def("bet_context", &sixmax::EngineGameState::bet_context)
-        .def("abstract_key", &sixmax::EngineGameState::abstract_key);
+        .def("abstract_key", &sixmax::EngineGameState::abstract_key)
+        .def("street", [](const sixmax::EngineGameState& s) { return (int)s.street(); })
+        .def("board", &sixmax::EngineGameState::board)
+        .def("hole_cards", [](const sixmax::EngineGameState& s, int p) {
+            auto hc = s.hole_cards(p);
+            return std::vector<int>{hc[0], hc[1]};
+        });
     py::class_<sixmax::EngineGame, sixmax::Game>(m, "EngineGame")
         .def(py::init<sixmax::EngineConfig, const sixmax::ActionVocab*,
                       const sixmax::Abstraction*>(),
@@ -499,5 +506,24 @@ PYBIND11_MODULE(sixmax, m) {
         .def("combo_prob", &sixmax::RangeTracker::combo_prob)
         .def("set_range_for_test", &sixmax::RangeTracker::set_range_for_test)
         .def("observe_with_probs", &sixmax::RangeTracker::observe_with_probs);
+    // --- Phase 2 search: street subgame builder (Task 3) ---
+    py::class_<sixmax::SubgameConfig>(m, "SubgameConfig")
+        .def(py::init<>())
+        .def_readwrite("max_nodes", &sixmax::SubgameConfig::max_nodes);
+
+    py::class_<sixmax::Subgame, sixmax::VectorGame>(m, "Subgame")
+        .def(py::init<const sixmax::EngineGameState&, const sixmax::ActionVocab&,
+                      const sixmax::RangeTracker&, int, std::array<int, 2>,
+                      sixmax::SubgameConfig>(),
+             py::arg("street_root"), py::arg("vocab"), py::arg("ranges"),
+             py::arg("hero"), py::arg("hero_hole"), py::arg("cfg"),
+             py::keep_alive<1, 3>())   // subgame holds ActionVocab*
+        .def("num_hands", &sixmax::Subgame::num_hands)
+        .def("compatible", &sixmax::Subgame::compatible)
+        .def("prior_reach", &sixmax::Subgame::prior_reach)
+        .def("root", &sixmax::Subgame::root)
+        .def("node_count", &sixmax::Subgame::node_count)
+        .def("node_ids", &sixmax::Subgame::node_ids)
+        .def("query_node_id", &sixmax::Subgame::query_node_id);
 
 }
