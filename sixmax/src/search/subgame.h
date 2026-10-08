@@ -45,6 +45,10 @@ public:
     std::unique_ptr<VectorState> root() const override;
     size_t node_count() const { return nodes_.size(); }
     std::vector<uint64_t> node_ids() const;
+    // False if any leaf could not be fully valued (deadline hit, or a sampled
+    // leaf with no blueprint). The solve would then rest on zero-valued leaves,
+    // so SearchStrategy must fall back to the blueprint rather than trust it.
+    bool complete() const { return complete_; }
 
     // Index translation used by SubgameState::utility and LeafEval wiring.
     int combo_for(int player, int hand) const {            // compact index -> 1326-combo
@@ -76,6 +80,7 @@ private:
     LeafEval leaf_eval_;
     std::vector<Node> nodes_;
     SubgameConfig cfg_;
+    bool complete_ = true;   // cleared when a leaf can't be fully valued
 };
 
 class SubgameState : public VectorState {

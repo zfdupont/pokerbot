@@ -33,6 +33,21 @@ def _flop_state():
     return eng, vocab, tracker
 
 
+def _river_state():
+    """Check down preflop -> flop -> turn -> river, hero still in. Mirrors
+    tests/sixmax/test_leaf_eval.py::_street_state(3)."""
+    vocab = _load_vocab("search")
+    cfg = sixmax.EngineConfig(num_players=2)
+    eng = sixmax.EngineGameState(cfg, 0, list(range(52)), vocab, [])
+    while eng.street() < 3:
+        eng.apply(CALL)
+        eng.apply(CHECK)
+    assert eng.street() == 3
+    tracker = sixmax.RangeTracker(cfg, vocab)
+    tracker.reset(list(eng.board()), tuple(eng.hole_cards(0)))
+    return eng, vocab, tracker
+
+
 def test_subgame_legality_matches_engine_exactly():
     eng, vocab, tracker = _flop_state()
     hole = tuple(eng.hole_cards(0))
@@ -69,3 +84,23 @@ def test_subgame_construction_is_deterministic():
     b = sixmax.Subgame(eng, vocab, tracker, 0, hole, sixmax.SubgameConfig())
     assert a.node_ids() == b.node_ids()
     assert list(a.root().legal_mask()) == list(b.root().legal_mask())
+
+
+def test_subgame_completeness_reflects_leaf_evaluation():
+    """Deadline->fallback safety: a subgame whose leaves could not all be valued
+    reports complete() == False, so SearchStrategy can fall back to the blueprint
+    instead of solving a tree with zero-valued (unevaluated) leaves.
+
+    - Flop subgame, exact-only (no blueprint): flop/turn leaves need a blueprint
+      continuation that is absent, so they go unevaluated -> incomplete.
+    - River subgame: every leaf is board-complete and valued exactly by
+      safe_eval without a blueprint -> complete."""
+    eng, vocab, tracker = _flop_state()
+    hole = tuple(eng.hole_cards(0))
+    flop_sg = sixmax.Subgame(eng, vocab, tracker, 0, hole, sixmax.SubgameConfig())
+    assert flop_sg.complete() is False
+
+    reng, rvocab, rtracker = _river_state()
+    rhole = tuple(reng.hole_cards(0))
+    river_sg = sixmax.Subgame(reng, rvocab, rtracker, 0, rhole, sixmax.SubgameConfig())
+    assert river_sg.complete() is True

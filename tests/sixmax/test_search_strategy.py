@@ -58,6 +58,18 @@ def test_tiny_budget_returns_without_overrunning():
     assert probs == [] or math.isclose(sum(probs), 1.0, abs_tol=1e-9)
 
 
+def test_incomplete_search_falls_back_to_blueprint():
+    """Safety invariant (the plan's 'never worse than blueprint by construction'):
+    a budget too small to evaluate the leaves must FALL BACK — an empty result so
+    the blueprint is used — never act on a zero-truncated subgame. Before the fix
+    the solver returned a non-empty uniform distribution over the garbage tree."""
+    strat, vocab = _strategy(1.0)
+    eng = _flop(vocab)
+    probs = list(strat.probs(eng, 0, []))
+    assert probs == []
+    assert strat.last_decision_searched() is False
+
+
 def test_result_is_empty_or_a_legal_distribution():
     strat, vocab = _strategy(500.0)
     eng = _flop(vocab)

@@ -54,12 +54,19 @@ int Subgame::build(const EngineGameState& s, int depth) {
         }
         if (n.leaf) {
             n.actor = -1;
-            // Fill the leaf's value matrix (hero row x opponent columns) unless
-            // it needs the sampled continuation and no blueprint was supplied.
-            if (!leaf_eval_.expired() &&
-                (leaf_eval_.has_blueprint() || s.board().size() == 5))
+            // A leaf is valuable iff it is board-complete (exact showdown) or a
+            // blueprint is available for the sampled continuation.
+            const bool can_eval =
+                leaf_eval_.has_blueprint() || s.board().size() == 5;
+            if (can_eval && !leaf_eval_.expired()) {
                 n.leaf_matrix = leaf_eval_.matrix(s, hero_seat_, {hero_combo_},
                                                   opp_hands_);
+                // matrix() returns early (partial/zero cells) once the deadline
+                // passes; treat any such leaf as unevaluated.
+                if (leaf_eval_.expired()) complete_ = false;
+            } else {
+                complete_ = false;   // unvaluable: out of time, or no blueprint
+            }
             return idx;
         }
         n.actor = s.current_player();

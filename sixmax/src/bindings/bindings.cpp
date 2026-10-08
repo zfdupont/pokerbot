@@ -551,6 +551,7 @@ PYBIND11_MODULE(sixmax, m) {
         .def("root", &sixmax::Subgame::root)
         .def("node_count", &sixmax::Subgame::node_count)
         .def("node_ids", &sixmax::Subgame::node_ids)
+        .def("complete", &sixmax::Subgame::complete)
         .def("query_node_id", &sixmax::Subgame::query_node_id);
     // --- Phase 2 search: orchestration (Task 5) ---
     py::class_<sixmax::SearchConfig>(m, "SearchConfig")

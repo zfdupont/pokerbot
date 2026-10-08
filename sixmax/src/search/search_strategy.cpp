@@ -47,6 +47,15 @@ std::vector<double> SearchStrategy::probs(const EngineGameState& decision_state,
                    &bp_, leaf_cfg, leaf_deadline);
         const uint64_t query_id = sg.query_node_id(prefix);
 
+        // Deadline->fallback safety guard. sg.complete() is false when a leaf
+        // could not be fully valued (the deadline truncated leaf evaluation to
+        // zero-valued cells, or a sampled leaf had no blueprint). Solving such a
+        // tree yields a confident-but-wrong strategy that the agent would then
+        // act on, breaking the plan's "never worse than the blueprint by
+        // construction" invariant. Fall back to the blueprint before spending
+        // the budget on a solve we would discard.
+        if (!sg.complete()) { ++fallbacks_; return {}; }
+
         const auto now = std::chrono::steady_clock::now();
         const double elapsed_ms =
             std::chrono::duration<double, std::milli>(now - start).count();
