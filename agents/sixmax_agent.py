@@ -446,6 +446,21 @@ class SixmaxAgent(PokerAgent):
             rng=self._rng)
         return self._translate(idx, to_call_chips, raise_to_bb, bb, player)
 
+    def _action_to_vocab(self, state, action, amount, bb):
+        """Map a live (Action, amount) at EngineGameState `state` to a vocab
+        index. FOLD/CHECK/CALL are the fixed indices 0/1/2; BET/RAISE quantise
+        the live raise-to (in bb) to the nearest vocab entry. u=0.0 makes the
+        pseudo-harmonic pick deterministic, which replay requires."""
+        from models.enums import Action
+        if action == Action.FOLD:
+            return 0
+        if action == Action.CHECK:
+            return 1
+        if action == Action.CALL:
+            return 2
+        ctx = state.bet_context()
+        return self._deploy._vocab.nearest((amount or 0) / bb, ctx, 0.0)
+
     def _reconstruct_search_state(self, game_state, hole, board):
         """Best-effort EngineGameState at the current postflop decision.
 
