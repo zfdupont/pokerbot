@@ -17,7 +17,8 @@ class GameState:
         self.current_player_idx = 0
         self.betting_round = 0  # 0=preflop, 1=flop, 2=turn, 3=river
         self.raises_per_street = [0, 0, 0, 0]  # raise counts per street (faithful; each consumer applies its own cap)
-        
+        self.action_history = []  # (player_idx, Action, amount, betting_round) per voluntary action
+
     def _create_deck(self) -> List[Card]:
         deck = []
         for suit in Suit:

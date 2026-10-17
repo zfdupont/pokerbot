@@ -160,6 +160,10 @@ class PokerGame:
             street = self.state.betting_round
             self.state.raises_per_street[street] += 1  # faithful; consumers cap
 
+        self.state.action_history.append(
+            (self.state.players.index(player), action, amount, self.state.betting_round)
+        )
+
     def _determine_winners(self, pot_manager: PotManager) -> None:
         active_players = [p for p in self.state.players if p.is_active]
 
@@ -177,6 +181,7 @@ class PokerGame:
         self.state.current_bet = 0
         self.state.betting_round = 0
         self.state.raises_per_street = [0, 0, 0, 0]
+        self.state.action_history = []
         for p in self.state.players:
             p.hole_cards = []
             p.current_bet = 0
