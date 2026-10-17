@@ -26,6 +26,8 @@ max_nodes    = 20000
 max_iters    = 2000
 leaf_samples = 256
 seed         = 1
+narrow_preflop  = true     # feed the preflop line into the opponent range
+prune_keep_mass = 0.99     # keep the top-99% mass band; 1.0 disables pruning
 
 [abstraction]
 flop_buckets = 50

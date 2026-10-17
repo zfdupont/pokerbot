@@ -284,6 +284,8 @@ _SEARCH_BUILTIN = {
     "max_iters": 2000,
     "leaf_samples": 256,
     "seed": 1,
+    "narrow_preflop": True,
+    "prune_keep_mass": 0.99,
 }
 
 
@@ -293,11 +295,10 @@ def _as_bool(value):
     return bool(value)
 
 
-def _load_search_config(config_toml, section="search"):
-    """Merge the [search] block into a sixmax.SearchConfig.
-
-    Precedence: builtin < TOML < env (SIXMAX_SEARCH_<KEY>). Unknown TOML keys
-    are rejected, mirroring scripts/train_sixmax.py::resolve_config."""
+def _merge_search_config(config_toml, section="search"):
+    """Resolve the [search] block (all keys) with builtin < TOML < env
+    precedence. Unknown TOML keys are rejected, mirroring
+    scripts/train_sixmax.py::resolve_config. Env keys are SIXMAX_SEARCH_<KEY>."""
     try:
         import tomllib
     except ModuleNotFoundError:  # pragma: no cover - py<3.11
@@ -315,6 +316,13 @@ def _load_search_config(config_toml, section="search"):
         env = os.environ.get("SIXMAX_SEARCH_" + key.upper())
         if env is not None:
             cfg[key] = env
+    return cfg
+
+
+def _load_search_config(config_toml, section="search"):
+    """Merge the [search] block into a sixmax.SearchConfig (ignoring the
+    narrowing knobs, which the agent reads via _load_narrow_config)."""
+    cfg = _merge_search_config(config_toml, section)
     out = sixmax.SearchConfig()
     out.enabled = _as_bool(cfg["enabled"])
     out.budget_ms = float(cfg["budget_ms"])
@@ -323,6 +331,15 @@ def _load_search_config(config_toml, section="search"):
     out.leaf_samples = int(cfg["leaf_samples"])
     out.seed = int(cfg["seed"])
     return out
+
+
+def _load_narrow_config(config_toml, section="search"):
+    """Python-side narrowing knobs, same precedence as _load_search_config."""
+    cfg = _merge_search_config(config_toml, section)
+    return {
+        "narrow_preflop": _as_bool(cfg["narrow_preflop"]),
+        "prune_keep_mass": float(cfg["prune_keep_mass"]),
+    }
 
 
 class SearchStrategy:
