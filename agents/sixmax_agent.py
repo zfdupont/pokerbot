@@ -461,6 +461,53 @@ class SixmaxAgent(PokerAgent):
         ctx = state.bet_context()
         return self._deploy._vocab.nearest((amount or 0) / bb, ctx, 0.0)
 
+    def _replay_to_street_root(self, game_state, hole, board):
+        """Faithful EngineGameState at the START of the current betting round,
+        plus the current street's observed_actions (vocab indices).
+
+        Hero is engine seat 0; the engine button is derived from the live button
+        so preflop action order matches. Starting stacks are each seat's pre-hand
+        stack (stack + total_contributed) in the engine's BB=1 frame, so the
+        replayed pot equals the live pot. HU only (seat 1 is the sole opponent)."""
+        import sixmax
+        players = game_state.players
+        n = len(players)
+        bb = game_state.big_blind
+        street = game_state.betting_round
+
+        hero_idx = players.index(self._hero)
+        seat_live = [hero_idx] + [i for i in range(n) if i != hero_idx]
+
+        used = set(hole) | set(board)
+        fillers = (c for c in range(52) if c not in used)
+        deck = list(range(52))
+        deck[0], deck[1] = hole[0], hole[1]            # hero = engine seat 0
+        for i in range(1, n):
+            deck[2 * i] = next(fillers)
+            deck[2 * i + 1] = next(fillers)
+        for j, c in enumerate(board):
+            deck[2 * n + j] = c
+        for j in range(len(board), 5):
+            deck[2 * n + j] = next(fillers)
+
+        cfg = sixmax.EngineConfig(num_players=n)
+        # Per-seat pre-hand stacks in BB (engine frame is BB=1), engine-seat order.
+        stacks = [float(players[li].stack + players[li].total_contributed) / bb
+                  for li in seat_live]
+        button = (game_state.button_pos - hero_idx) % n
+        eng = sixmax.EngineGameState(cfg, button, deck, self._deploy._vocab, stacks)
+
+        prefix = []
+        for (_pidx, action, amount, rnd) in game_state.action_history:
+            if eng.is_terminal():
+                break
+            idx = self._action_to_vocab(eng, action, amount, bb)
+            if rnd < street:
+                eng.apply(idx)              # advance toward the street root
+            elif rnd == street:
+                prefix.append(idx)          # in-street prefix: collected, not applied
+        return eng, prefix
+
     def _reconstruct_search_state(self, game_state, hole, board):
         """Best-effort EngineGameState at the current postflop decision.
 
