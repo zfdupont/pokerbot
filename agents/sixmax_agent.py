@@ -380,6 +380,9 @@ class SixmaxAgent(PokerAgent):
         self._rng = random.Random()
         self._search = (SearchStrategy(checkpoint_path, search_toml)
                         if search_toml is not None else None)
+        self._narrow = (_load_narrow_config(search_toml)
+                        if search_toml is not None else None)
+        self._hero = None
 
     @classmethod
     def from_strategy(cls, strategy, config_toml=_DEFAULT_TOML):
@@ -389,9 +392,12 @@ class SixmaxAgent(PokerAgent):
         agent._deploy = strategy
         agent._rng = random.Random()
         agent._search = None
+        agent._narrow = None
+        agent._hero = None
         return agent
 
     def get_action(self, player, game_state):
+        self._hero = player
         bb = game_state.big_blind
         players = game_state.players
         n = len(players)
@@ -416,12 +422,22 @@ class SixmaxAgent(PokerAgent):
                                  current_bet_bb, pot_bb, to_call_bb, stack_bb)
 
         if self._search is not None and self._search.enabled and street != 0:
-            # v1: reconstruct the current postflop decision as the subgame root
-            # and search from there (observed_actions=[]; in-street Bayes
-            # updates are a follow-up). Falls back to the blueprint on empty.
-            engine_state = self._reconstruct_search_state(game_state, hole, board)
-            if engine_state is not None:
-                p = self._search.probs(engine_state, 0, [])
+            # Reconstruct the street root from the real action line and solve the
+            # subgame against the preflop-narrowed, pruned opponent range. Any
+            # failure here leaves p empty -> fall through to the blueprint, so
+            # search is "never worse than the blueprint by construction".
+            try:
+                engine_state, prefix = self._replay_to_street_root(
+                    game_state, hole, board)
+                opp_prior = []
+                if self._narrow and self._narrow["narrow_preflop"]:
+                    raw = self._opponent_prior(game_state, hole, board)
+                    opp_prior = self._prune_prior(
+                        raw, self._narrow["prune_keep_mass"])
+                p = self._search.probs(engine_state, 0, prefix, opp_prior=opp_prior)
+            except Exception:
+                p = []
+            if p:
                 idx = self._sample_search(p, legal)
                 if idx is not None:
                     action = self._deploy._vocab.at(idx)
