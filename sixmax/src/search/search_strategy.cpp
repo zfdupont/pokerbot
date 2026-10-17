@@ -9,7 +9,8 @@ SearchStrategy::SearchStrategy(const BlueprintStrategy& bp, const ActionVocab& v
 
 std::vector<double> SearchStrategy::probs(const EngineGameState& decision_state,
                                           int hero,
-                                          const std::vector<int>& observed_actions) {
+                                          const std::vector<int>& observed_actions,
+                                          const std::vector<double>& opp_prior) {
     last_searched_ = false;
     if (!sc_.enabled) { ++fallbacks_; return {}; }
     try {
@@ -23,6 +24,10 @@ std::vector<double> SearchStrategy::probs(const EngineGameState& decision_state,
         std::unique_ptr<EngineGameState> cur = decision_state.clone_engine();
         RangeTracker tracker(cfg_, vocab_);
         tracker.reset(board, hero_hole);
+        // Seed the posterior with a caller-supplied preflop-narrowed prior
+        // (board-blocking already encoded as zeros). Degenerate input keeps
+        // the uniform reset; empty input preserves today's behaviour.
+        if (!opp_prior.empty()) tracker.set_prior(opp_prior);
         std::vector<int> prefix;
         for (int action : observed_actions) {
             if (cur->is_terminal()) break;

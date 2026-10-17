@@ -33,7 +33,8 @@ public:
     // is the STREET ROOT (start of the current street); `observed_actions` is
     // the vocab-action prefix taken since that root.
     std::vector<double> probs(const EngineGameState& decision_state, int hero,
-                              const std::vector<int>& observed_actions);
+                              const std::vector<int>& observed_actions,
+                              const std::vector<double>& opp_prior = {});
 
     bool last_decision_searched() const { return last_searched_; }
     int searches() const { return searches_; }

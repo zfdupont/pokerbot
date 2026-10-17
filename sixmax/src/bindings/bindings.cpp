@@ -573,7 +573,8 @@ PYBIND11_MODULE(sixmax, m) {
              py::keep_alive<1, 3>())   // strategy holds ActionVocab&
         .def("probs", &sixmax::SearchStrategy::probs,
              py::arg("decision_state"), py::arg("hero"),
-             py::arg("observed_actions"))
+             py::arg("observed_actions"),
+             py::arg("opp_prior") = std::vector<double>())
         .def("last_decision_searched",
              &sixmax::SearchStrategy::last_decision_searched)
         .def("searches", &sixmax::SearchStrategy::searches)

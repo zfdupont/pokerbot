@@ -86,3 +86,24 @@ def test_searched_flag_agrees_with_the_result():
     eng = _flop(vocab)
     probs = list(strat.probs(eng, 0, []))
     assert strat.last_decision_searched() == (probs != [])
+
+
+def test_opp_prior_narrows_support():
+    """A sparse opponent prior (a handful of unblocked combos) still yields a
+    legal, normalised distribution or an empty fallback — never an exception."""
+    strat, vocab = _strategy(500.0)
+    eng = _flop(vocab)                       # hero=0,1 opp=2,3 board=4,5,6
+    prior = [0.0] * 1326
+    for (c0, c1) in [(7, 8), (9, 10), (11, 12)]:   # unblocked combos
+        prior[sixmax.RangeTracker.combo_index(c0, c1)] = 1.0
+    p = list(strat.probs(eng, 0, [], opp_prior=prior))
+    assert p == [] or (abs(sum(p) - 1.0) < 1e-6 and all(x >= 0 for x in p))
+
+
+def test_empty_opp_prior_is_backcompat():
+    """An omitted or empty opp_prior preserves today's uniform-reset behaviour."""
+    strat, vocab = _strategy(500.0)
+    eng = _flop(vocab)
+    p_default = list(strat.probs(eng, 0, []))
+    p_explicit = list(strat.probs(eng, 0, [], opp_prior=[]))
+    assert p_default == p_explicit
