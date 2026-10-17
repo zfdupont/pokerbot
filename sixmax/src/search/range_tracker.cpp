@@ -76,4 +76,13 @@ void RangeTracker::observe_with_probs(int, const std::vector<double>& w) {
     range_ = std::move(post);
 }
 
+void RangeTracker::set_prior(const std::vector<double>& prior) {
+    if (prior.size() != range_.size()) return;        // malformed: ignore
+    double total = 0.0;
+    for (double v : prior) total += (v > 0.0 ? v : 0.0);
+    if (total <= 0.0) return;                          // degenerate: keep reset
+    for (size_t i = 0; i < range_.size(); ++i)
+        range_[i] = (prior[i] > 0.0 ? prior[i] : 0.0) / total;
+}
+
 }  // namespace sixmax

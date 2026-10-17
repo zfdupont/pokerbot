@@ -507,7 +507,8 @@ PYBIND11_MODULE(sixmax, m) {
         .def("range", [](const sixmax::RangeTracker& t, int p) { return t.range(p); })
         .def("combo_prob", &sixmax::RangeTracker::combo_prob)
         .def("set_range_for_test", &sixmax::RangeTracker::set_range_for_test)
-        .def("observe_with_probs", &sixmax::RangeTracker::observe_with_probs);
+        .def("observe_with_probs", &sixmax::RangeTracker::observe_with_probs)
+        .def("set_prior", &sixmax::RangeTracker::set_prior);
     // --- Phase 2 search: street subgame builder (Task 3) ---
     py::class_<sixmax::SubgameConfig>(m, "SubgameConfig")
         .def(py::init<>())

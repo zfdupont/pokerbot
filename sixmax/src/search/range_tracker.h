@@ -32,6 +32,11 @@ public:
     void observe(const BlueprintStrategy& blueprint, const EngineGameState& pre_action,
                  int actor, int action);
 
+    // Overwrite the posterior with `prior` (renormalised copy). A wrong-size or
+    // all-zero prior is ignored, leaving the current range (e.g. a uniform
+    // reset) intact — the degenerate-safe path the search relies on.
+    void set_prior(const std::vector<double>& prior);
+
     const std::vector<double>& range(int) const { return range_; }
     double combo_prob(std::array<int, 2> hole) const {
         return range_[combo_index(hole[0], hole[1])];

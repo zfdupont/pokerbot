@@ -71,3 +71,28 @@ def test_degenerate_update_keeps_a_valid_distribution():
     r = list(t.range(1))
     assert math.isclose(sum(r), 1.0, abs_tol=1e-12)
     assert all(v >= 0.0 and not math.isnan(v) for v in r)
+
+
+def test_set_prior_overrides_with_normalised_copy():
+    """set_prior overwrites the posterior with a renormalised copy of the input."""
+    t = _tracker()
+    t.reset([], [0, 1])                      # uniform over unblocked
+    prior = [0.0] * 1326
+    i = sixmax.RangeTracker.combo_index(10, 20)
+    j = sixmax.RangeTracker.combo_index(30, 40)
+    prior[i] = 3.0
+    prior[j] = 1.0                           # unnormalised 3:1
+    t.set_prior(prior)
+    r = list(t.range(0))
+    assert math.isclose(r[i], 0.75, abs_tol=1e-9)
+    assert math.isclose(r[j], 0.25, abs_tol=1e-9)
+    assert math.isclose(sum(r), 1.0, abs_tol=1e-9)
+
+
+def test_set_prior_all_zero_keeps_uniform_reset():
+    """A degenerate all-zero prior is ignored: the reset range is preserved."""
+    t = _tracker()
+    t.reset([], [0, 1])
+    before = list(t.range(0))
+    t.set_prior([0.0] * 1326)
+    assert list(t.range(0)) == before
