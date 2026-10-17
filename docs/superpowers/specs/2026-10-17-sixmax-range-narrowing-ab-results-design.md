@@ -52,12 +52,24 @@ PROBE_CKPT=sixmax/checkpoints/hu_blueprint.bin PROBE_TOML=sixmax/configs/hu.toml
 | Narrowing ON (narrow_preflop=true) | 32.7s | 1633 ms | 2 | 2 |
 | Narrowing OFF (uniform range)       | 98.5s | 4926 ms | 3 | 9 |
 
-**Read:** narrowing is ~3.0x faster wall-time and completes within budget far
-more often (2 fallbacks vs 9). The fallback drop is the load-bearing result:
-against the uniform range the subgame exhausts the deadline and falls back to
-the blueprint; the pruned range lets search actually act. The chip/BB-100
-deltas in this probe are statistical noise (2-3 searches total) and carry no
-strength signal.
+**Read:** at these knobs narrowing is ~3.0x faster wall-time and completes
+within budget far more often (2 fallbacks vs 9). The fallback drop is the
+load-bearing result: against the uniform range the subgame exhausts the
+deadline and falls back to the blueprint; the pruned range lets search actually
+act. The chip/BB-100 deltas in this probe are statistical noise (2-3 searches
+total) and carry no strength signal.
+
+**What this probe does and does NOT measure.** `leaf_samples=1, max_nodes=16`
+is a *degenerate* search (tiny tree, one leaf sample) chosen to isolate
+fire/fallback behavior cheaply. The ~3x number is therefore a leaf-eval +
+fallback effect; it does **not** measure the cost of the new Python
+prior-construction path (`_opponent_prior` rebuilds a per-combo engine and
+replays the preflop line for each of ~1081 unblocked combos, every postflop
+decision). That cost is on the critical path and is invisible at these knobs.
+**Before the full A/B, profile `_opponent_prior` at production `budget_ms` /
+`leaf_samples`** — if per-decision prior construction is material, memoize the
+per-combo likelihood replay. The full A/B below runs at production knobs and
+will surface it.
 
 ## Full paired A/B — PENDING (run-when-ready, not CI)
 

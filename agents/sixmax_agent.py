@@ -519,6 +519,12 @@ class SixmaxAgent(PokerAgent):
                 break
             idx = self._action_to_vocab(eng, action, amount, bb)
             if rnd < street:
+                # A faithful replay only applies actions legal at the engine
+                # state; an illegal index means the live line desynced from the
+                # engine (e.g. an unrepresentable quantized raise), so bail and
+                # let get_action fall back to the blueprint rather than misread.
+                if not eng.legal_mask()[idx]:
+                    raise ValueError("replay desync: action illegal at engine state")
                 eng.apply(idx)              # advance toward the street root
             elif rnd == street:
                 prefix.append(idx)          # in-street prefix: collected, not applied
@@ -596,6 +602,10 @@ class SixmaxAgent(PokerAgent):
             if rnd >= street or eng.is_terminal():
                 break
             idx = self._action_to_vocab(eng, action, amount, bb)
+            if not eng.legal_mask()[idx]:
+                # Desync (as in _replay_to_street_root): abandon this combo's
+                # likelihood; the caller's prior still normalises over the rest.
+                raise ValueError("likelihood replay desync: illegal action")
             if pidx != hero_idx:
                 probs = self._deploy._strategy.probs_for(eng)
                 like *= probs[idx] if idx < len(probs) else 0.0
