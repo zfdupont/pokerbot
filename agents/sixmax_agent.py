@@ -508,6 +508,101 @@ class SixmaxAgent(PokerAgent):
                 prefix.append(idx)          # in-street prefix: collected, not applied
         return eng, prefix
 
+    def _opponent_prior(self, game_state, hole, board):
+        """Opponent range prior over the 1326 combos from the preflop+earlier
+        line: for each combo unblocked by `hole`/`board`, the product of the
+        blueprint's probability of each observed opponent action with that combo.
+        Blocked combos are exactly 0.0. No opponent pre-street decision -> uniform
+        over unblocked. Returns a normalised length-1326 list."""
+        import sixmax
+        hero_idx = game_state.players.index(self._hero)
+        street = game_state.betting_round
+        opp_decisions = any(
+            rnd < street and pidx != hero_idx
+            for (pidx, _a, _amt, rnd) in game_state.action_history)
+        blocked = set(hole) | set(board)
+        prior = [0.0] * 1326
+        for c0 in range(52):
+            if c0 in blocked:
+                continue
+            for c1 in range(c0 + 1, 52):
+                if c1 in blocked:
+                    continue
+                idx = sixmax.RangeTracker.combo_index(c0, c1)
+                prior[idx] = (self._combo_likelihood(game_state, hole, board, (c0, c1))
+                              if opp_decisions else 1.0)
+        total = sum(prior)
+        if total <= 0.0:
+            # No information: uniform over unblocked combos.
+            for c0 in range(52):
+                if c0 in blocked:
+                    continue
+                for c1 in range(c0 + 1, 52):
+                    if c1 in blocked:
+                        continue
+                    prior[sixmax.RangeTracker.combo_index(c0, c1)] = 1.0
+            total = sum(prior)
+        return [p / total for p in prior]
+
+    def _combo_likelihood(self, game_state, hole, board, opp_combo):
+        """Product over the opponent's pre-current-street decisions of the
+        blueprint P(observed action | opponent holds opp_combo), replayed into a
+        per-combo engine state so probs_for buckets that combo."""
+        import sixmax
+        players = game_state.players
+        n = len(players)
+        bb = game_state.big_blind
+        street = game_state.betting_round
+        hero_idx = players.index(self._hero)
+        seat_live = [hero_idx] + [i for i in range(n) if i != hero_idx]
+
+        used = set(hole) | set(board) | set(opp_combo)
+        fillers = (c for c in range(52) if c not in used)
+        deck = list(range(52))
+        deck[0], deck[1] = hole[0], hole[1]            # hero = engine seat 0
+        deck[2], deck[3] = opp_combo[0], opp_combo[1]  # opponent = engine seat 1
+        for i in range(2, n):
+            deck[2 * i] = next(fillers)
+            deck[2 * i + 1] = next(fillers)
+        for j, c in enumerate(board):
+            deck[2 * n + j] = c
+        for j in range(len(board), 5):
+            deck[2 * n + j] = next(fillers)
+
+        cfg = sixmax.EngineConfig(num_players=n)
+        stacks = [float(players[li].stack + players[li].total_contributed) / bb
+                  for li in seat_live]
+        button = (game_state.button_pos - hero_idx) % n
+        eng = sixmax.EngineGameState(cfg, button, deck, self._deploy._vocab, stacks)
+
+        like = 1.0
+        for (pidx, action, amount, rnd) in game_state.action_history:
+            if rnd >= street or eng.is_terminal():
+                break
+            idx = self._action_to_vocab(eng, action, amount, bb)
+            if pidx != hero_idx:
+                probs = self._deploy._strategy.probs_for(eng)
+                like *= probs[idx] if idx < len(probs) else 0.0
+            eng.apply(idx)
+        return like
+
+    @staticmethod
+    def _prune_prior(prior, keep_mass):
+        """Zero every combo outside the smallest set whose cumulative mass
+        reaches `keep_mass`, then renormalise. keep_mass >= 1.0 keeps all."""
+        order = sorted(range(len(prior)), key=lambda i: prior[i], reverse=True)
+        out = [0.0] * len(prior)
+        acc = 0.0
+        for i in order:
+            if prior[i] <= 0.0:
+                break
+            out[i] = prior[i]
+            acc += prior[i]
+            if acc >= keep_mass:
+                break
+        total = sum(out)
+        return [v / total for v in out] if total > 0 else list(prior)
+
     def _reconstruct_search_state(self, game_state, hole, board):
         """Best-effort EngineGameState at the current postflop decision.
 
