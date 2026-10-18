@@ -59,22 +59,47 @@ deadline and falls back to the blueprint; the pruned range lets search actually
 act. The chip/BB-100 deltas in this probe are statistical noise (2-3 searches
 total) and carry no strength signal.
 
-**What this probe does and does NOT measure.** `leaf_samples=1, max_nodes=16`
-is a *degenerate* search (tiny tree, one leaf sample) chosen to isolate
-fire/fallback behavior cheaply. The ~3x number is therefore a leaf-eval +
-fallback effect; it does **not** measure the cost of the new Python
-prior-construction path (`_opponent_prior` rebuilds a per-combo engine and
-replays the preflop line for each of ~1081 unblocked combos, every postflop
-decision). That cost is on the critical path and is invisible at these knobs.
-**Before the full A/B, profile `_opponent_prior` at production `budget_ms` /
-`leaf_samples`** — if per-decision prior construction is material, memoize the
-per-combo likelihood replay. The full A/B below runs at production knobs and
-will surface it.
+The degenerate-knob caveat below is superseded by the production-knob
+profile that follows — the ~3x is a fallback-rate effect at `leaf_samples=1`,
+not a measurement of either the real leaf cost or the Python prior path.
 
-## Full paired A/B — PENDING (run-when-ready, not CI)
+## Production-knob profile (2026-10-17) — decisive
 
-Multi-hour unattended run; launch deliberately (detach per the repo's
-long-job convention):
+Per postflop search decision at the shipped HU knobs (`budget_ms=5000`,
+`leaf_samples=256`, `max_nodes=20000`), timed phase-by-phase
+(`scripts/_profile_search_decision.py`, throwaway, now deleted):
+
+| Phase | Time | Share |
+|-------|------|-------|
+| `_replay_to_street_root` | 0.1 ms | ~0% |
+| `_opponent_prior` (all ~1081 combos) | 11 ms | 0.2% |
+| `_prune_prior` | 0.3 ms | ~0% |
+| `SearchStrategy.probs` (C++ leaf eval + solve) | **3007 ms** | **~60%** |
+
+3007 ms is exactly the leaf deadline (`budget_ms * 0.6`, `search_strategy.cpp`).
+The C++ leaf evaluator burns the entire leaf budget and still cannot value all
+leaves, so `Subgame::complete()` is false and `probs` falls back to the
+blueprint **before even solving** (`searched=False` on every decision at these
+knobs: 0 successful searches / 14 fallbacks over 20 hands).
+
+**Two conclusions:**
+
+1. **The new Python range path is negligible — 11.5 ms total, 0.2% of budget.**
+   The reviewer's deferred concern about `_opponent_prior` per-combo cost is
+   resolved; no memoization is needed. Narrowing is cheap and correct.
+2. **The leaf evaluator is the sole bottleneck**, exactly as `.mex/ROUTER.md`'s
+   Phase-2 note says. Narrowing cuts the opponent support `m` (the leaf matrix
+   is `1 × m`, hero is a point mass) by ~2.5x on a raise line, but the
+   evaluator needs ~100x: leaf cost ≈ (#flop/turn leaf nodes) × `m` ×
+   `leaf_samples` × rollout_length, and at `leaf_samples=256` it gets ~25-40%
+   through 3000 ms.
+
+## Full paired A/B — DEFERRED (null by construction at production knobs)
+
+Not run. At the shipped knobs search falls back 100% of the time, so a
+2000×12 A/B (~8-9 h) would compare blueprint-vs-blueprint and reproduce the
+2026-10-08 null. It is only worth running once searches actually *complete*
+within budget. The command remains valid for when that holds:
 
 ```bash
 nohup caffeinate -is env PYTHONUNBUFFERED=1 uv run python scripts/eval_search_ab.py \
@@ -84,11 +109,21 @@ nohup caffeinate -is env PYTHONUNBUFFERED=1 uv run python scripts/eval_search_ab
   > docs/superpowers/specs/2026-10-17-range-narrowing-ab.log 2>&1 &
 ```
 
-**Statistical-power caveat:** 2000 hands × 12 seeds is an interim gate, below
-the plan's full `--hands 20000` gate (which stays infeasible until the Phase-3
-value net lands). Treat the paired diff / `|t|` as a sign/trend, not a verdict.
-Success = search non-worse than the blueprint with latency low enough to scale
-the gate up; stretch = positive paired diff with `|t|` trending up.
+**Statistical-power caveat (for when it runs):** 2000 × 12 is an interim gate,
+below the plan's `--hands 20000`. Treat the paired diff / `|t|` as a
+sign/trend, not a verdict.
 
-When run, append: per-seat BB/100 table, paired diff, `|t|`, and a VERDICT line,
-mirroring the 2026-10-07 results doc.
+## Next step — parallelize the leaf evaluator (no value net required)
+
+The profile reframes the roadmap: a value net is the ultimate O(1) leaf, but
+it is no longer the *only* path to a non-null A/B. `LeafEval::matrix`
+(`sixmax/src/search/leaf_eval.cpp`) is a serial loop over opponent combos whose
+cells are independent (`out[i*m+j]`); the only shared state is one
+`std::mt19937_64`. Parallelizing it (per-combo RNG, `std::thread` +
+`hardware_concurrency` as in `sixmax/src/dream/trainer.cpp`) is a bounded C++
+change worth ~Ncore with zero accuracy cost. Combined with a more aggressive
+`prune_keep_mass` (0.90) on raise lines (~2.5x on `m`) and per-rollout
+allocation cleanup (the `clone_engine()` + 52-entry pool rebuild in
+`rollout()`), the compounded speedup (~20x on an 8-core host) could get flop
+searches completing within a few seconds — enough to make this A/B measure a
+real difference. That change gets its own brainstorm → spec → plan.
