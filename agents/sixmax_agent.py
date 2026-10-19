@@ -284,6 +284,7 @@ _SEARCH_BUILTIN = {
     "max_iters": 2000,
     "leaf_samples": 256,
     "seed": 1,
+    "leaf_threads": 0,
     "narrow_preflop": True,
     "prune_keep_mass": 0.99,
 }
@@ -330,6 +331,7 @@ def _load_search_config(config_toml, section="search"):
     out.max_iters = int(cfg["max_iters"])
     out.leaf_samples = int(cfg["leaf_samples"])
     out.seed = int(cfg["seed"])
+    out.leaf_threads = int(cfg["leaf_threads"])
     return out
 
 

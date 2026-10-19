@@ -519,7 +519,8 @@ PYBIND11_MODULE(sixmax, m) {
     py::class_<sixmax::LeafEvalConfig>(m, "LeafEvalConfig")
         .def(py::init<>())
         .def_readwrite("samples", &sixmax::LeafEvalConfig::samples)
-        .def_readwrite("seed", &sixmax::LeafEvalConfig::seed);
+        .def_readwrite("seed", &sixmax::LeafEvalConfig::seed)
+        .def_readwrite("threads", &sixmax::LeafEvalConfig::threads);
 
     py::class_<sixmax::LeafEval>(m, "LeafEval")
         .def(py::init<sixmax::LeafEvalConfig>(), py::arg("cfg"))   // exact-only
@@ -562,7 +563,8 @@ PYBIND11_MODULE(sixmax, m) {
         .def_readwrite("max_nodes", &sixmax::SearchConfig::max_nodes)
         .def_readwrite("max_iters", &sixmax::SearchConfig::max_iters)
         .def_readwrite("leaf_samples", &sixmax::SearchConfig::leaf_samples)
-        .def_readwrite("seed", &sixmax::SearchConfig::seed);
+        .def_readwrite("seed", &sixmax::SearchConfig::seed)
+        .def_readwrite("leaf_threads", &sixmax::SearchConfig::leaf_threads);
 
     py::class_<sixmax::SearchStrategy>(m, "SearchStrategy")
         .def(py::init<const sixmax::BlueprintStrategy&, const sixmax::ActionVocab&,

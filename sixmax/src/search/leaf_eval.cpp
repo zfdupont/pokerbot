@@ -1,6 +1,8 @@
 #include "search/leaf_eval.h"
+#include <algorithm>
 #include <array>
 #include <stdexcept>
+#include <thread>
 #include "exploit/policy.h"
 #include "game/safe_eval.h"
 #include "search/range_tracker.h"
@@ -51,40 +53,65 @@ std::vector<double> LeafEval::matrix(const EngineGameState& leaf, int actor,
     // HU showdown swing: the winner nets +pot/2 (contributed half, takes all).
     // A single per-leaf constant; CFR only uses relative action values.
     const double stake = leaf.hand().pot() / 2.0;
-    std::array<int, 7> hero7{}, opp7{};
-    if (board_complete)
-        for (int b = 0; b < 5; ++b) { hero7[2 + b] = board[b]; opp7[2 + b] = board[b]; }
 
-    std::mt19937_64 rng(cfg_.seed ^
-                        (static_cast<uint64_t>(leaf.street()) * 0x9E3779B97F4A7C15ull));
-
-    for (size_t i = 0; i < n; ++i) {
-        const auto a = RangeTracker::combo_cards(our_hands[i]);
-        if (on_board[a[0]] || on_board[a[1]]) continue;        // card removal: board
-        for (size_t j = 0; j < m; ++j) {
+    // Evaluate every cell for a contiguous block of opponent combos [j0, j1).
+    // Each sampled cell seeds its own RNG from (seed, street, our_combo,
+    // opp_combo) — never a shared sequential stream — so the matrix is
+    // bit-identical for any thread count and robust to deadline early-exit.
+    // hero7/opp7 are per-worker scratch (thread-local by being lambda locals).
+    auto work = [&](size_t j0, size_t j1) {
+        std::array<int, 7> h7{}, o7{};
+        if (board_complete)
+            for (int b = 0; b < 5; ++b) { h7[2 + b] = board[b]; o7[2 + b] = board[b]; }
+        for (size_t j = j0; j < j1; ++j) {
             const auto b = RangeTracker::combo_cards(opp_hands[j]);
             if (on_board[b[0]] || on_board[b[1]]) continue;    // card removal: board
-            if (a[0] == b[0] || a[0] == b[1] || a[1] == b[0] || a[1] == b[1])
-                continue;                                       // shared card (incl. identical)
-            if (board_complete) {
-                // Exact showdown. NOTE: not engine-terminal; do NOT call payoffs().
-                hero7[0] = a[0]; hero7[1] = a[1];
-                opp7[0] = b[0];  opp7[1] = b[1];
-                const auto hr = safe_eval::rank7(hero7);
-                const auto orr = safe_eval::rank7(opp7);
-                out[i * m + j] = hr.beats(orr) ? stake : (orr.beats(hr) ? -stake : 0.0);
-            } else {
-                if (!bp_) throw std::logic_error("sampled leaf needs a blueprint");
-                if (expired()) return out;   // budget exhausted: leave the rest at 0
-                double acc = 0.0;
-                for (int s = 0; s < cfg_.samples; ++s) {
-                    acc += rollout(leaf, actor, our_hands[i], opp_hands[j], rng);
-                    if ((s & 15) == 15 && expired()) break;
+            for (size_t i = 0; i < n; ++i) {
+                const auto a = RangeTracker::combo_cards(our_hands[i]);
+                if (on_board[a[0]] || on_board[a[1]]) continue;  // card removal: board
+                if (a[0] == b[0] || a[0] == b[1] || a[1] == b[0] || a[1] == b[1])
+                    continue;                                   // shared card (incl. identical)
+                if (board_complete) {
+                    // Exact showdown. NOTE: not engine-terminal; do NOT call payoffs().
+                    h7[0] = a[0]; h7[1] = a[1];
+                    o7[0] = b[0]; o7[1] = b[1];
+                    const auto hr = safe_eval::rank7(h7);
+                    const auto orr = safe_eval::rank7(o7);
+                    out[i * m + j] = hr.beats(orr) ? stake : (orr.beats(hr) ? -stake : 0.0);
+                } else {
+                    if (!bp_) throw std::logic_error("sampled leaf needs a blueprint");
+                    if (expired()) return;   // budget exhausted: leave this worker's rest at 0
+                    std::mt19937_64 rng(
+                        cfg_.seed
+                        ^ (static_cast<uint64_t>(leaf.street()) * 0x9E3779B97F4A7C15ull)
+                        ^ (static_cast<uint64_t>(our_hands[i]) * 0xD1B54A32D192ED03ull)
+                        ^ (static_cast<uint64_t>(opp_hands[j]) * 0xA0761D6478BD642Full));
+                    double acc = 0.0;
+                    for (int s = 0; s < cfg_.samples; ++s) {
+                        acc += rollout(leaf, actor, our_hands[i], opp_hands[j], rng);
+                        if ((s & 15) == 15 && expired()) break;
+                    }
+                    out[i * m + j] = cfg_.samples > 0 ? acc / cfg_.samples : 0.0;
                 }
-                out[i * m + j] = cfg_.samples > 0 ? acc / cfg_.samples : 0.0;
             }
         }
+    };
+
+    int n_threads = cfg_.threads <= 0
+        ? static_cast<int>(std::thread::hardware_concurrency()) : cfg_.threads;
+    if (n_threads < 1) n_threads = 1;
+    if (n_threads == 1 || m < 2) { work(0, m); return out; }
+    if (static_cast<size_t>(n_threads) > m) n_threads = static_cast<int>(m);
+
+    const size_t chunk = (m + n_threads - 1) / n_threads;
+    std::vector<std::thread> pool;
+    pool.reserve(n_threads);
+    for (int t = 0; t < n_threads; ++t) {
+        const size_t j0 = static_cast<size_t>(t) * chunk;
+        if (j0 >= m) break;
+        pool.emplace_back(work, j0, std::min(j0 + chunk, m));
     }
+    for (auto& th : pool) th.join();
     return out;
 }
 

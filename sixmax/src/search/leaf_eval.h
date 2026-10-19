@@ -12,6 +12,7 @@ namespace sixmax {
 struct LeafEvalConfig {
     int samples = 256;     // (opponent hand, runout) draws per leaf
     uint64_t seed = 1;
+    int threads = 0;       // leaf-matrix worker threads; <=0 => all cores
 };
 
 // End-of-street leaf values. A board-complete (river) leaf is an EXACT showdown

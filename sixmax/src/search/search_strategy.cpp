@@ -45,6 +45,7 @@ std::vector<double> SearchStrategy::probs(const EngineGameState& decision_state,
         LeafEvalConfig leaf_cfg;
         leaf_cfg.samples = sc_.leaf_samples;
         leaf_cfg.seed = sc_.seed;
+        leaf_cfg.threads = sc_.leaf_threads;
         const double leaf_ms = sc_.budget_ms * 0.6;
         const auto leaf_deadline =
             start + std::chrono::milliseconds(static_cast<long long>(leaf_ms));

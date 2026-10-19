@@ -19,6 +19,7 @@ struct SearchConfig {
     int max_iters = 2000;
     int leaf_samples = 256;
     uint64_t seed = 1;
+    int leaf_threads = 0;    // leaf-matrix worker threads; <=0 => all cores
 };
 
 // Orchestrates one decision. Contract: never throws; never returns a partial

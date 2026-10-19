@@ -26,6 +26,7 @@ max_nodes    = 20000
 max_iters    = 2000
 leaf_samples = 256
 seed         = 1
+leaf_threads = 0           # leaf-matrix worker threads; 0 = all cores
 narrow_preflop  = true     # feed the preflop line into the opponent range
 prune_keep_mass = 0.99     # keep the top-99% mass band; 1.0 disables pruning
 

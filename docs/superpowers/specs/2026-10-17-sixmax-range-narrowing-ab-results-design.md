@@ -127,3 +127,54 @@ allocation cleanup (the `clone_engine()` + 52-entry pool rebuild in
 `rollout()`), the compounded speedup (~20x on an 8-core host) could get flop
 searches completing within a few seconds — enough to make this A/B measure a
 real difference. That change gets its own brainstorm → spec → plan.
+
+## Parallel leaf evaluator — SHIPPED (2026-10-19)
+
+`LeafEval::matrix` now evaluates opponent combos across worker threads
+(`[search].leaf_threads`, default `0` = all cores; `SIXMAX_SEARCH_LEAF_THREADS`
+env). Each sampled cell seeds its own RNG from `(seed, street, our_combo,
+opp_combo)` instead of one shared sequential stream, so the matrix is
+**bit-identical for any thread count** (pinned by
+`test_sampled_leaf_identical_across_thread_counts`) and robust to deadline
+early-exit — which the old shared stream was not.
+
+**Measured (warm, 8 logical cores, one flop leaf, 400 combos, samples=64):**
+serial 280 ms → all cores 95 ms ≈ **3x**, identical output. Sublinear in cores
+(allocator contention on the per-rollout `clone_engine()` + efficiency/HT
+cores), but free and accuracy-neutral.
+
+**Throughput reframed — the limiter moved from leaf eval to the solver.** With
+threading, leaf eval finishes under the 3000 ms leaf deadline, so searches now
+*complete* (`searched=True`) where before they fell back 100% of the time. But
+per-decision wall is unchanged (~budget_ms): `VectorCfr::solve` has no
+convergence early-exit (`vector_cfr.cpp:45-48`) — it runs to `max_iters` or
+burns the leftover budget, and the orchestrator hands it all remaining time.
+So a completed decision ≈ `budget_ms` (~5 s shipped), ~0.2 decisions/s. The
+throughput lever is now the **solver** (`max_iters` / a convergence early-exit),
+not leaf eval.
+
+## max_iters sweep (2026-10-19) — no signal, underpowered
+
+Paired search-on vs no-search blueprint, HU 50M checkpoint vs the frozen
+tabular opponent, `budget_ms=30000` (so `max_iters` binds), all cores,
+150 hands × seeds 1-4. Log: `2026-10-19-maxiters-sweep.log`.
+
+| max_iters | paired diff (search − blueprint) | sd | se | t | verdict |
+|-----------|----------------------------------|-----|-----|------|----------------|
+| 100  | −32.4 BB/100 | 57.5  | 28.8  | −1.13 | keep-blueprint |
+| 2000 | +31.4 BB/100 | 244.7 | 122.4 | +0.26 | keep-blueprint |
+
+**Read:** no evidence search beats the blueprint at either setting (both
+`|t| ≪ 2`); the sign flip is noise. More iters did not improve the mean — it
+**inflated variance** (sd 57 → 245). The run validated that searches now
+*complete* and emit real non-blueprint strategies (nonzero, volatile diffs),
+but says nothing conclusive about strength.
+
+**Power caveat / known confound:** n=4 × 150 hands is far too small. Worse, the
+harness pins the *deals* (duplicate matches) but not each agent's
+action-sampling RNG (`SixmaxAgent._rng` is entropy-seeded), so the off-arm
+blueprint score itself varies run-to-run (seed 2 blueprint: +90.5 at
+`max_iters=100`, −158.0 at `2000`). The pairing cancels card variance, not
+sampling variance. **Before any larger A/B: pin `agent._rng` in the harness**
+(as `test_search_agent_wiring.py` already does) and raise hands/seeds — else the
+residual sampling noise swamps any real edge.

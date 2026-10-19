@@ -102,3 +102,24 @@ def test_sampled_leaf_is_deterministic():
     a = list(ev.matrix(eng, 0, [0, 1, 2], [3, 4, 5]))
     b = list(ev.matrix(eng, 0, [0, 1, 2], [3, 4, 5]))
     assert a == b
+
+
+@pytest.mark.skipif(not os.path.exists(_CKPT),
+                    reason="blueprint checkpoint is gitignored")
+def test_sampled_leaf_identical_across_thread_counts():
+    """Per-combo seeding makes the parallel matrix bit-identical to the serial
+    one: leaf_threads must not change a single value. Many opponent combos so
+    the work actually spans several threads."""
+    vocab = _load_vocab("search")
+    bp = sixmax.BlueprintStrategy.load(_CKPT, vocab)
+    eng = _street_state(2)
+    our = [0, 1, 2]
+    opp = list(range(40))
+
+    c1 = sixmax.LeafEvalConfig()
+    c1.threads = 1
+    cN = sixmax.LeafEvalConfig()
+    cN.threads = 4
+    a = list(sixmax.LeafEval(bp, c1).matrix(eng, 0, our, opp))
+    b = list(sixmax.LeafEval(bp, cN).matrix(eng, 0, our, opp))
+    assert a == b
