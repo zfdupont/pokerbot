@@ -13,6 +13,7 @@
 #include "blueprint/engine_game.h"
 #include "abstraction/abstraction.h"
 #include "abstraction/abstract_key.h"
+#include "abstraction/hand_index.h"
 #include "blueprint/checkpoint.h"
 #include "exploit/policy.h"
 #include "exploit/lbr.h"
@@ -215,6 +216,33 @@ PYBIND11_MODULE(sixmax, m) {
         if (hole.size() != 2) throw py::value_error("expects 2 cards");
         return sixmax::preflop_class({hole[0], hole[1]});
     });
+    // --- Suit-canonical hand indexer ---
+    m.attr("HAND_INDEX_VERSION") = sixmax::kHandIndexVersion;
+    m.def("hand_index_size", [](int street) {
+        return sixmax::HandIndexer::instance().size(street);
+    }, py::arg("street"));
+    m.def("hand_index",
+          [](int street, const std::vector<int>& hole,
+             const std::vector<int>& board) {
+              if (hole.size() != 2) throw py::value_error("expects 2 cards");
+              return sixmax::HandIndexer::instance().index(
+                  street, {hole[0], hole[1]}, board);
+          },
+          py::arg("street"), py::arg("hole"), py::arg("board"));
+    m.def("hand_unindex",
+          [](int street, uint64_t idx) {
+              std::array<int, 2> hole{};
+              std::vector<int> board;
+              sixmax::HandIndexer::instance().unindex(street, idx, hole, board);
+              return py::make_tuple(
+                  std::vector<int>{hole[0], hole[1]}, board);
+          },
+          py::arg("street"), py::arg("idx"));
+    m.def("hand_multiplicity",
+          [](int street, uint64_t idx) {
+              return sixmax::HandIndexer::instance().multiplicity(street, idx);
+          },
+          py::arg("street"), py::arg("idx"));
     m.def("pot_bucket", &sixmax::pot_bucket, py::arg("pot_bb"));
     m.def("pack_abstract_key",
           [](int card, int street, const std::vector<int>& raises,

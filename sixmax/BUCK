@@ -15,6 +15,7 @@ cxx_library(
         "src/blueprint/engine_game.cpp",
         "src/abstraction/abstraction.cpp",
         "src/abstraction/abstract_key.cpp",
+        "src/abstraction/hand_index.cpp",
         "src/blueprint/checkpoint.cpp",
         "src/exploit/policy.cpp",
         "src/exploit/lbr.cpp",
