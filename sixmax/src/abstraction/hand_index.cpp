@@ -683,19 +683,33 @@ bool hand_unindex(const hand_indexer_t* indexer, uint32_t round,
                 suit_index[i] = 0;
                 continue;
             }
-            suit_index[i] =
-                low = static_cast<uint32_t>(std::floor(
-                    std::exp(std::log(group_index) / (j - i) - 1 +
-                             std::log(j - i)) -
-                    j - i));
-            high = static_cast<uint32_t>(std::ceil(
-                std::exp(std::log(group_index) / (j - i) + std::log(j - i)) -
-                j + i + 1));
+            const double group_width = static_cast<double>(j - i);
+            const double log_group_index =
+                std::log(static_cast<double>(group_index));
+            double low_estimate = std::floor(
+                std::exp(log_group_index / group_width - 1.0 +
+                         std::log(group_width)) -
+                group_width);
+            double high_estimate = std::ceil(
+                std::exp(log_group_index / group_width +
+                         std::log(group_width)) -
+                group_width + 1.0);
+            if (low_estimate < 0.0) {
+                low_estimate = 0.0;
+            }
+            if (high_estimate < 0.0) {
+                high_estimate = 0.0;
+            }
+            low = static_cast<uint32_t>(low_estimate);
+            high = static_cast<uint32_t>(high_estimate);
             if (high > suit_size) {
                 high = suit_size;
             }
             if (high <= low) {
                 low = 0;
+                suit_index[i] = 0;
+            } else {
+                suit_index[i] = low;
             }
             while (low < high) {
                 uint32_t mid = (low + high) / 2;
