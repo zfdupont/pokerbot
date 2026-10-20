@@ -12,7 +12,7 @@ edges:
     condition: when measuring against OpenSpiel or random rather than against another checkpoint
   - target: context/setup.md
     condition: for the eval commands and the droplet swap procedure
-last_updated: 2026-10-06
+last_updated: 2026-10-20
 ---
 
 # A/B Two Candidates Honestly
@@ -40,6 +40,13 @@ roughly ±10 BB/100 per arm, and seed-to-seed swings of ±50 BB/100 are normal.
    difference" — keep the incumbent.
 5. Always print the raw vs-opponent BB/100 too, as a sanity floor (a candidate that cannot beat the
    weak baseline is broken, not merely unlucky).
+
+**Direct head-to-head is usually better (2026-10-20):** `scripts/eval_blueprint_h2h.py --a X --b Y`
+plays the two candidates against each other. With every RNG pinned per hand, each seed's duplicate
+score already *is* the paired difference (self-match = exactly 0), and its se is far smaller (~2
+BB/100 at 8×20k vs ~7.7 via a third party). Use the third-party design only as a robustness check:
+against a fixed weak villain it measures who *exploits that villain* more, which can disagree with
+who is stronger (HU 10M: −8 vs six-max when both faced CFRAgent; HU 50M: +45.6 vs six-max head-to-head).
 
 ## Gotchas
 
