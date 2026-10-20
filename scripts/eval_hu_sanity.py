@@ -3,9 +3,10 @@
 and neural bots, in the live game/poker.py engine.
 
 Duplicate deals cancel deal luck: each seeded deck is played twice, with the
-hero in seat 0 then seat 1. The deck is shuffled with the global `random`
-module and re-created each hand, so seeding `random` before play_hand makes the
-deck reproducible; the hero's action RNG uses a separate stream.
+hero in seat 0 then seat 1. Each hand pins every RNG to the hand seed — the
+deck (global `random`), numpy (agents like CFRAgent), and each agent's private
+`_rng` — so a hand is fully reproducible and, across compared arms, shares
+common random numbers (sampling cancels except where a strategy diverges).
 
 Usage:
     uv run python scripts/eval_hu_sanity.py --blueprint sixmax/checkpoints/blueprint.bin \
@@ -17,6 +18,8 @@ import os
 import random
 import sys
 
+import numpy as np
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models.player import Player
@@ -26,7 +29,17 @@ from game.poker import PokerGame
 def _play_seeded(hero_agent, villain_agent, hero_seat, seed, bb, stack):
     """One hand at a fixed seed; returns hero's chip delta. bb sets blinds via
     small_blind = bb // 2."""
-    random.seed(seed)
+    random.seed(seed)               # deck shuffle (global random)
+    np.random.seed(seed % (2**32))  # agents sampling via numpy (e.g. CFRAgent)
+    # Pin each agent's private action RNG to the hand seed, so sampling is
+    # reproducible and shared across compared arms (common random numbers):
+    # two arms play a hand identically until a strategy actually diverges, which
+    # is the only place the paired A/B should see a difference. Previously these
+    # were entropy-seeded, injecting uncontrolled per-hand variance.
+    for a in (hero_agent, villain_agent):
+        r = getattr(a, "_rng", None)
+        if isinstance(r, random.Random):
+            r.seed(seed)
     names = ["a", "b"]
     agents = [None, None]
     agents[hero_seat] = hero_agent

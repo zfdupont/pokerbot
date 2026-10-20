@@ -178,3 +178,48 @@ blueprint score itself varies run-to-run (seed 2 blueprint: +90.5 at
 sampling variance. **Before any larger A/B: pin `agent._rng` in the harness**
 (as `test_search_agent_wiring.py` already does) and raise hands/seeds — else the
 residual sampling noise swamps any real edge.
+
+## max_iters sweep, CRN re-run (2026-10-19/20) — harness now deterministic, still no signal
+
+Two harness fixes made the A/B a true common-random-numbers design:
+
+1. `scripts/eval_hu_sanity.py::_play_seeded` pins every RNG to the hand seed:
+   global `random` (deck), `np.random` (CFRAgent sampling), and each agent's
+   private `_rng` (`tests/scripts/test_eval_harness_rng.py`).
+2. `util/vec_equity.py` drew Monte Carlo equity from an entropy-seeded
+   `np.random.default_rng()`, which `np.random.seed` does not reach. CFRAgent's
+   `lru_cache`d buckets were therefore fixed per *process* to a random draw, so
+   borderline hands bucketed differently in every process (off-arm alone: same
+   score twice in-process, different across processes, even with
+   `PYTHONHASHSEED=0`). Now `equity_vec` seeds a fresh Generator from
+   `_equity_seed(hole, board)` (card masks, order-free, hole shifted past bit
+   52), mirroring the C++ `equity_seed` (`tests/util/test_vec_equity_determinism.py`).
+
+A first pinned run with only fix 1 (`2026-10-19-maxiters-sweep-pinned.log`:
++14.3 t=0.60 / +13.4 t=0.80) still had a moving off-arm and is superseded.
+
+Log: `2026-10-19-maxiters-sweep-crn.log` (same setup: HU 50M vs tabular,
+budget 30s, all cores, 150 hands × seeds 1-4).
+
+| max_iters | paired diff | sd | se | t | verdict |
+|-----------|-------------|------|------|------|----------------|
+| 100  | +16.3 BB/100 | 54.9 | 27.5 | 0.59 | keep-blueprint |
+| 2000 | +14.1 BB/100 | 61.0 | 30.5 | 0.46 | keep-blueprint |
+
+**Determinism verified:** the blueprint column is identical across arms
+(−43.67, −82.00, +12.83, +10.00). Seeds 1 and 3 also have *identical search
+scores* at 100 and 2000 iters: with shared action draws, small changes in the
+solved mix rarely flip a sampled action, so 20x more iterations changed play in
+only some hands. `max_iters` above 100 buys essentially nothing.
+
+**Read:** the remaining spread (per-seed diffs −51 to +91) is real
+search-induced divergence, not harness noise; sd did not fall because pinning
+removed noise from both arms equally and the diff is dominated by the hands
+where search changes a decision. Both arms are consistently small-positive
+(+14 to +16) but nowhere near significance. At this per-seed sd, a +15 BB/100
+edge needs roughly 9k duplicate deals for t≈2 (~20 h at the current ~8 s/deal),
+and the n=4 seed-level t test is itself weak (3 df: t=2 is p≈0.14). Next:
+report per-deal paired diffs (n = deals, not seeds) and switch the primary
+villain to the blueprint itself (duplicate self-play is exactly 0, so no
+off-arm is needed and the run cost halves); keep CFRAgent as the robustness
+check. `enabled` stays false.

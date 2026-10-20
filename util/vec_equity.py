@@ -42,7 +42,25 @@ _FULL_DECK   = [Card(r, s) for r in range(2, 15) for s in list(Suit)]
 _DECK_MASKS  = np.array([c.card_mask for c in _FULL_DECK], dtype=np.int64)
 _DECK_KEYS   = [c.key for c in _FULL_DECK]
 
-_rng = np.random.default_rng()
+
+
+def _equity_seed(hole: List[Card], board: List[Card]) -> int:
+    """Deterministic RNG seed for one (hole, board) equity estimate.
+
+    Mirrors the C++ equity_seed in sixmax/src/abstraction/abstraction.cpp: the
+    estimate must be a pure function of the cards, so the lru_cached bucket in
+    cfr/abstraction.py is identical in every process (training workers, the
+    live agent, both arms of a paired eval).
+    """
+    # card_mask is a stable bitmask (unlike hash() on the str suit), and OR is
+    # order-free. Shifting the hole mask past bit 52 keeps hole and board apart.
+    hole_mask = 0
+    for c in hole:
+        hole_mask |= c.card_mask
+    board_mask = 0
+    for c in board:
+        board_mask |= c.card_mask
+    return (hole_mask << 52) | board_mask
 
 
 def _index52c7_vec(masks: np.ndarray) -> np.ndarray:
@@ -109,8 +127,9 @@ def equity_vec(hole: List[Card], board: List[Card], n_samples: int = 500) -> flo
     # O(n_samples × n_draw) vs argsort's O(n_samples × n_avail × log n_avail).
     indices = np.tile(np.arange(n_avail, dtype=np.int32), (n_samples, 1))
     _rows   = np.arange(n_samples)
+    rng     = np.random.default_rng(_equity_seed(hole, board))
     for k in range(n_draw):
-        j        = _rng.integers(k, n_avail, size=n_samples)
+        j        = rng.integers(k, n_avail, size=n_samples)
         col_k    = indices[_rows, k].copy()
         indices[_rows, k] = indices[_rows, j]
         indices[_rows, j] = col_k
