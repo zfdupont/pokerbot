@@ -185,6 +185,9 @@ neural_cfr/checkpoints/
 # Sixmax blueprint checkpoints (large binaries)
 sixmax/checkpoints/
 
+# Sixmax generated lookup tables (feature store / bucket maps)
+sixmax/tables/
+
 # IDE
 .vscode/
 

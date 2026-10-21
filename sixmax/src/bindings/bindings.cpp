@@ -2,7 +2,9 @@
 #include <pybind11/stl.h>
 #include <fstream>
 #include <cmath>
+#include <cstdio>
 #include <random>
+#include <utility>
 #include "game/safe_eval.h"
 #include "vocab/vocab.h"
 #include "blueprint/game.h"
@@ -13,6 +15,7 @@
 #include "blueprint/engine_game.h"
 #include "abstraction/abstraction.h"
 #include "abstraction/abstract_key.h"
+#include "abstraction/equity_table.h"
 #include "abstraction/hand_index.h"
 #include "blueprint/checkpoint.h"
 #include "exploit/policy.h"
@@ -243,6 +246,82 @@ PYBIND11_MODULE(sixmax, m) {
               return sixmax::HandIndexer::instance().multiplicity(street, idx);
           },
           py::arg("street"), py::arg("idx"));
+    // --- Exact equity feature store ---
+    m.def("river_equity_exact",
+          [](const std::vector<int>& hole, const std::vector<int>& board) {
+              if (hole.size() != 2) throw py::value_error("expects 2 cards");
+              return sixmax::river_equity_exact({hole[0], hole[1]}, board);
+          },
+          py::arg("hole"), py::arg("board"));
+    m.def("derive_equity_one",
+          [](int street, const std::vector<int>& hole,
+             const std::vector<int>& board) {
+              if (hole.size() != 2) throw py::value_error("expects 2 cards");
+              return sixmax::derive_equity_one(street, {hole[0], hole[1]},
+                                               board);
+          },
+          py::arg("street"), py::arg("hole"), py::arg("board"));
+    m.def("derive_equity",
+          [](int street, const std::vector<float>& next_street,
+             int num_threads) {
+              return sixmax::derive_equity(street, next_street, num_threads);
+          },
+          py::arg("street"), py::arg("next_street"),
+          py::arg("num_threads") = 0);
+    m.def("build_equity_store",
+          [](const std::string& path, int num_threads) {
+              std::fprintf(stderr, "[equity] river table\n");
+              auto river = sixmax::build_river_equity(num_threads);
+              std::fprintf(stderr, "[equity] turn table (from river)\n");
+              auto turn = sixmax::derive_equity(2, river, num_threads);
+              std::fprintf(stderr, "[equity] flop table (from turn)\n");
+              auto flop = sixmax::derive_equity(1, turn, num_threads);
+              sixmax::EquityStore store;
+              store.eq = {std::move(flop), std::move(turn),
+                          std::move(river)};
+              const uint64_t hash = sixmax::equity_content_hash(store);
+              store.content_hash = hash;
+              sixmax::save_equity_store(path, store);
+              std::fprintf(stderr, "[equity] wrote %s (hash %016llx)\n",
+                           path.c_str(),
+                           static_cast<unsigned long long>(hash));
+              return hash;
+          },
+          py::arg("path"), py::arg("num_threads") = 0);
+    m.def("equity_store_lookup",
+          [](const std::string& path, int street, uint64_t idx) {
+              return sixmax::equity_store_lookup(path, street, idx);
+          },
+          py::arg("path"), py::arg("street"), py::arg("idx"));
+    m.def("_write_equity_store_for_test",
+          [](const std::string& path, const std::vector<float>& flop,
+             const std::vector<float>& turn,
+             const std::vector<float>& river) {
+              sixmax::EquityStore store;
+              store.eq = {flop, turn, river};
+              sixmax::save_equity_store(path, store, false);
+              return sixmax::equity_content_hash(store);
+          },
+          py::arg("path"), py::arg("flop"), py::arg("turn"),
+          py::arg("river"));
+    m.def("_load_equity_store_for_test",
+          [](const std::string& path, bool strict) {
+              try {
+                  auto store = strict
+                      ? sixmax::load_equity_store(path)
+                      : sixmax::load_equity_store_skip_size_check(path);
+                  return py::make_tuple(store.eq[0], store.eq[1], store.eq[2],
+                                        store.content_hash);
+              } catch (const std::exception& e) {
+                  throw py::value_error(e.what());
+              }
+          },
+          py::arg("path"), py::arg("strict") = false);
+    m.def("_river_equities_for_board",
+          [](const std::vector<int>& board) {
+              return sixmax::river_equities_for_board(board);
+          },
+          py::arg("board"));
     m.def("pot_bucket", &sixmax::pot_bucket, py::arg("pot_bb"));
     m.def("pack_abstract_key",
           [](int card, int street, const std::vector<int>& raises,
