@@ -3,6 +3,8 @@
 #include <memory>
 #include <random>
 #include <stdexcept>
+#include "abstraction/bucket_map.h"
+#include "abstraction/hand_index.h"
 #include "game/safe_eval.h"
 
 namespace sixmax {
@@ -112,17 +114,24 @@ Abstraction::Abstraction(const AbstractionConfig& cfg,
       bucket_cache_(std::make_unique<BucketCache>(
           cache_cap, std::make_unique<ClearOnFullPolicy>())) {}
 
-// Transfers the cache pointer alongside cfg_/edges_. Always correct: the cache
-// is a deterministic accelerator, so a shared/stale entry equals the value it
-// would recompute.
+Abstraction::Abstraction(std::shared_ptr<const BucketMap> map)
+    : map_(std::move(map)) {
+    if (!map_) throw std::invalid_argument("Abstraction: null bucket map");
+}
+
+// Transfers the cache pointer alongside cfg_/edges_/map_. Always correct: the
+// cache is a deterministic accelerator, so a shared/stale entry equals the
+// value it would recompute.
 Abstraction::Abstraction(Abstraction&& other) noexcept
     : cfg_(std::move(other.cfg_)), edges_(std::move(other.edges_)),
+      map_(std::move(other.map_)),
       bucket_cache_(std::move(other.bucket_cache_)) {}
 
 Abstraction& Abstraction::operator=(Abstraction&& other) noexcept {
     if (this != &other) {
         cfg_ = std::move(other.cfg_);
         edges_ = std::move(other.edges_);
+        map_ = std::move(other.map_);
         bucket_cache_ = std::move(other.bucket_cache_);
     }
     return *this;
@@ -133,6 +142,16 @@ int Abstraction::bucket(const std::array<int, 2>& hole,
     if (board.size() < 3 || board.size() > 5)
         throw std::invalid_argument(
             "Abstraction::bucket: board must have 3, 4, or 5 cards");
+
+    // Map-backed kind: an index computation plus one mmap byte read. The map
+    // uses HandIndexer streets (1=flop), NOT the legacy 0-based edge-table
+    // street below — the two conventions must not be mixed.
+    if (map_) {
+        const int street = (int)board.size() - 2;  // 1=flop 2=turn 3=river
+        return map_->bucket(
+            street, HandIndexer::instance().index(street, hole, board));
+    }
+
     const int s = (int)board.size() - 3;  // 0=flop 1=turn 2=river
 
     // Canonical (hole, board) identity: equity_seed already FNV-mixes the
@@ -165,6 +184,7 @@ int Abstraction::bucket(const std::array<int, 2>& hole,
 }
 
 int Abstraction::num_buckets(int street) const {
+    if (map_) return map_->num_buckets(street);
     switch (street) {
         case 1: return cfg_.flop_buckets;
         case 2: return cfg_.turn_buckets;
@@ -174,6 +194,12 @@ int Abstraction::num_buckets(int street) const {
 
 uint64_t Abstraction::hash() const {
     uint64_t h = 1469598103934665603ull;
+    if (map_) {
+        // Kind tag keeps a map-backed abstraction disjoint from any legacy
+        // one, even if a map content hash happened to equal an edges hash.
+        h = fnv_mix(h, 0x6d617030ull);  // "map0"
+        return fnv_mix(h, map_->content_hash());
+    }
     auto mix_u = [&](uint64_t v) { h = fnv_mix(h, v); };
     auto mix_d = [&](double v) {
         uint64_t b;

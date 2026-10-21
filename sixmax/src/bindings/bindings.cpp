@@ -466,6 +466,17 @@ PYBIND11_MODULE(sixmax, m) {
              py::arg("quantile_samples") = 10000,
              py::arg("seed") = 20260719,
              py::arg("cache_cap") = sixmax::Abstraction::kDefaultBucketCacheCap)
+        .def_static("from_bucket_map",
+                    [](const std::string& path) {
+                        try {
+                            return sixmax::Abstraction(
+                                sixmax::BucketMap::open(path));
+                        } catch (const std::exception& e) {
+                            throw py::value_error(e.what());
+                        }
+                    },
+                    py::arg("path"))
+        .def("is_map", &sixmax::Abstraction::is_map)
         .def("bucket",
              [](const sixmax::Abstraction& a, const std::vector<int>& hole,
                 const std::vector<int>& board) {
@@ -607,8 +618,9 @@ PYBIND11_MODULE(sixmax, m) {
     });
     // --- Blueprint checkpoints + strategy (Phase 1b Task 4) ---
     m.def("load_abstraction", [](const std::string& path) {
-        // Peek only the abstraction block: reuse the loader with the
-        // stored hash so it cannot mismatch, then rebuild from edges.
+        // Peek only the vocab hash: reuse the loader with the stored hash so
+        // it cannot mismatch, then rebuild the abstraction (stored edges for
+        // SIXBP001, resolved + hash-checked bucket map for SIXBP002).
         auto loaded = sixmax::load_blueprint(
             path, [&] {
                 std::ifstream i(path, std::ios::binary);
@@ -617,7 +629,7 @@ PYBIND11_MODULE(sixmax, m) {
                 i.read(reinterpret_cast<char*>(&h), sizeof h);
                 return h;
             }());
-        return sixmax::Abstraction(loaded.abs_cfg, std::move(loaded.edges));
+        return sixmax::load_abstraction_for(path, loaded);
     }, py::arg("path"));
     // --- Read-only autopsy dump: recovers per-infoset visit-weight and regret
     //     that the normalized accessors discard (plateau diagnosis). ---

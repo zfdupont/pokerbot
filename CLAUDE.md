@@ -36,6 +36,7 @@ Always edit  Non-Negotiables after modifying any of these. Condensed from `.mex/
 - In `cfr/`/`neural_cfr/` the 6-action vocabulary order is fixed (`0=fold 1=check 2=call 3=b0.5 4=b1.0 5=allin`); in `sixmax/` the vocab is config-defined and checkpoints embed its hash. Everywhere: mask illegal actions, never reorder or filter storage.
 - The C++ evaluator's (`common/`) `12 - rank` kicker inversion (lower = better) must be preserved — removing it inverts learned hand strength; new consumers use the opaque `safe_eval` API only.
 - Chip values crossing an engine boundary must be rescaled to the `starting_stack=100, big_blind=1` training frame.
+- Map-based checkpoints (`SIXBP002`) are bound to their bucket map by content hash; the hand indexer (`kHandIndexVersion`) is part of that contract; never change either without a version bump.
 - Never commit secrets (`OPENPOKER_API_KEY`) or checkpoint files.
 
 ## Quick Commands

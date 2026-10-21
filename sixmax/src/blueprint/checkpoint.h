@@ -10,9 +10,16 @@
 namespace sixmax {
 
 // Binary blueprint artifact. Self-describing per the artifact contract:
-// embeds the vocab hash and the full abstraction (config + quantile edges),
-// so loaders can refuse mismatches and reconstruct the exact keyer without
-// re-sampling. Native-endian; artifacts move between same-arch machines.
+// embeds the vocab hash and the full abstraction, so loaders can refuse
+// mismatches and reconstruct the exact keyer without re-sampling.
+//
+// Two magics:
+//  * SIXBP001 — legacy kind: config + quantile edges, as before.
+//  * SIXBP002 — map-backed kind: same layout up to starting_stack, then
+//    int32 kind=1, uint64 map content hash and a length-prefixed map filename
+//    hint, then the table as v1. The map itself is resolved at load time
+//    (see resolve_bucket_map) and refused if its content hash differs.
+// Native-endian; artifacts move between same-arch machines.
 struct BlueprintMeta {
     uint64_t vocab_hash;
     int num_players;
@@ -25,8 +32,11 @@ void save_blueprint(const std::string& path, const BlueprintMeta& meta,
 
 struct LoadedBlueprint {
     BlueprintMeta meta;
-    AbstractionConfig abs_cfg;
-    std::array<std::vector<double>, 3> edges;
+    int abs_kind = 0;  // 0 = legacy edges, 1 = bucket map
+    uint64_t map_hash = 0;   // SIXBP002 only
+    std::string map_hint;    // SIXBP002 only: the map's basename
+    AbstractionConfig abs_cfg;                    // legacy kind only
+    std::array<std::vector<double>, 3> edges;     // legacy kind only
     uint64_t iterations;
     std::unordered_map<uint64_t, InfosetData> table;
 };
@@ -36,8 +46,23 @@ struct LoadedBlueprint {
 LoadedBlueprint load_blueprint(const std::string& path,
                                uint64_t expected_vocab_hash);
 
+// Locate a SIXBP002 checkpoint's bucket map. Search order:
+//   $SIXMAX_BUCKET_MAP (full path) if set,
+//   dirname(ckpt_path)/hint,
+//   $SIXMAX_TABLES_DIR/hint (default `sixmax/tables`, relative to cwd).
+// Throws std::runtime_error listing every path tried.
+std::string resolve_bucket_map(const std::string& ckpt_path,
+                               const std::string& hint);
+
+// Rebuild the abstraction a loaded checkpoint was trained with: the stored
+// edges for the legacy kind, the resolved bucket map (refusing a content-hash
+// mismatch) for the map-backed kind.
+Abstraction load_abstraction_for(const std::string& ckpt_path,
+                                 const LoadedBlueprint& loaded);
+
 // Read-only average-strategy view of an artifact, for eval and deployment.
-// Owns its Abstraction (reconstructed from the stored edges).
+// Owns its Abstraction (reconstructed from the stored edges, or from the
+// resolved bucket map for a SIXBP002 checkpoint).
 class BlueprintStrategy {
 public:
     static BlueprintStrategy load(const std::string& path,

@@ -8,6 +8,8 @@
 
 namespace sixmax {
 
+class BucketMap;
+
 // Lossless 169-class preflop index (0..168): pairs on the diagonal
 // (r*13+r), suited above it (hi*13+lo), offsuit below (lo*13+hi).
 // Pure function of the two card codes; card order is irrelevant.
@@ -30,10 +32,17 @@ struct AbstractionConfig {
     uint64_t seed = 20260719;      // edge sampling + equity salt
 };
 
-// Postflop equity-percentile buckets. Edges are per-street equity quantiles
-// estimated once from quantile_samples random (hole, board) draws, so
-// buckets are (approximately) equally populated. Street inferred from board
-// size (3=flop, 4=turn, 5=river).
+// Postflop equity bucketing, in two kinds:
+//
+//  * legacy (default): equity-percentile buckets. Edges are per-street equity
+//    quantiles estimated once from quantile_samples random (hole, board)
+//    draws, so buckets are (approximately) equally populated.
+//  * map-backed: a memory-mapped SIXBM001 bucket map. bucket() is
+//    map[street][HandIndexer::index(hole, board)] — no rollouts, no memo
+//    cache, and num_buckets() comes from the map header.
+//
+// Street is inferred from the board size (3=flop, 4=turn, 5=river) either way.
+// Preflop is not bucketed by this class (the caller uses preflop_class).
 class Abstraction {
 public:
     // Per-shard cap for the memo cache (see bucket_cache.h). A runtime-only
@@ -45,6 +54,9 @@ public:
     Abstraction(const AbstractionConfig& cfg,
                 std::array<std::vector<double>, 3> edges,
                 size_t cache_cap = kDefaultBucketCacheCap);  // from artifact
+    // Map-backed kind. The map is immutable after open, so a shared read-only
+    // mmap view can be handed to several Abstraction owners.
+    explicit Abstraction(std::shared_ptr<const BucketMap> map);
     // Moves transfer the cache pointer alongside cfg_/edges_. That is always
     // correct: the cache is a deterministic accelerator (a stale or shared
     // entry still equals the value it would recompute). Copies stay deleted;
@@ -56,14 +68,21 @@ public:
     int bucket(const std::array<int, 2>& hole,
                const std::vector<int>& board) const;
     int num_buckets(int street) const;  // street 1=flop 2=turn 3=river
+    bool is_map() const { return map_ != nullptr; }
+    const BucketMap* bucket_map() const { return map_.get(); }
     const AbstractionConfig& config() const { return cfg_; }
     const std::array<std::vector<double>, 3>& edges() const { return edges_; }
-    uint64_t hash() const;  // config + edges; part of the artifact contract
+    // Config + edges (legacy) or kind tag + map content hash (map-backed);
+    // part of the artifact contract.
+    uint64_t hash() const;
     size_t bucket_cache_size() const;  // diagnostics / tests
 
 private:
     AbstractionConfig cfg_;
     std::array<std::vector<double>, 3> edges_;  // [0]=flop [1]=turn [2]=river
+
+    // Non-null for the map-backed kind; cfg_/edges_/bucket_cache_ unused then.
+    std::shared_ptr<const BucketMap> map_;
 
     // Deterministic (hole, board) -> bucket memo, sharded + size-bounded. An
     // accelerator only: NOT hashed, serialised, or reconstructed from an
