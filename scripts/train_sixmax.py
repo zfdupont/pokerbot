@@ -385,6 +385,8 @@ def main() -> None:
     reporter = _ProgressReporter(trainer, cfg["iterations"],
                                  cfg["report_interval"])
     reporter.start()
+    loop_t0 = time.monotonic()
+    save_t0 = loop_t0
     try:
         while completed < cfg["iterations"]:
             chunk = min(ckpt_interval, cfg["iterations"] - completed)
@@ -397,6 +399,20 @@ def main() -> None:
                 snap = f"{base}_{completed:08d}{ext}"
                 shutil.copy2(cfg["checkpoint"], snap)
                 logging.info(f"  snapshot -> {snap}")
+            # Machine-readable throughput, one line per checkpoint save (the
+            # final one included). `it/s` is cumulative since this training
+            # loop started; `window_it/s` covers only the iterations since the
+            # previous save, so a slowdown shows up without arithmetic on the
+            # heartbeat lines. Timed before selection so an eval never skews it.
+            now = time.monotonic()
+            elapsed = now - loop_t0
+            window_s = now - save_t0
+            cumulative_rate = completed / elapsed if elapsed > 0 else 0.0
+            window_rate = chunk / window_s if window_s > 0 else 0.0
+            save_t0 = now
+            logging.info(f"[rate] iters={trainer.iterations()} "
+                         f"it/s={cumulative_rate:.1f} "
+                         f"window_it/s={window_rate:.1f}")
             if cfg["selection_enabled"]:
                 run_selection(cfg, repo_root, trainer)
             logging.info(f"[{completed:,}/{cfg['iterations']:,}] "
