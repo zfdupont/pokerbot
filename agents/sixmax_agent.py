@@ -133,6 +133,11 @@ class SixmaxDeployStrategy:
     def num_players(self):
         return self._strategy.num_players()
 
+    @property
+    def num_infosets(self):
+        """Queryable infosets in the loaded checkpoint (unseen keys dropped)."""
+        return self._strategy.num_infosets()
+
     def _card_bucket(self, hole, board, street):
         if street == 0:
             return sixmax.preflop_class(hole)
