@@ -334,11 +334,12 @@ PYBIND11_MODULE(sixmax, m) {
     m.def("_kmeans_buckets",
           [](const std::vector<std::vector<float>>& hists,
              const std::vector<uint32_t>& weight, int k, uint64_t seed,
-             int iters) {
-              return sixmax::kmeans_buckets(hists, weight, k, seed, iters);
+             int iters, int num_threads) {
+              return sixmax::kmeans_buckets(hists, weight, k, seed, iters,
+                                            num_threads);
           },
           py::arg("hists"), py::arg("weight"), py::arg("k"),
-          py::arg("seed"), py::arg("iters"));
+          py::arg("seed"), py::arg("iters"), py::arg("num_threads") = 0);
     m.def("_turn_potential_hist",
           [](const std::vector<int>& hole, const std::vector<int>& board,
              int bins) {
@@ -383,6 +384,11 @@ PYBIND11_MODULE(sixmax, m) {
         .def("num_buckets", &sixmax::BucketMap::num_buckets,
              py::arg("street"))
         .def("content_hash", &sixmax::BucketMap::content_hash)
+        .def("equity_hash", &sixmax::BucketMap::equity_hash)
+        .def("method", &sixmax::BucketMap::method,
+             py::return_value_policy::reference_internal)
+        .def("params", &sixmax::BucketMap::params,
+             py::return_value_policy::reference_internal)
         .def("path", &sixmax::BucketMap::path,
              py::return_value_policy::reference_internal);
     m.def("build_bucket_map",

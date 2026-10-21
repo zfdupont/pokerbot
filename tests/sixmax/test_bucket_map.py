@@ -134,6 +134,22 @@ def test_kmeans_deterministic_and_separates():
     assert labels[0] != labels[100]  # the blobs land in different buckets
 
 
+def test_kmeans_thread_count_independent():
+    rng = random.Random(4242)
+    n, bins = 3000, 8
+    hists = []
+    for _ in range(n):
+        raw = [rng.random() for _ in range(bins)]
+        total = sum(raw)
+        hists.append([value / total for value in raw])  # proper distributions
+    weight = [rng.randint(1, 24) for _ in range(n)]
+
+    single = sixmax._kmeans_buckets(hists, weight, 5, 99, 20, num_threads=1)
+    multi = sixmax._kmeans_buckets(hists, weight, 5, 99, 20, num_threads=4)
+    assert single == multi
+    assert single == sixmax._kmeans_buckets(hists, weight, 5, 99, 20)
+
+
 def test_kmeans_rejects_bad_input():
     hists = [[1.0, 0.0], [0.0, 1.0]]
     with pytest.raises(ValueError):
@@ -220,6 +236,9 @@ def test_map_roundtrip(map_path):
         for idx in (0, 1, 12_345, size - 1):
             assert m.bucket(street, idx) == idx % 7
     assert m.content_hash() != 0
+    assert m.equity_hash() == 0  # the test writer records no equity store
+    assert m.method() == "percentile"
+    assert m.params() == ""
     assert m.path() == os.path.abspath(map_path)
     assert sixmax.BucketMap.open(map_path).content_hash() == m.content_hash()
 
@@ -247,6 +266,19 @@ def test_map_refuses_damaged_files(tmp_path, map_path, damage):
         else:
             f.seek(8)
             f.write((sixmax.HAND_INDEX_VERSION + 1).to_bytes(4, "little"))
+    with pytest.raises(ValueError):
+        sixmax.BucketMap.open(damaged)
+
+
+def test_map_refuses_header_count_mismatch(tmp_path, map_path):
+    # The content hash covers only the arrays, so a header bucket count that
+    # disagrees with the data (still inside [1, 255]) must be caught by the
+    # count cross-check in open().
+    damaged = str(tmp_path / "count_mismatch.bin")
+    shutil.copyfile(map_path, damaged)
+    with open(damaged, "r+b") as f:
+        f.seek(36)  # uint32 buckets[0] in the fixed header
+        f.write((6).to_bytes(4, "little"))
     with pytest.raises(ValueError):
         sixmax.BucketMap.open(damaged)
 

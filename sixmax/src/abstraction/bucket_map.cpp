@@ -552,7 +552,8 @@ std::vector<uint8_t> percentile_buckets(const std::vector<float>& eq,
 
 std::vector<uint8_t> kmeans_buckets(
     const std::vector<std::vector<float>>& hists,
-    const std::vector<uint32_t>& weight, int k, uint64_t seed, int iters) {
+    const std::vector<uint32_t>& weight, int k, uint64_t seed, int iters,
+    int num_threads) {
     if (hists.size() != weight.size())
         throw std::invalid_argument(
             "kmeans_buckets: weight size does not match hists");
@@ -577,7 +578,7 @@ std::vector<uint8_t> kmeans_buckets(
     }
     return kmeans_from_cdf_impl(
         cdf.data(), n, dims, [&weight](uint64_t i) { return weight[i]; }, k,
-        seed, iters, 0);
+        seed, iters, num_threads);
 }
 
 // ---------------------------------------------------------------------------
@@ -766,7 +767,6 @@ std::shared_ptr<const BucketMap> BucketMap::open(const std::string& path) {
         for (size_t s = 0; s < 3; ++s)
             counts[s] = read_field<uint32_t>(base, 36 + 4 * s);
         const uint64_t equity_hash = read_field<uint64_t>(base, 48);
-        (void)equity_hash;
         const uint64_t stored_hash = read_field<uint64_t>(base, 56);
         const uint32_t method_len = read_field<uint32_t>(base, 64);
         const uint32_t params_len = read_field<uint32_t>(base, 68);
@@ -802,6 +802,18 @@ std::shared_ptr<const BucketMap> BucketMap::open(const std::string& path) {
         const uint8_t* data = base + kHeaderBytes + strings;
         uint64_t h = kFnvOffset;
         for (size_t s = 0; s < 3; ++s) {
+            // The content hash does not cover the header, so the declared
+            // bucket count is cross-checked against the data here, in the
+            // same pass that hashes it.
+            uint8_t max_bucket = 0;
+            for (uint64_t i = 0; i < sizes[s]; ++i)
+                max_bucket = std::max(max_bucket, data[i]);
+            if (static_cast<uint32_t>(max_bucket) + 1 != counts[s])
+                throw std::runtime_error(
+                    "bucket map bucket count mismatch on street " +
+                    std::to_string(s + 1) + ": header has " +
+                    std::to_string(counts[s]) + ", data has " +
+                    std::to_string(static_cast<uint32_t>(max_bucket) + 1));
             hash_mix(h, sizes[s]);
             h = hash_bytes(h, data, static_cast<size_t>(sizes[s]));
             data += sizes[s];
@@ -810,18 +822,33 @@ std::shared_ptr<const BucketMap> BucketMap::open(const std::string& path) {
             throw std::runtime_error("bucket map content hash mismatch: " +
                                      path);
 
+        // Validate and copy the variable-length header strings before the
+        // mapping changes hands (their bounds were checked by the length
+        // equality above).
+        const std::string method(
+            reinterpret_cast<const char*>(base + kHeaderBytes), method_len);
+        const std::string params(
+            reinterpret_cast<const char*>(base + kHeaderBytes + method_len),
+            params_len);
+
+        // All validation passed. Build the object first and hand the mapping
+        // over last: the BucketMap destructor is then the only owner of the
+        // munmap on every path (a throw above leaves base_ null).
         auto out = std::shared_ptr<BucketMap>(new BucketMap());
-        out->base_ = base;
         out->length_ = static_cast<size_t>(length);
         out->sizes_ = sizes;
         out->buckets_ = counts;
         out->content_hash_ = stored_hash;
+        out->equity_hash_ = equity_hash;
+        out->method_ = method;
+        out->params_ = params;
         out->path_ = path;
         const uint8_t* cursor = base + kHeaderBytes + strings;
         for (size_t s = 0; s < 3; ++s) {
             out->data_[s] = cursor;
             cursor += sizes[s];
         }
+        out->base_ = base;
         return out;
     } catch (...) {
         ::munmap(mapped, static_cast<size_t>(length));

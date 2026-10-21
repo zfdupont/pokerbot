@@ -39,7 +39,8 @@ std::vector<uint8_t> percentile_buckets(const std::vector<float>& eq,
 // which is O(bins) and exact for ordered bins. Initialisation is
 // multiplicity-weighted k-means++ seeded from `seed`; `iters` Lloyd
 // iterations follow (stopping early when no label changes). Results are
-// deterministic for a given seed and independent of the thread count.
+// deterministic for a given seed and independent of the thread count;
+// num_threads <= 0 means hardware concurrency.
 //
 // Histograms must all have the same number of bins and are treated as
 // distributions over those bins (they need not be normalised). Throws
@@ -47,7 +48,8 @@ std::vector<uint8_t> percentile_buckets(const std::vector<float>& eq,
 // fewer points than buckets, or a weight-length mismatch.
 std::vector<uint8_t> kmeans_buckets(
     const std::vector<std::vector<float>>& hists,
-    const std::vector<uint32_t>& weight, int k, uint64_t seed, int iters);
+    const std::vector<uint32_t>& weight, int k, uint64_t seed, int iters,
+    int num_threads = 0);
 
 // ---------------------------------------------------------------------------
 // Potential-aware features (exposed per hand so they can be unit-tested).
@@ -96,8 +98,8 @@ void write_bucket_map(const std::string& path,
                       uint64_t equity_hash);
 
 // Read-only mmap view of a SIXBM001 file. open() refuses a wrong magic, hand
-// index version, street size, bucket count, file length or content hash, and
-// throws std::runtime_error otherwise.
+// index version, street size, bucket count (in the header or in the data),
+// file length or content hash, and throws std::runtime_error otherwise.
 class BucketMap {
 public:
     static std::shared_ptr<const BucketMap> open(const std::string& path);
@@ -112,6 +114,11 @@ public:
     // std::invalid_argument for a bad street.
     int num_buckets(int street) const;
     uint64_t content_hash() const { return content_hash_; }
+    // Header metadata: the equity store this map was built from, and the
+    // method/params strings the builder recorded.
+    uint64_t equity_hash() const { return equity_hash_; }
+    const std::string& method() const { return method_; }
+    const std::string& params() const { return params_; }
     const std::string& path() const { return path_; }
 
 private:
@@ -123,6 +130,9 @@ private:
     std::array<uint64_t, 3> sizes_{};
     std::array<uint32_t, 3> buckets_{};
     uint64_t content_hash_ = 0;
+    uint64_t equity_hash_ = 0;
+    std::string method_;
+    std::string params_;
     std::string path_;
 };
 
