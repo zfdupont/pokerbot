@@ -271,6 +271,8 @@ def summarize(rows):
     bb = [row.get("baseline") or 0 for row in rows if row["pos"] == 0]
     return {
         "hands": len(rows),
+        "hands_bb": sum(1 for row in rows if row["pos"] == 0),
+        "hands_sb": sum(1 for row in rows if row["pos"] == 1),
         "raw_bb100": raw_bb100,
         "raw_se": raw_se,
         "baseline_bb100": baseline_bb100,
@@ -329,6 +331,7 @@ def format_report(summary, parts):
         f"baseline={summary['baseline_bb100']:+.1f} +/- {summary['baseline_se']:.1f} bb/100",
         f"  bb={summary['bb_baseline_bb100']:+.1f} bb/100  "
         f"sb={summary['sb_baseline_bb100']:+.1f} bb/100 (baseline by seat)",
+        f"seat balance: BB={summary['hands_bb']} SB={summary['hands_sb']}",
         "size bins (BB won or lost):",
     ]
     for name in SIZE_BINS:

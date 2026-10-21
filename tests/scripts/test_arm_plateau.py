@@ -150,3 +150,59 @@ def test_plateau_cli_self_snapshots_converge(monkeypatch, capsys, tiny_ckpt):
     assert "iters=200" in out
     assert "iters=100" in out
     assert "VERDICT: converged" in out
+
+
+def test_lag_non_positive_rejected(monkeypatch, capsys, tmp_path):
+    """--lag <= 0 would pair a snapshot with itself; refuse it up front."""
+    from scripts import arm_plateau
+
+    for bad in ("0", "-1"):
+        monkeypatch.setattr(sys, "argv", [
+            "arm_plateau.py", "--snapshots",
+            os.path.join(str(tmp_path), "*.bin"), "--lag", bad])
+        with pytest.raises(SystemExit):
+            arm_plateau.main()
+        assert "must be positive" in capsys.readouterr().err
+
+
+def test_lag_still_validated_before_globbing(monkeypatch, capsys, tiny_ckpt):
+    """A bad --lag errors even when no snapshot matches the glob."""
+    from scripts import arm_plateau
+
+    monkeypatch.setattr(sys, "argv", [
+        "arm_plateau.py", "--snapshots", "/nonexistent/*.bin", "--lag", "0"])
+    with pytest.raises(SystemExit):
+        arm_plateau.main()
+    assert "must be positive" in capsys.readouterr().err
+
+
+def test_single_seed_warns_on_stderr(monkeypatch, capsys, tiny_ckpt):
+    """One seed has no spread: t is 0, so the verdict always reads converged."""
+    from scripts import arm_plateau
+
+    directory = os.path.dirname(tiny_ckpt)
+    for iters in (100, 200):
+        shutil.copyfile(tiny_ckpt,
+                        os.path.join(directory, f"warn_{iters}.bin"))
+    monkeypatch.setattr(sys, "argv", [
+        "arm_plateau.py", "--snapshots", os.path.join(directory, "warn_*.bin"),
+        "--lag", "100", "--hands", "2", "--seeds", "1"])
+    arm_plateau.main()
+    captured = capsys.readouterr()
+    assert "warning" in captured.err
+    assert ">= 2 seeds" in captured.err
+    assert "VERDICT: converged" in captured.out
+
+
+def test_multi_seed_does_not_warn(monkeypatch, capsys, tiny_ckpt):
+    from scripts import arm_plateau
+
+    directory = os.path.dirname(tiny_ckpt)
+    for iters in (100, 200):
+        shutil.copyfile(tiny_ckpt,
+                        os.path.join(directory, f"quiet_{iters}.bin"))
+    monkeypatch.setattr(sys, "argv", [
+        "arm_plateau.py", "--snapshots", os.path.join(directory, "quiet_*.bin"),
+        "--lag", "100", "--hands", "2", "--seeds", "1,2"])
+    arm_plateau.main()
+    assert "warning" not in capsys.readouterr().err

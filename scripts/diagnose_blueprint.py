@@ -39,18 +39,38 @@ def weighted_mean(values, weights):
     return sum(v * w for v, w in zip(values, weights)) / tw
 
 
-def decode_key(key):
+def decode_key(key, pot_layout=None):
     """Unpack the abstract infoset key per abstract_key.h's documented layout:
     card 0-7, street 8-9, raises 10-17 (2 bits/street), pot 18-19,
-    live 20-22, after 23-25."""
+    live 20-22, after 23-25.
+
+    `pot_layout` is the checkpoint's own layout, as `Abstraction.pot_layout()`
+    returns it (`(mode, edges)`). Under the legacy layout (or when it is not
+    given) the pot index is read from bits 18-19, as SIXBP001/002 wrote it.
+    A non-legacy layout (SIXBP003) leaves bits 18-19 zero and puts the pot
+    index at bits 26-29, where up to 16 buckets fit.
+    """
+    legacy = is_legacy_pot_layout(pot_layout)
     return {
         "card": key & 0xFF,
         "street": (key >> 8) & 0x3,
         "raises": [(key >> (10 + 2 * st)) & 0x3 for st in range(4)],
-        "pot": (key >> 18) & 0x3,
+        "pot": (key >> 18) & 0x3 if legacy else (key >> 26) & 0xF,
         "live": (key >> 20) & 0x7,
         "after": (key >> 23) & 0x7,
     }
+
+
+LEGACY_POT_EDGES = (7.0, 15.0, 40.0)
+
+
+def is_legacy_pot_layout(pot_layout):
+    """True for the historical BB 7/15/40 layout (and for `None`, which means
+    'no layout given': only SIXBP001/002 can predate PotLayout)."""
+    if pot_layout is None:
+        return True
+    mode, edges = pot_layout
+    return mode == "bb" and [float(e) for e in edges] == list(LEGACY_POT_EDGES)
 
 
 def top_tier(records, frac):
@@ -61,14 +81,14 @@ def top_tier(records, frac):
     return ordered[:k]
 
 
-def probe_policy(records, card_id, street, total_raises):
+def probe_policy(records, card_id, street, total_raises, pot_layout=None):
     """Mass-weighted mean policy over every real infoset matching a probe
     predicate (card bucket, street, and total raises-so-far). Returns
     (mean_probs, total_mass); ([], 0.0) when no infoset matches."""
     acc = None
     total = 0.0
     for key, probs, mass, _reg in records:
-        d = decode_key(key)
+        d = decode_key(key, pot_layout)
         if d["card"] != card_id or d["street"] != street:
             continue
         if total_raises is not None and sum(d["raises"]) != total_raises:
@@ -292,12 +312,15 @@ def _role_mass(probs, roles):
     return {r: sum(probs[i] for i in idxs) for r, idxs in roles.items()}
 
 
-def checkpoint_report(iterations, records, roles, probes, top_frac=0.05):
+def checkpoint_report(iterations, records, roles, probes, top_frac=0.05,
+                      pot_layout=None):
     """Compute the plateau-diagnosis metrics for one checkpoint.
 
     probes: list of (label, card_id, street, total_raises, expected_role)
     where expected_role in {"fold","aggressive"} names the mass that SHOULD
     grow across checkpoints for that spot.
+    pot_layout: the checkpoint's PotLayout (`None` = legacy), so SIXBP003 pot
+    indices decode from bits 26-29.
     """
     masses = [r[2] for r in records]
     ent_all = weighted_mean([entropy_bits(r[1]) for r in records], masses)
@@ -310,7 +333,8 @@ def checkpoint_report(iterations, records, roles, probes, top_frac=0.05):
 
     probe_rows = []
     for label, card_id, street, total_raises, expected in probes:
-        probs, mass = probe_policy(records, card_id, street, total_raises)
+        probs, mass = probe_policy(records, card_id, street, total_raises,
+                                   pot_layout=pot_layout)
         rm = _role_mass(probs, roles) if probs else {}
         probe_rows.append({
             "label": label, "matched_mass": mass,
@@ -368,6 +392,22 @@ def _probe_card_id(hand):
     return sixmax.preflop_class([c1, c2])
 
 
+_SIXBP003_MAGIC = b"SIXBP003"
+
+
+def _pot_layout_for(checkpoint_path):
+    """The checkpoint's own PotLayout, or `None` for the legacy formats.
+
+    Only SIXBP003 can carry a non-legacy layout, so a legacy run never pays to
+    mmap and hash a bucket map just to decode keys.
+    """
+    with open(checkpoint_path, "rb") as f:
+        magic = f.read(8)
+    if magic != _SIXBP003_MAGIC:
+        return None
+    return _sixmax().load_abstraction(checkpoint_path).pot_layout()
+
+
 def main(argv=None):
     import argparse
     import glob
@@ -393,7 +433,8 @@ def main(argv=None):
     for p in paths:
         iters, records = sixmax.dump_infosets(p)
         reports.append(checkpoint_report(iters, records, roles, probes,
-                                         top_frac=args.top_frac))
+                                         top_frac=args.top_frac,
+                                         pot_layout=_pot_layout_for(p)))
 
     reports.sort(key=lambda r: r["iterations"])
     for r in reports:

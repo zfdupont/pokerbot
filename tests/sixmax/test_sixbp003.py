@@ -352,3 +352,17 @@ def test_train_cli_pot_edges_requires_map(tmp_path):
         capture_output=True, text=True, cwd=_REPO_ROOT, timeout=600)
     assert result.returncode != 0
     assert "pot_edges requires bucket_map" in result.stderr
+
+
+def test_diagnose_blueprint_autopsy_reads_the_stored_layout(c1_checkpoint):
+    """The plateau autopsy decodes pot from bits 26-29 on SIXBP003 files."""
+    from scripts.diagnose_blueprint import _pot_layout_for, decode_key
+
+    path = c1_checkpoint["ckpt"]
+    assert _pot_layout_for(path) == ("bb", C1_EDGES)
+    _iters, records = sixmax.dump_infosets(path)
+    postflop = [(key, probs) for key, probs, _m, _r in records
+                if ((key >> 8) & 3) > 0 and ((key >> 26) & 15) > 0]
+    assert postflop
+    key = postflop[0][0]
+    assert decode_key(key, _pot_layout_for(path))["pot"] == (key >> 26) & 15

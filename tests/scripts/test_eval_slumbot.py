@@ -295,3 +295,23 @@ def test_summary_on_committed_baseline_log(capsys):
     assert "baseline=-118.3" in out
     hundred = [ln for ln in out.splitlines() if ln.strip().startswith("100+")]
     assert hundred and "n=   34" in hundred[0]
+
+
+def test_summarize_counts_seat_balance():
+    """Sessions start in the big blind, so the summary must show the split."""
+    rows = [{"pos": 0, "winnings": 100, "baseline": 200},
+            {"pos": 1, "winnings": -300, "baseline": -200},
+            {"pos": 0, "winnings": 50, "baseline": 0}]
+    s = summarize(rows)
+    assert s["hands_bb"] == 2 and s["hands_sb"] == 1
+
+
+def test_report_prints_seat_balance():
+    from scripts.eval_slumbot import format_report
+
+    rows = [{"pos": 0, "winnings": 100, "baseline": 200},
+            {"pos": 1, "winnings": -300, "baseline": -200}]
+    for row in rows:
+        row.update(action="", board=[])
+    out = format_report(summarize(rows), breakdown(rows))
+    assert "seat balance: BB=1 SB=1" in out

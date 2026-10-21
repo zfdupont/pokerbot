@@ -230,3 +230,50 @@ def test_checkpoint_report_smoke():
     assert 0.0 <= rep["gini"] <= 1.0
     assert rep["entropy_all"] >= 0.0
     assert rep["entropy_top"] >= 0.0
+
+
+# ---------------------------------------------------------------------------
+# Pot field decoding across checkpoint formats (SIXBP001/002 vs SIXBP003)
+# ---------------------------------------------------------------------------
+C1_EDGES = [4.0, 8.0, 16.0, 40.0, 100.0]
+LEGACY_POT_LAYOUT = ("bb", [7.0, 15.0, 40.0])
+
+
+def test_decode_key_legacy_reads_pot_from_bits_18_19():
+    key = (2 << 18)
+    assert decode_key(key)["pot"] == 2
+    assert decode_key(key, LEGACY_POT_LAYOUT)["pot"] == 2
+
+
+def test_decode_key_nonlegacy_reads_pot_from_bits_26_29():
+    """SIXBP003 keeps bits 18-19 zero and puts the pot index at 26-29."""
+    key = (11 << 26) | (5) | (1 << 8) | (3 << 20) | (2 << 23)
+    d = decode_key(key, ("bb", C1_EDGES))
+    assert d["pot"] == 11
+    assert d["card"] == 5 and d["street"] == 1
+    assert d["live"] == 3 and d["after"] == 2
+    # The legacy reader would see zero, which is exactly the bug this fixes.
+    assert decode_key(key)["pot"] == 0
+
+
+def test_decode_key_spr_layout_is_nonlegacy():
+    key = (7 << 26)
+    assert decode_key(key, ("spr", [0.5, 1.0, 2.0, 4.0, 8.0]))["pot"] == 7
+
+
+def test_probe_policy_uses_the_pot_layout_when_decoding():
+    """probe_policy must not choke on SIXBP003 keys."""
+    key = (9 << 26) | (5) | (0 << 8)
+    recs = [(key, [1.0, 0.0], 2.0, 0.0)]
+    probs, mass = probe_policy(recs, card_id=5, street=0, total_raises=0,
+                               pot_layout=("bb", C1_EDGES))
+    assert probs == [1.0, 0.0] and mass == 2.0
+
+
+def test_pot_layout_for_legacy_magic_is_none(tmp_path):
+    """SIXBP001/002 are legacy by definition: no map loaded, no layout."""
+    from scripts.diagnose_blueprint import _pot_layout_for
+
+    legacy = tmp_path / "legacy.bin"
+    legacy.write_bytes(b"SIXBP002" + b"\0" * 8)
+    assert _pot_layout_for(str(legacy)) is None

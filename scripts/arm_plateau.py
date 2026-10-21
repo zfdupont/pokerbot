@@ -110,6 +110,9 @@ def main():
         return
     if args.snapshots is None:
         p.error("--snapshots is required unless --infosets or --cap is given")
+    if args.lag <= 0:
+        p.error("--lag must be positive (a lag of 0 would compare a snapshot "
+                "with itself)")
 
     from scripts.eval_blueprint_h2h import run_h2h
 
@@ -118,6 +121,11 @@ def main():
     except ValueError as exc:
         p.error(str(exc))
     seeds = [int(s) for s in args.seeds.split(",")]
+    if len(seeds) < 2:
+        # A t-test on one seed has no spread: t is 0, so converged() always
+        # says "converged". Say so instead of letting the verdict mislead.
+        print(f"warning: t-test needs >= 2 seeds; verdict will read converged "
+              f"(got {len(seeds)})", file=sys.stderr)
     print(f"A = {newest} (iters={snapshot_iters(newest)})")
     print(f"B = {older} (iters={snapshot_iters(older)})")
     print(f"{'seed':>4} {'A vs B':>10}")
