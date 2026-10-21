@@ -347,3 +347,19 @@ def test_cli_flags():
         mod.parse_args(["--counts", "1,2"])  # needs flop,turn,river
     with pytest.raises(SystemExit):
         mod.parse_args(["--counts", "1,2,256"])
+
+
+def test_kmeans_reseeds_empty_clusters_deterministically():
+    """Two distinct histograms with k=3 leave one cluster empty under the old
+    code (it kept the previous centre forever). Re-seeding makes exactly k
+    non-empty clusters, identically for any thread count."""
+    hists = [[1.0, 0.0]] * 50 + [[0.0, 1.0]] * 50
+    weight = [1] * len(hists)
+
+    labels = sixmax._kmeans_buckets(hists, weight, 3, 7, 20, num_threads=1)
+    assert sorted(set(labels)) == [0, 1, 2]
+    assert all(labels.count(c) > 0 for c in range(3))
+
+    multi = sixmax._kmeans_buckets(hists, weight, 3, 7, 20, num_threads=4)
+    assert multi == labels
+    assert sixmax._kmeans_buckets(hists, weight, 3, 7, 20) == labels

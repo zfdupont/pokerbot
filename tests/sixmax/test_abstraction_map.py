@@ -258,3 +258,30 @@ def test_sixbp001_still_loads(tmp_path):
             assert strategy.probs(key) == expected
             seen += 1
     assert seen > 0
+
+
+def test_sixbp002_load_abstraction_uses_explicit_map(
+        tmp_path, synthetic_map, other_map, monkeypatch, capfd):
+    """--resume with a renamed map: the explicit candidate is searched, but the
+    content hash still guards it (a wrong explicit map is refused)."""
+    named = tmp_path / "renamed_source.bin"
+    shutil.copyfile(synthetic_map, named)
+    abs_ = sixmax.Abstraction.from_bucket_map(str(named))
+    path = str(tmp_path / "bp002_explicit.bin")
+    _train(abs_, path, iterations=20)
+
+    moved = tmp_path / "elsewhere" / "different_name.bin"
+    moved.parent.mkdir()
+    shutil.move(str(named), str(moved))
+    monkeypatch.delenv("SIXMAX_BUCKET_MAP", raising=False)
+    monkeypatch.delenv("SIXMAX_TABLES_DIR", raising=False)
+
+    loaded = sixmax.load_abstraction(path, bucket_map=str(moved))
+    assert loaded.is_map()
+    assert loaded.hash() == abs_.hash()
+    err = capfd.readouterr().err
+    assert "warning" in err.lower()
+    assert "different_name.bin" in err
+
+    with pytest.raises(RuntimeError, match="map hash mismatch"):
+        sixmax.load_abstraction(path, bucket_map=other_map)

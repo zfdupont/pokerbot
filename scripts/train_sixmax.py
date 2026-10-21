@@ -301,6 +301,10 @@ def main() -> None:
                         dest="report_interval",
                         help="heartbeat log line every N seconds (0 = off)")
     parser.add_argument("--resume", type=str, default=None)
+    parser.add_argument("--bucket-map", type=str, default=None,
+                        dest="bucket_map",
+                        help="explicit SIXBM001 path; overrides "
+                             "[abstraction].bucket_map (also used on --resume)")
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--selection-enabled",
                         action=argparse.BooleanOptionalAction, default=None,
@@ -323,7 +327,10 @@ def main() -> None:
 
     if args.resume:
         logging.info(f"Resuming from {args.resume}")
-        abstraction = sixmax.load_abstraction(args.resume)
+        # cfg["bucket_map"] (CLI > TOML) is an explicit map candidate; the
+        # checkpoint's content hash still refuses a mismatched map.
+        abstraction = sixmax.load_abstraction(
+            args.resume, bucket_map=cfg["bucket_map"])
         trainer = sixmax.resume_blueprint(
             args.resume, engine_cfg, vocab, abstraction,
             num_threads=cfg["num_threads"], seed=cfg["seed"])

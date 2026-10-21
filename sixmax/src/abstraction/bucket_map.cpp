@@ -309,6 +309,45 @@ std::vector<uint8_t> kmeans_from_cdf_impl(const float* cdf, uint64_t n,
     std::vector<double> cluster_weight(kk, 0.0);
     std::vector<float> new_centroids(kk * row, 0.0f);
 
+    // Re-seed each empty cluster at the point farthest from its assigned
+    // centre, choosing distinct points greedily (ties -> lowest index). This
+    // runs single-threaded in index order, so the result is identical for any
+    // thread count.
+    const auto reseed_empty = [&](std::vector<float>& target,
+                                  const std::vector<uint8_t>& assigned) {
+        std::vector<size_t> empty;
+        for (size_t c = 0; c < kk; ++c)
+            if (cluster_weight[c] == 0.0) empty.push_back(c);
+        if (empty.empty()) return false;
+        std::vector<uint64_t> chosen;
+        chosen.reserve(empty.size());
+        for (size_t c : empty) {
+            uint64_t best = 0;
+            double best_dist = -1.0;
+            for (uint64_t i = 0; i < n; ++i) {
+                if (std::find(chosen.begin(), chosen.end(), i) !=
+                    chosen.end())
+                    continue;
+                const float* p = cdf + static_cast<size_t>(i) * row;
+                const float* centre =
+                    &centroids[static_cast<size_t>(assigned[i]) * row];
+                double d = 0.0;
+                for (size_t t = 0; t < row; ++t)
+                    d += std::fabs(static_cast<double>(p[t]) - centre[t]);
+                if (d > best_dist) {  // ties keep the lowest index
+                    best_dist = d;
+                    best = i;
+                }
+            }
+            chosen.push_back(best);
+            std::copy(cdf + static_cast<size_t>(best) * row,
+                      cdf + (static_cast<size_t>(best) + 1) * row,
+                      target.begin() + static_cast<size_t>(c) * row);
+        }
+        return true;
+    };
+
+    bool reseeded_last = false;
     for (int iteration = 0; iteration < iters; ++iteration) {
         std::fill(shard_sums.begin(), shard_sums.end(), 0.0);
         std::fill(shard_cluster_weight.begin(), shard_cluster_weight.end(),
@@ -368,17 +407,84 @@ std::vector<uint8_t> kmeans_from_cdf_impl(const float* cdf, uint64_t n,
                     new_centroids[c * row + t] = static_cast<float>(
                         sums[c * row + t] / cluster_weight[c]);
             } else {
-                // Empty cluster: keep the previous centre (deterministic).
+                // Empty cluster: keep the previous centre for now; the
+                // re-seed below picks a real point when possible.
                 std::copy(&centroids[c * row], &centroids[(c + 1) * row],
                           &new_centroids[c * row]);
             }
         }
+        reseeded_last = reseed_empty(new_centroids, new_labels);
         centroids.swap(new_centroids);
         labels.swap(new_labels);
 
         uint64_t changed = 0;
         for (uint64_t v : shard_changed) changed += v;
-        if (changed == 0) break;
+        if (changed == 0 && !reseeded_last) break;
+    }
+
+    // If the final iteration re-seeded a centre, `labels` still reflects the
+    // pre-seed centres: do one assignment pass with the final centres.
+    if (reseeded_last) {
+        run_shards(n, shards, num_threads,
+                   [&](int, uint64_t begin, uint64_t end) {
+                       for (uint64_t i = begin; i < end; ++i) {
+                           const float* p = cdf + static_cast<size_t>(i) * row;
+                           int best = 0;
+                           float best_dist =
+                               std::numeric_limits<float>::max();
+                           for (int c = 0; c < k; ++c) {
+                               const float* centre =
+                                   &centroids[static_cast<size_t>(c) * row];
+                               float d = 0.0f;
+                               for (int t = 0; t < dims; ++t)
+                                   d += std::fabs(p[t] - centre[t]);
+                               if (d < best_dist) {
+                                   best_dist = d;
+                                   best = c;
+                               }
+                           }
+                           labels[i] = static_cast<uint8_t>(best);
+                       }
+                   });
+    }
+
+    // Final guarantee: every bucket is non-empty. Degenerate inputs (fewer
+    // distinct histograms than k, or exact duplicate rows) can leave a
+    // re-seeded centre coincident with an existing one, so move the farthest
+    // member of the largest cluster into each empty cluster. Deterministic:
+    // lowest empty cluster, largest cluster (ties by lowest index), farthest
+    // point (ties by lowest index).
+    std::vector<uint64_t> cluster_size(kk, 0);
+    for (uint64_t i = 0; i < n; ++i) ++cluster_size[labels[i]];
+    for (;;) {
+        size_t empty = kk;
+        for (size_t c = 0; c < kk; ++c)
+            if (cluster_size[c] == 0) {
+                empty = c;
+                break;
+            }
+        if (empty == kk) break;
+        size_t source = 0;
+        for (size_t c = 1; c < kk; ++c)
+            if (cluster_size[c] > cluster_size[source]) source = c;
+        // n >= k and at least one empty cluster => the largest has >= 2.
+        uint64_t best = 0;
+        double best_dist = -1.0;
+        for (uint64_t i = 0; i < n; ++i) {
+            if (labels[i] != source) continue;
+            const float* p = cdf + static_cast<size_t>(i) * row;
+            const float* centre = &centroids[source * row];
+            double d = 0.0;
+            for (size_t t = 0; t < row; ++t)
+                d += std::fabs(static_cast<double>(p[t]) - centre[t]);
+            if (d > best_dist) {  // ties keep the lowest index
+                best_dist = d;
+                best = i;
+            }
+        }
+        labels[best] = static_cast<uint8_t>(empty);
+        --cluster_size[source];
+        ++cluster_size[empty];
     }
     return labels;
 }

@@ -47,18 +47,28 @@ LoadedBlueprint load_blueprint(const std::string& path,
                                uint64_t expected_vocab_hash);
 
 // Locate a SIXBP002 checkpoint's bucket map. Search order:
-//   $SIXMAX_BUCKET_MAP (full path) if set,
-//   dirname(ckpt_path)/hint,
-//   $SIXMAX_TABLES_DIR/hint (default `sixmax/tables`, relative to cwd).
+//   1. $SIXMAX_BUCKET_MAP (full path) if set,
+//   2. `explicit_path` if non-empty (config/CLI override),
+//   3. dirname(ckpt_path)/hint,
+//   4. $SIXMAX_TABLES_DIR/hint (default `sixmax/tables`, relative to cwd).
+//
+// $SIXMAX_BUCKET_MAP applies to EVERY SIXBP002 resolution in the process, so
+// a head-to-head between checkpoints that live on different maps must leave
+// it unset (use per-load explicit paths instead). A wrong map is still refused
+// downstream by the content-hash check, never used silently.
+//
 // Throws std::runtime_error listing every path tried.
 std::string resolve_bucket_map(const std::string& ckpt_path,
-                               const std::string& hint);
+                               const std::string& hint,
+                               const std::string& explicit_path = "");
 
 // Rebuild the abstraction a loaded checkpoint was trained with: the stored
 // edges for the legacy kind, the resolved bucket map (refusing a content-hash
-// mismatch) for the map-backed kind.
+// mismatch) for the map-backed kind. `explicit_map` (optional) is a config/CLI
+// candidate inserted into the map search order (see resolve_bucket_map).
 Abstraction load_abstraction_for(const std::string& ckpt_path,
-                                 const LoadedBlueprint& loaded);
+                                 const LoadedBlueprint& loaded,
+                                 const std::string& explicit_map = "");
 
 // Read-only average-strategy view of an artifact, for eval and deployment.
 // Owns its Abstraction (reconstructed from the stored edges, or from the

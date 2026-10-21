@@ -16,6 +16,19 @@ def load_module(path: str, name: str):
     return m
 
 
+def warn_if_bucket_map_ignored(abs_cfg: dict) -> None:
+    """DREAM always uses the legacy Monte Carlo percentile abstraction.
+
+    A bucket-map selection in [abstraction] is a six-max blueprint setting, so
+    surface it instead of silently training something else.
+    """
+    bucket_map = abs_cfg.get("bucket_map", "")
+    if bucket_map:
+        print(f"warning: [abstraction].bucket_map = {bucket_map!r} is ignored "
+              f"by DREAM; it always uses the Monte Carlo percentile "
+              f"abstraction.", file=sys.stderr)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Train DREAM neural blueprint for sixmax/",
@@ -126,6 +139,7 @@ def main():
 
     # Load abstraction
     abs_cfg = cfg_data.get("abstraction", {})
+    warn_if_bucket_map_ignored(abs_cfg)
     abstraction = sixmax.Abstraction(
         flop_buckets=abs_cfg.get("flop_buckets",      50),
         turn_buckets=abs_cfg.get("turn_buckets",      50),

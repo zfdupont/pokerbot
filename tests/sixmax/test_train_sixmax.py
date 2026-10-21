@@ -208,3 +208,52 @@ def test_resolve_config_report_interval_precedence(tmp_path):
     assert cfg["report_interval"] == 5
     cfg = mod.resolve_config(_Args(config=str(toml), report_interval=9), _ROOT)
     assert cfg["report_interval"] == 9
+
+
+def test_bucket_map_cli_flag_overrides_toml(tmp_path):
+    mod = _load_script()
+    toml = tmp_path / "map.toml"
+    toml.write_text('[abstraction]\nbucket_map = "from_toml.bin"\n')
+    cfg = mod.resolve_config(
+        _Args(config=str(toml), bucket_map="from_cli.bin"), _ROOT)
+    assert cfg["bucket_map"] == "from_cli.bin"
+
+
+def test_resume_uses_bucket_map_candidate(tmp_path, synthetic_bucket_map):
+    """A renamed map is found through --bucket-map on resume (the content-hash
+    check still guards it, and the TOML key is overridden)."""
+    original = tmp_path / "original_map.bin"
+    with open(synthetic_bucket_map, "rb") as src, open(original, "wb") as dst:
+        dst.write(src.read())
+    toml = tmp_path / "map.toml"
+    toml.write_text(
+        "[actions.blueprint]\n"
+        'preflop_opens = [{size = 2.5, unit = "bb"}]\n'
+        'bet_sizes = [{size = 0.33, unit = "pot"}]\n'
+        "include_allin = true\n"
+        "[train.blueprint]\n"
+        "num_players = 2\niterations = 40\nnum_threads = 1\nseed = 3\n")
+    ckpt = tmp_path / "map_bp.bin"
+    result = subprocess.run(
+        [sys.executable, _SCRIPT, "--config", str(toml),
+         "--bucket-map", str(original), "--checkpoint", str(ckpt)],
+        capture_output=True, text=True, cwd=_ROOT, timeout=600)
+    assert result.returncode == 0, result.stderr
+    with open(ckpt, "rb") as f:
+        assert f.read(8) == b"SIXBP002"
+
+    moved = tmp_path / "moved" / "renamed.bin"
+    moved.parent.mkdir()
+    os.replace(original, moved)
+
+    resumed = tmp_path / "map_bp_resumed.bin"
+    result = subprocess.run(
+        [sys.executable, _SCRIPT, "--config", str(toml),
+         "--bucket-map", str(moved), "--resume", str(ckpt),
+         "--checkpoint", str(resumed), "--iterations", "20"],
+        capture_output=True, text=True, cwd=_ROOT, timeout=600)
+    assert result.returncode == 0, result.stderr
+    assert "warning" in result.stderr.lower()
+    import sixmax
+    assert sixmax.load_abstraction(
+        str(resumed), bucket_map=str(moved)).hash() > 0
