@@ -109,6 +109,15 @@ def canonical_live_after(n, button, hero, folded, all_in, street):
     return live, after
 
 
+_LEGACY_POT_EDGES = [7.0, 15.0, 40.0]
+
+
+def _is_legacy_pot_layout(layout):
+    """True for the historical BB 7/15/40 layout (the only legacy one)."""
+    mode, edges = layout
+    return mode == "bb" and [float(e) for e in edges] == _LEGACY_POT_EDGES
+
+
 class SixmaxDeployStrategy:
     def __init__(self, strategy, vocab):
         self._strategy = strategy
@@ -134,7 +143,7 @@ class SixmaxDeployStrategy:
                eff_stack_bb=None):
         abstraction = self._strategy.abstraction()
         if eff_stack_bb is None:
-            if abstraction.pot_layout() != ("bb", [7.0, 15.0, 40.0]):
+            if not _is_legacy_pot_layout(abstraction.pot_layout()):
                 raise ValueError(
                     "eff_stack_bb is required for non-legacy pot layouts")
             eff_stack_bb = stack_bb
@@ -362,7 +371,7 @@ class SearchStrategy:
                 "search vocab must match the blueprint vocab "
                 f"(search={vocab.hash()} blueprint={blueprint_vocab.hash()})")
         bp = sixmax.BlueprintStrategy.load(checkpoint, vocab)
-        if bp.abstraction().pot_layout() != ("bb", [7.0, 15.0, 40.0]):
+        if not _is_legacy_pot_layout(bp.abstraction().pot_layout()):
             raise RuntimeError(
                 "search does not support non-legacy pot layouts")
         self._cfg = _load_search_config(config_toml)
