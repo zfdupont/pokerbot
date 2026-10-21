@@ -251,7 +251,7 @@ Plus, with a fake `post`:
     - the container gets `-e SIXMAX_BUCKET_MAP=/pokerbot/tables/<basename>`, and the trainer gets `--bucket-map /pokerbot/tables/<basename>`;
     - if `--config`'s TOML sets `bucket_map` and `--bucket-map` is absent, it exits 2 with "config needs a bucket map; pass --bucket-map".
   - `cloud_train.sh --dry-run` prints the rsync excludes, upload target and `docker run` command, then exits 0 before sourcing `.env` or calling `hcloud`.
-  - `train_sixmax.py` logs `[rate] iters=<N> it/s=<cumulative> window_it/s=<since last save>` at every checkpoint save.
+  - `train_sixmax.py` logs `[rate] iters=<N> it/s=<cumulative> window_it/s=<since last save>` at every checkpoint save (`N` = the trainer's TOTAL iterations, so a resumed run's log stays monotone; both rates cover this run only, and the window excludes selection).
 
 - [ ] **Step 1: Write the failing tests:**
   - `test_dry_run_with_map`: `bash scripts/cloud_train.sh --dry-run --config sixmax/configs/hu200.toml --bucket-map sixmax/tables/map_pct_50_50_20.bin --checkpoint-name hu200_c0.bin` prints `SIXMAX_BUCKET_MAP=/pokerbot/tables/map_pct_50_50_20.bin`, `--exclude='sixmax/tables/'` and `--bucket-map /pokerbot/tables/map_pct_50_50_20.bin`.
@@ -314,7 +314,9 @@ Record every result in `docs/superpowers/specs/2026-10-21-hu-200bb-abstraction-r
    - Cap = `arm_plateau.py --cap`.
    - Train to plateau or cap.
 5. **Gate 2** (spec "Gate policy"):
-   - head-to-head of each arm vs C0 at its plateau or cap, `|t| >= 2`;
+   - head-to-head of each arm vs C0 at its plateau or cap, `|t| >= 2`:
+     `eval_blueprint_h2h.py --a ARM --b C0 --hands 20000 --seeds 1,...,8 --bb 2 --stack 400`.
+     **Always pass `--bb 2 --stack 400` for a 200 BB arm** (stack is in chips: 400 chips at bb 2 = 200 BB); the script's own default is the 100 BB frame, while `arm_plateau.py` already defaults to 200 BB;
    - the winner (or C0) to Slumbot at 13k hands;
    - apply the pass/block rules;
    - also check the Phase 2 extra stop (at least 2 SE better than -118).
