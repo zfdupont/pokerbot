@@ -80,37 +80,30 @@ void validate_river_board(const std::vector<int>& board) {
         throw std::invalid_argument("river board must have 5 cards");
 }
 
+// Validate `n` card codes (each 0..51, no duplicates) and report which are
+// used. Both failures are std::invalid_argument; the messages are part of the
+// bindings' tested behaviour.
+std::array<bool, kCards> validate_cards(const int* cards, int n) {
+    std::array<bool, kCards> used{};
+    for (int i = 0; i < n; ++i) {
+        const int c = cards[i];
+        if (c < 0 || c >= static_cast<int>(kCards))
+            throw std::invalid_argument("card out of range");
+        if (used[static_cast<size_t>(c)])
+            throw std::invalid_argument("duplicate card");
+        used[static_cast<size_t>(c)] = true;
+    }
+    return used;
+}
+
 // Validate 5 board cards and return the 47-card remaining deck in ascending
 // card order. The caller has already checked the board size.
 void remaining_cards(const std::array<int, 5>& board,
                      std::array<int, 47>& out) {
-    bool used[kCards] = {false};
-    for (int c : board) {
-        if (c < 0 || c >= static_cast<int>(kCards))
-            throw std::invalid_argument("card out of range");
-        if (used[c]) throw std::invalid_argument("duplicate card");
-        used[c] = true;
-    }
+    const auto used = validate_cards(board.data(), 5);
     int n = 0;
     for (int c = 0; c < static_cast<int>(kCards); ++c)
-        if (!used[c]) out[n++] = c;
-}
-
-void validate_distinct_cards(const std::array<int, 2>& hole,
-                             const std::array<int, 5>& board) {
-    bool used[kCards] = {false};
-    for (int c : {hole[0], hole[1]}) {
-        if (c < 0 || c >= static_cast<int>(kCards))
-            throw std::invalid_argument("card out of range");
-        if (used[c]) throw std::invalid_argument("duplicate card");
-        used[c] = true;
-    }
-    for (int c : board) {
-        if (c < 0 || c >= static_cast<int>(kCards))
-            throw std::invalid_argument("card out of range");
-        if (used[c]) throw std::invalid_argument("duplicate card");
-        used[c] = true;
-    }
+        if (!used[static_cast<size_t>(c)]) out[n++] = c;
 }
 
 // Index of pair (i, j), i < j, in the nested-loop order over 47 cards.
@@ -353,28 +346,20 @@ EquityStore load_impl(const std::string& path, bool check_sizes) {
 double river_equity_exact(const std::array<int, 2>& hole,
                           const std::vector<int>& board) {
     validate_river_board(board);
-    const std::array<int, 5> board_arr{
-        {board[0], board[1], board[2], board[3], board[4]}};
-    validate_distinct_cards(hole, board_arr);
+    const std::array<int, 7> mine_cards{{hole[0], hole[1], board[0], board[1],
+                                         board[2], board[3], board[4]}};
+    const auto used = validate_cards(mine_cards.data(), 7);
 
-    bool used[kCards] = {false};
-    used[hole[0]] = used[hole[1]] = true;
-    for (int c : board_arr) used[c] = true;
-
-    const std::array<int, 7> mine_cards{{hole[0], hole[1], board_arr[0],
-                                         board_arr[1], board_arr[2],
-                                         board_arr[3], board_arr[4]}};
     const safe_eval::HandRank mine = safe_eval::rank7(mine_cards);
 
     uint32_t wins = 0;
     uint32_t ties = 0;
     for (int a = 0; a < static_cast<int>(kCards); ++a) {
-        if (used[a]) continue;
+        if (used[static_cast<size_t>(a)]) continue;
         for (int b = a + 1; b < static_cast<int>(kCards); ++b) {
-            if (used[b]) continue;
-            const std::array<int, 7> theirs_cards{
-                {a, b, board_arr[0], board_arr[1], board_arr[2],
-                 board_arr[3], board_arr[4]}};
+            if (used[static_cast<size_t>(b)]) continue;
+            const std::array<int, 7> theirs_cards{{
+                a, b, board[0], board[1], board[2], board[3], board[4]}};
             const safe_eval::HandRank theirs =
                 safe_eval::rank7(theirs_cards);
             if (mine.beats(theirs)) ++wins;
@@ -477,19 +462,12 @@ double derive_equity_one(int street, const std::array<int, 2>& hole,
         throw std::invalid_argument(
             "derive_equity_one: board size does not match street");
 
-    bool used[kCards] = {false};
-    for (int c : {hole[0], hole[1]}) {
-        if (c < 0 || c >= static_cast<int>(kCards))
-            throw std::invalid_argument("card out of range");
-        if (used[c]) throw std::invalid_argument("duplicate card");
-        used[c] = true;
-    }
-    for (int c : board) {
-        if (c < 0 || c >= static_cast<int>(kCards))
-            throw std::invalid_argument("card out of range");
-        if (used[c]) throw std::invalid_argument("duplicate card");
-        used[c] = true;
-    }
+    std::array<int, 7> cards{};  // 2 hole + at most 4 board
+    cards[0] = hole[0];
+    cards[1] = hole[1];
+    for (size_t i = 0; i < board.size(); ++i) cards[2 + i] = board[i];
+    const auto used =
+        validate_cards(cards.data(), 2 + static_cast<int>(board.size()));
 
     double sum = 0.0;
     int count = 0;
@@ -539,7 +517,10 @@ void save_equity_store(const std::string& path, const EquityStore& store,
             o.write(reinterpret_cast<const char*>(values.data()),
                     static_cast<std::streamsize>(values.size() *
                                                  sizeof(float)));
-        if (!o) {
+        // close() flushes, so a full-disk failure at the final flush is seen
+        // here rather than after the rename.
+        o.close();
+        if (o.fail()) {
             std::remove(tmp.c_str());
             throw std::runtime_error("write failed: " + tmp);
         }
