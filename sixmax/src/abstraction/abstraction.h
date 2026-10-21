@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
+#include "abstraction/abstract_key.h"
 #include "abstraction/bucket_cache.h"
 
 namespace sixmax {
@@ -72,6 +73,13 @@ public:
     const BucketMap* bucket_map() const { return map_.get(); }
     const AbstractionConfig& config() const { return cfg_; }
     const std::array<std::vector<double>, 3>& edges() const { return edges_; }
+    // Pot layout part of the infoset key. Defaults to the legacy 7/15/40 BB
+    // layout; non-legacy layouts are validated and hashed into hash().
+    void set_pot_layout(PotLayout layout);
+    const PotLayout& pot_layout() const { return pot_layout_; }
+    uint64_t pack_key(int card, int street,
+                      const std::array<uint8_t, 4>& raises, double pot_bb,
+                      double eff_stack_bb, int live, int after) const;
     // Config + edges (legacy) or kind tag + map content hash (map-backed);
     // part of the artifact contract.
     uint64_t hash() const;
@@ -80,6 +88,7 @@ public:
 private:
     AbstractionConfig cfg_;
     std::array<std::vector<double>, 3> edges_;  // [0]=flop [1]=turn [2]=river
+    PotLayout pot_layout_;                      // legacy by default
 
     // Non-null for the map-backed kind; cfg_/edges_/bucket_cache_ unused then.
     std::shared_ptr<const BucketMap> map_;

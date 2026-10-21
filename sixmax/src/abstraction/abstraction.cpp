@@ -19,6 +19,8 @@ int preflop_class(const std::array<int, 2>& hole) {
 
 namespace {
 
+constexpr uint64_t kPotLayoutTag = 0x706f7431ull;  // "pot1"
+
 uint64_t fnv_mix(uint64_t h, uint64_t v) {
     h ^= v;
     h *= 1099511628211ull;
@@ -124,13 +126,14 @@ Abstraction::Abstraction(std::shared_ptr<const BucketMap> map)
 // value it would recompute.
 Abstraction::Abstraction(Abstraction&& other) noexcept
     : cfg_(std::move(other.cfg_)), edges_(std::move(other.edges_)),
-      map_(std::move(other.map_)),
+      pot_layout_(std::move(other.pot_layout_)), map_(std::move(other.map_)),
       bucket_cache_(std::move(other.bucket_cache_)) {}
 
 Abstraction& Abstraction::operator=(Abstraction&& other) noexcept {
     if (this != &other) {
         cfg_ = std::move(other.cfg_);
         edges_ = std::move(other.edges_);
+        pot_layout_ = std::move(other.pot_layout_);
         map_ = std::move(other.map_);
         bucket_cache_ = std::move(other.bucket_cache_);
     }
@@ -192,29 +195,54 @@ int Abstraction::num_buckets(int street) const {
     }
 }
 
+void Abstraction::set_pot_layout(PotLayout layout) {
+    validate_pot_layout(layout);
+    pot_layout_ = std::move(layout);
+}
+
+uint64_t Abstraction::pack_key(int card, int street,
+                               const std::array<uint8_t, 4>& raises,
+                               double pot_bb, double eff_stack_bb, int live,
+                               int after) const {
+    const int pot_idx = pot_bucket(pot_layout_, pot_bb, eff_stack_bb);
+    return pack_abstract_key(card, street, raises, pot_idx,
+                             pot_layout_.is_legacy(), live, after);
+}
+
 uint64_t Abstraction::hash() const {
     uint64_t h = 1469598103934665603ull;
     if (map_) {
         // Kind tag keeps a map-backed abstraction disjoint from any legacy
         // one, even if a map content hash happened to equal an edges hash.
         h = fnv_mix(h, 0x6d617030ull);  // "map0"
-        return fnv_mix(h, map_->content_hash());
+        h = fnv_mix(h, map_->content_hash());
+    } else {
+        auto mix_u = [&](uint64_t v) { h = fnv_mix(h, v); };
+        auto mix_d = [&](double v) {
+            uint64_t b;
+            __builtin_memcpy(&b, &v, sizeof b);
+            h = fnv_mix(h, b);
+        };
+        mix_u((uint64_t)cfg_.flop_buckets);
+        mix_u((uint64_t)cfg_.turn_buckets);
+        mix_u((uint64_t)cfg_.river_buckets);
+        mix_u((uint64_t)cfg_.equity_rollouts);
+        mix_u((uint64_t)cfg_.quantile_samples);
+        mix_u(cfg_.seed);
+        for (const auto& e : edges_) {
+            mix_u((uint64_t)e.size());
+            for (double v : e) mix_d(v);
+        }
     }
-    auto mix_u = [&](uint64_t v) { h = fnv_mix(h, v); };
-    auto mix_d = [&](double v) {
-        uint64_t b;
-        __builtin_memcpy(&b, &v, sizeof b);
-        h = fnv_mix(h, b);
-    };
-    mix_u((uint64_t)cfg_.flop_buckets);
-    mix_u((uint64_t)cfg_.turn_buckets);
-    mix_u((uint64_t)cfg_.river_buckets);
-    mix_u((uint64_t)cfg_.equity_rollouts);
-    mix_u((uint64_t)cfg_.quantile_samples);
-    mix_u(cfg_.seed);
-    for (const auto& e : edges_) {
-        mix_u((uint64_t)e.size());
-        for (double v : e) mix_d(v);
+    if (!pot_layout_.is_legacy()) {
+        h = fnv_mix(h, kPotLayoutTag);
+        h = fnv_mix(h, (uint64_t)pot_layout_.mode);
+        h = fnv_mix(h, (uint64_t)pot_layout_.edges.size());
+        for (double v : pot_layout_.edges) {
+            uint64_t b;
+            __builtin_memcpy(&b, &v, sizeof b);
+            h = fnv_mix(h, b);
+        }
     }
     return h;
 }

@@ -118,9 +118,17 @@ uint64_t EngineGameState::abstract_key(const Abstraction& abs) const {
     std::array<uint8_t, 4> capped_raises;
     for (int i = 0; i < 4; ++i)
         capped_raises[i] = std::min(raises_[i], uint8_t(3));
-    uint64_t key = pack_abstract_key((int)card, street, capped_raises,
-                                     hand_.pot(), live, after);
-    return key;
+    // Effective stack behind = min(acting player's stack, max stack among the
+    // other non-folded players). An all-in opponent leaves 0, which SPR mode
+    // maps to bucket 0 without dividing by zero.
+    double other_max = 0.0;
+    for (int s = 0; s < n; ++s) {
+        if (s == p || hand_.player(s).folded) continue;
+        other_max = std::max(other_max, hand_.player(s).stack);
+    }
+    const double eff_stack_bb = std::min(hand_.player(p).stack, other_max);
+    return abs.pack_key((int)card, street, capped_raises, hand_.pot(),
+                        eff_stack_bb, live, after);
 }
 
 std::unique_ptr<GameState> EngineGame::new_hand(std::mt19937_64& rng) {

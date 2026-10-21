@@ -431,7 +431,8 @@ PYBIND11_MODULE(sixmax, m) {
           },
           py::arg("path"), py::arg("flop"), py::arg("turn"),
           py::arg("river"), py::arg("method"));
-    m.def("pot_bucket", &sixmax::pot_bucket, py::arg("pot_bb"));
+    m.def("pot_bucket", [](double pot_bb) { return sixmax::pot_bucket(pot_bb); },
+          py::arg("pot_bb"));
     m.def("pack_abstract_key",
           [](int card, int street, const std::vector<int>& raises,
              double pot_bb, int live, int after) {
@@ -487,7 +488,49 @@ PYBIND11_MODULE(sixmax, m) {
         .def("num_buckets", &sixmax::Abstraction::num_buckets)
         .def("edges", &sixmax::Abstraction::edges)
         .def("bucket_cache_size", &sixmax::Abstraction::bucket_cache_size)
-        .def("hash", &sixmax::Abstraction::hash);
+        .def("hash", &sixmax::Abstraction::hash)
+        .def("set_pot_layout",
+             [](sixmax::Abstraction& a, const std::string& mode,
+                const std::vector<double>& edges) {
+                 sixmax::PotLayout layout;
+                 if (mode == "bb")
+                     layout.mode = sixmax::PotMode::BB;
+                 else if (mode == "spr")
+                     layout.mode = sixmax::PotMode::SPR;
+                 else
+                     throw py::value_error(
+                         "pot mode must be 'bb' or 'spr'");
+                 layout.edges = edges;
+                 try {
+                     a.set_pot_layout(std::move(layout));
+                 } catch (const std::invalid_argument& e) {
+                     throw py::value_error(e.what());
+                 }
+             },
+             py::arg("mode"), py::arg("edges"))
+        .def("pot_layout",
+             [](const sixmax::Abstraction& a) {
+                 const auto& layout = a.pot_layout();
+                 const std::string mode =
+                     layout.mode == sixmax::PotMode::SPR ? "spr" : "bb";
+                 return py::make_tuple(mode, layout.edges);
+             })
+        .def("pack_key",
+             [](const sixmax::Abstraction& a, int card, int street,
+                const std::vector<int>& raises, double pot_bb,
+                double eff_stack_bb, int live, int after) {
+                 if (raises.size() != 4)
+                     throw py::value_error("raises must have length 4");
+                 std::array<uint8_t, 4> r{(uint8_t)raises[0],
+                                          (uint8_t)raises[1],
+                                          (uint8_t)raises[2],
+                                          (uint8_t)raises[3]};
+                 return a.pack_key(card, street, r, pot_bb, eff_stack_bb,
+                                   live, after);
+             },
+             py::arg("card"), py::arg("street"), py::arg("raises"),
+             py::arg("pot_bb"), py::arg("eff_stack_bb"), py::arg("live"),
+             py::arg("after"));
     m.def("blueprint_probs",
           [](const sixmax::BlueprintStrategy& st,
              const sixmax::EngineGameState& s) {
