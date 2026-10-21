@@ -1,3 +1,4 @@
+#include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <fstream>
@@ -15,6 +16,7 @@
 #include "blueprint/engine_game.h"
 #include "abstraction/abstraction.h"
 #include "abstraction/abstract_key.h"
+#include "abstraction/bucket_map.h"
 #include "abstraction/equity_table.h"
 #include "abstraction/hand_index.h"
 #include "blueprint/checkpoint.h"
@@ -322,6 +324,106 @@ PYBIND11_MODULE(sixmax, m) {
               return sixmax::river_equities_for_board(board);
           },
           py::arg("board"));
+    // --- Bucket maps (percentile / potential-aware builders + mmap reader) ---
+    m.def("_percentile_buckets",
+          [](const std::vector<float>& eq, const std::vector<uint32_t>& weight,
+             int k) {
+              return sixmax::percentile_buckets(eq, weight, k);
+          },
+          py::arg("eq"), py::arg("weight"), py::arg("k"));
+    m.def("_kmeans_buckets",
+          [](const std::vector<std::vector<float>>& hists,
+             const std::vector<uint32_t>& weight, int k, uint64_t seed,
+             int iters) {
+              return sixmax::kmeans_buckets(hists, weight, k, seed, iters);
+          },
+          py::arg("hists"), py::arg("weight"), py::arg("k"),
+          py::arg("seed"), py::arg("iters"));
+    m.def("_turn_potential_hist",
+          [](const std::vector<int>& hole, const std::vector<int>& board,
+             int bins) {
+              if (hole.size() != 2) throw py::value_error("expects 2 cards");
+              return sixmax::turn_potential_hist_exact({hole[0], hole[1]},
+                                                       board, bins);
+          },
+          py::arg("hole"), py::arg("board"),
+          py::arg("bins") = sixmax::kPotentialTurnBins);
+    m.def("_flop_potential_hist",
+          [](const std::vector<int>& hole, const std::vector<int>& board,
+             const py::array_t<uint8_t, py::array::c_style>& turn_buckets,
+             int num_buckets, const std::vector<int>& order) {
+              if (hole.size() != 2) throw py::value_error("expects 2 cards");
+              const auto info = turn_buckets.request();
+              if (info.ndim != 1)
+                  throw py::value_error("expected a 1-D uint8 array");
+              const auto* data = static_cast<const uint8_t*>(info.ptr);
+              return sixmax::flop_potential_hist(
+                  {hole[0], hole[1]}, board,
+                  std::vector<uint8_t>(data, data + info.shape[0]),
+                  num_buckets, order);
+          },
+          py::arg("hole"), py::arg("board"), py::arg("turn_buckets"),
+          py::arg("num_buckets"), py::arg("order"));
+    py::class_<sixmax::BucketMap, std::shared_ptr<sixmax::BucketMap>>(
+        m, "BucketMap")
+        .def_static("open",
+                    [](const std::string& path) {
+                        try {
+                            // The map is immutable after open; const_cast only
+                            // adapts to pybind's shared_ptr<T> holder.
+                            return std::const_pointer_cast<sixmax::BucketMap>(
+                                sixmax::BucketMap::open(path));
+                        } catch (const std::exception& e) {
+                            throw py::value_error(e.what());
+                        }
+                    },
+                    py::arg("path"))
+        .def("bucket", &sixmax::BucketMap::bucket, py::arg("street"),
+             py::arg("idx"))
+        .def("num_buckets", &sixmax::BucketMap::num_buckets,
+             py::arg("street"))
+        .def("content_hash", &sixmax::BucketMap::content_hash)
+        .def("path", &sixmax::BucketMap::path,
+             py::return_value_policy::reference_internal);
+    m.def("build_bucket_map",
+          [](const std::string& equity_path, const std::string& out,
+             const std::string& method, const std::vector<int>& counts,
+             uint64_t seed, int num_threads) {
+              if (counts.size() != 3)
+                  throw py::value_error("counts must have length 3");
+              try {
+                  sixmax::build_bucket_map(
+                      equity_path, out, method,
+                      std::array<int, 3>{counts[0], counts[1], counts[2]},
+                      seed, num_threads);
+              } catch (const std::exception& e) {
+                  throw py::value_error(e.what());
+              }
+          },
+          py::arg("equity_path"), py::arg("out"), py::arg("method"),
+          py::arg("counts"), py::arg("seed") = 0,
+          py::arg("num_threads") = 0);
+    m.def("_write_bucket_map_for_test",
+          [](const std::string& path,
+             const py::array_t<uint8_t, py::array::c_style>& flop,
+             const py::array_t<uint8_t, py::array::c_style>& turn,
+             const py::array_t<uint8_t, py::array::c_style>& river,
+             const std::string& method) {
+              const auto to_vector =
+                  [](const py::array_t<uint8_t, py::array::c_style>& array) {
+                  const auto info = array.request();
+                  if (info.ndim != 1)
+                      throw py::value_error("expected a 1-D uint8 array");
+                  const auto* data = static_cast<const uint8_t*>(info.ptr);
+                  return std::vector<uint8_t>(data,
+                                              data + info.shape[0]);
+              };
+              sixmax::write_bucket_map(
+                  path, {to_vector(flop), to_vector(turn), to_vector(river)},
+                  method, "", 0);
+          },
+          py::arg("path"), py::arg("flop"), py::arg("turn"),
+          py::arg("river"), py::arg("method"));
     m.def("pot_bucket", &sixmax::pot_bucket, py::arg("pot_bb"));
     m.def("pack_abstract_key",
           [](int card, int street, const std::vector<int>& raises,

@@ -16,6 +16,7 @@ cxx_library(
         "src/abstraction/abstraction.cpp",
         "src/abstraction/abstract_key.cpp",
         "src/abstraction/equity_table.cpp",
+        "src/abstraction/bucket_map.cpp",
         "src/abstraction/hand_index.cpp",
         "src/blueprint/checkpoint.cpp",
         "src/exploit/policy.cpp",
