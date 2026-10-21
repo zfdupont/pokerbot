@@ -29,5 +29,6 @@ Lookup table for all pattern files in this directory. Check here before starting
 | [eval-checkpoint-ab.md](eval-checkpoint-ab.md) | A/B-ing two candidate checkpoints (or search on/off) without being fooled by noise |
 | [eval-checkpoint.md](eval-checkpoint.md) | Measuring a trained checkpoint vs OpenSpiel or random baselines |
 | [eval-checkpoint.md#six-max-blueprint-vs-baseline-live-engine](eval-checkpoint.md) | Measuring a six-max blueprint vs a fixed baseline (PotOdds) — BB/100 curve |
+| [sdd-pi-implementer.md](sdd-pi-implementer.md) | Executing a plan with subagent-driven development: implementers run as pi + DeepSeek V4 Flash, reviewers stay Claude |
 | [train-strategy.md#task-neural-deep-cfr](train-strategy.md#task-neural-deep-cfr) | Running or resuming a neural Deep CFR training job |
 | [train-strategy.md#task-tabular-mccfr](train-strategy.md#task-tabular-mccfr) | Running or resuming a tabular MCCFR training job |

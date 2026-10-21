@@ -28,6 +28,10 @@ Routing summary (full table in `.mex/ROUTER.md`):
 
 After meaningful work, update the scaffold (GROW step in `.mex/ROUTER.md`) — keep it current instead of growing this file.
 
+## Agent Workflow
+
+- Subagent-driven development: implementer subagents run as `pi` on DeepSeek V4 Flash via `scripts/pi_run.sh` (not Claude `Agent` dispatches); reviewers stay Claude. Recipe and gotchas: `.mex/patterns/sdd-pi-implementer.md`.
+
 ## Hard Invariants
 
 Always edit  Non-Negotiables after modifying any of these. Condensed from `.mex/AGENTS.md` — never violate these:
