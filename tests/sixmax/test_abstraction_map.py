@@ -8,6 +8,7 @@ import importlib.util
 import os
 import random
 import shutil
+import struct
 
 import numpy as np
 import pytest
@@ -183,6 +184,59 @@ def test_sixbp002_missing_map_lists_paths(tmp_path, synthetic_map,
     with pytest.raises(RuntimeError) as excinfo:
         sixmax.BlueprintStrategy.load(path, VOCAB)
     assert str(tables_dir / "present.bin") in str(excinfo.value)
+
+
+def test_sixbp002_resolves_map_next_to_checkpoint(tmp_path, synthetic_map,
+                                                  monkeypatch):
+    """No env vars: the map is found beside the checkpoint, not in the tables dir."""
+    map_copy = tmp_path / "next_to_ckpt.bin"
+    shutil.copyfile(synthetic_map, map_copy)
+    abs_ = sixmax.Abstraction.from_bucket_map(str(map_copy))
+    path = str(tmp_path / "bp002.bin")
+    _train(abs_, path, iterations=20)
+
+    monkeypatch.delenv("SIXMAX_BUCKET_MAP", raising=False)
+    monkeypatch.delenv("SIXMAX_TABLES_DIR", raising=False)
+    loaded_abs = sixmax.load_abstraction(path)
+    assert loaded_abs.is_map()
+    assert loaded_abs.hash() == abs_.hash()
+    strategy = sixmax.BlueprintStrategy.load(path, VOCAB)
+    assert strategy.abstraction().hash() == abs_.hash()
+
+
+def test_sixbp002_resume_refuses_other_map(tmp_path, synthetic_map, other_map):
+    abs_ = sixmax.Abstraction.from_bucket_map(synthetic_map)
+    path = str(tmp_path / "bp002.bin")
+    _train(abs_, path, iterations=30)
+    other_abs = sixmax.Abstraction.from_bucket_map(other_map)
+    with pytest.raises(RuntimeError, match="map hash mismatch"):
+        sixmax.resume_blueprint(path, _CFG, VOCAB, other_abs,
+                                num_threads=1, seed=13)
+
+
+def test_sixbp002_resume_refuses_legacy_abstraction(tmp_path, synthetic_map):
+    abs_ = sixmax.Abstraction.from_bucket_map(synthetic_map)
+    path = str(tmp_path / "bp002.bin")
+    _train(abs_, path, iterations=30)
+    legacy = sixmax.Abstraction(flop_buckets=4, turn_buckets=4,
+                                river_buckets=2, equity_rollouts=8,
+                                quantile_samples=40)
+    with pytest.raises(RuntimeError, match="abstraction kind mismatch"):
+        sixmax.resume_blueprint(path, _CFG, VOCAB, legacy,
+                                num_threads=1, seed=13)
+
+
+def test_sixbp002_oversize_hint_is_refused(tmp_path, synthetic_map):
+    abs_ = sixmax.Abstraction.from_bucket_map(synthetic_map)
+    path = str(tmp_path / "bp002.bin")
+    _train(abs_, path, iterations=20)
+    # magic | vocab | num_players | action_dim | starting_stack | kind |
+    # map_hash -> hint_len sits at byte 44.
+    with open(path, "r+b") as f:
+        f.seek(44)
+        f.write(struct.pack("=I", (1 << 16) + 1))
+    with pytest.raises(RuntimeError, match="map hint too long"):
+        sixmax.load_abstraction(path)
 
 
 def test_sixbp001_still_loads(tmp_path):

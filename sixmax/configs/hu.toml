@@ -38,6 +38,10 @@ narrow_preflop  = true     # feed the preflop line into the opponent range
 prune_keep_mass = 0.99     # keep the top-99% mass band; 1.0 disables pruning
 
 [abstraction]
+# Optional: read bucket assignments from a prebuilt SIXBM001 map instead of
+# sampling Monte-Carlo quantile edges. When set, the bucket counts and MC
+# parameters below are ignored (the map header defines the buckets), e.g.:
+# bucket_map = "sixmax/tables/map_pct_50_50_20.bin"
 flop_buckets = 50
 turn_buckets = 50
 river_buckets = 20

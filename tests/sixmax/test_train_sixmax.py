@@ -1,5 +1,6 @@
 """Config resolution + end-to-end smoke for scripts/train_sixmax.py."""
 import importlib.util
+import json
 import os
 import subprocess
 import sys
@@ -43,6 +44,31 @@ def test_hu_config_sets_two_players():
     assert cfg["num_players"] == 2
     assert cfg["checkpoint"].endswith("hu_blueprint.bin")
     assert cfg["checkpoint_interval"] > 0
+    # The bucket-map example is commented out: hu.toml keeps the legacy path.
+    assert mod.BUILTIN_DEFAULTS["bucket_map"] == ""
+    assert cfg["bucket_map"] == ""
+
+
+def test_resolve_config_accepts_bucket_map(tmp_path):
+    mod = _load_script()
+    toml = tmp_path / "map.toml"
+    toml.write_text(
+        '[abstraction]\nbucket_map = "sixmax/tables/map_pct_50_50_20.bin"\n')
+    cfg = mod.resolve_config(_Args(config=str(toml)), _ROOT)
+    assert cfg["bucket_map"] == "sixmax/tables/map_pct_50_50_20.bin"
+
+
+def test_hu_map_config():
+    mod = _load_script()
+    cfg = mod.resolve_config(
+        _Args(config=os.path.join(_ROOT, "sixmax", "configs",
+                                  "hu_map.toml")), _ROOT)
+    assert cfg["bucket_map"] == "sixmax/tables/map_pct_50_50_20.bin"
+    assert cfg["iterations"] == 30_000_000
+    assert cfg["checkpoint_interval"] == 5_000_000
+    assert cfg["checkpoint"].endswith("hu_map_pct.bin")
+    assert cfg["snapshots"] is True
+    assert cfg["num_players"] == 2
 
 
 def test_resolve_config_rejects_unknown_keys(tmp_path):
@@ -80,6 +106,54 @@ def test_end_to_end_smoke(tmp_path):
     import sixmax  # conftest already force-loaded the extension
     abs_ = sixmax.load_abstraction(str(ckpt))
     assert abs_.num_buckets(1) == 6
+
+
+def test_train_with_map_writes_sixbp002(tmp_path, synthetic_bucket_map,
+                                        monkeypatch):
+    """A [abstraction] bucket_map config trains, saves SIXBP002, and resumes."""
+    import sixmax  # conftest already force-loaded the extension
+
+    mod = _load_script()
+    monkeypatch.setenv("SIXMAX_BUCKET_MAP", synthetic_bucket_map)
+    expected = sixmax.Abstraction.from_bucket_map(synthetic_bucket_map)
+    toml = tmp_path / "map.toml"
+    toml.write_text(
+        "[abstraction]\n"
+        f"bucket_map = {json.dumps(synthetic_bucket_map)}\n"
+        "[actions.blueprint]\n"
+        'preflop_opens = [{size = 2.5, unit = "bb"}]\n'
+        'bet_sizes = [{size = 0.33, unit = "pot"}]\n'
+        "include_allin = true\n"
+        "[train.blueprint]\n"
+        "num_players = 2\niterations = 200\nnum_threads = 1\nseed = 3\n")
+    env = {**os.environ, "SIXMAX_BUCKET_MAP": synthetic_bucket_map}
+    ckpt = tmp_path / "map_bp.bin"
+    result = subprocess.run(
+        [sys.executable, _SCRIPT, "--config", str(toml),
+         "--checkpoint", str(ckpt)],
+        capture_output=True, text=True, cwd=_ROOT, env=env, timeout=600)
+    assert result.returncode == 0, result.stderr
+    with open(ckpt, "rb") as f:
+        assert f.read(8) == b"SIXBP002"
+    assert "bucket map" in result.stderr.lower()
+    assert f"{expected.hash():016x}" in result.stderr
+
+    vocab = mod._load_vocab(_ROOT, str(toml))
+    strategy = sixmax.BlueprintStrategy.load(str(ckpt), vocab)
+    assert strategy.iterations() == 200
+    assert strategy.abstraction().is_map()
+    assert strategy.abstraction().hash() == expected.hash()
+
+    resumed = tmp_path / "map_bp_resumed.bin"
+    result = subprocess.run(
+        [sys.executable, _SCRIPT, "--config", str(toml),
+         "--resume", str(ckpt), "--checkpoint", str(resumed),
+         "--iterations", "100"],
+        capture_output=True, text=True, cwd=_ROOT, env=env, timeout=600)
+    assert result.returncode == 0, result.stderr
+    resumed_strategy = sixmax.BlueprintStrategy.load(str(resumed), vocab)
+    assert resumed_strategy.iterations() == 300
+    assert resumed_strategy.abstraction().hash() == expected.hash()
 
 
 # ── Progress observability (heartbeat) ────────────────────────────────────────

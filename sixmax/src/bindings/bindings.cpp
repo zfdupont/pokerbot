@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdio>
 #include <random>
+#include <stdexcept>
 #include <utility>
 #include "game/safe_eval.h"
 #include "vocab/vocab.h"
@@ -660,6 +661,32 @@ PYBIND11_MODULE(sixmax, m) {
              const sixmax::Abstraction* abstraction, int num_threads,
              uint64_t seed) {
               auto loaded = sixmax::load_blueprint(path, vocab->hash());
+              // The abstraction is supplied by the caller, so refuse one that
+              // does not match the artifact: resuming into the wrong key space
+              // would silently corrupt the imported table.
+              if (loaded.abs_kind == 0) {
+                  if (abstraction->is_map())
+                      throw std::runtime_error(
+                          "abstraction kind mismatch: checkpoint " + path +
+                          " stores legacy quantile edges, not a bucket map");
+                  const sixmax::Abstraction stored(loaded.abs_cfg,
+                                                   loaded.edges);
+                  if (abstraction->hash() != stored.hash())
+                      throw std::runtime_error(
+                          "abstraction hash mismatch: checkpoint " + path +
+                          " was trained with different legacy edges/config");
+              } else {
+                  if (!abstraction->is_map())
+                      throw std::runtime_error(
+                          "abstraction kind mismatch: checkpoint " + path +
+                          " is map-backed but a legacy abstraction was "
+                          "passed");
+                  if (abstraction->bucket_map()->content_hash() !=
+                      loaded.map_hash)
+                      throw std::runtime_error(
+                          "map hash mismatch: checkpoint " + path +
+                          " was trained with a different bucket map");
+              }
               sixmax::GameFactory f = [cfg, vocab, abstraction]() {
                   return std::make_unique<sixmax::EngineGame>(cfg, vocab,
                                                               abstraction);

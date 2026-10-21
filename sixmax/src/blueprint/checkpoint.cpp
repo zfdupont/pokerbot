@@ -183,7 +183,7 @@ LoadedBlueprint load_blueprint(const std::string& path,
         const auto hint_len = get<uint32_t>(i);
         if (hint_len > kMaxHintLength)
             throw std::runtime_error(
-                "blueprint checkpoint: truncated map hint: " + path);
+                "blueprint checkpoint: map hint too long: " + path);
         out.map_hint.resize(hint_len);
         if (hint_len > 0)
             i.read(&out.map_hint[0], (std::streamsize)hint_len);

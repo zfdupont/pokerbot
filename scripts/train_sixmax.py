@@ -82,6 +82,7 @@ def _load_vocab(repo_root: str, toml_path: str):
 
 BUILTIN_DEFAULTS = {
     # [abstraction]
+    "bucket_map": "",  # SIXBM001 path; "" = Monte-Carlo quantile edges
     "flop_buckets": 50, "turn_buckets": 50, "river_buckets": 20,
     "equity_rollouts": 100, "quantile_samples": 10000,
     "abstraction_seed": 20260719,
@@ -325,6 +326,15 @@ def main() -> None:
         abstraction = sixmax.load_abstraction(args.resume)
         trainer = sixmax.resume_blueprint(
             args.resume, engine_cfg, vocab, abstraction,
+            num_threads=cfg["num_threads"], seed=cfg["seed"])
+    elif cfg["bucket_map"]:
+        logging.info(f"Loading bucket map {cfg['bucket_map']} …")
+        abstraction = sixmax.Abstraction.from_bucket_map(cfg["bucket_map"])
+        buckets = [abstraction.num_buckets(s) for s in (1, 2, 3)]
+        logging.info(f"Bucket map hash {abstraction.hash():016x} "
+                     f"(buckets {buckets[0]}/{buckets[1]}/{buckets[2]})")
+        trainer = sixmax.BlueprintTrainer(
+            engine_cfg, vocab, abstraction,
             num_threads=cfg["num_threads"], seed=cfg["seed"])
     else:
         logging.info("Building abstraction (quantile edges) …")

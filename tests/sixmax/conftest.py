@@ -79,3 +79,34 @@ def default_vocab():
     """Session-scoped ActionVocab loaded from the default blueprint config."""
     vc = _load_vocab_mod()
     return vc.load_vocab(_TOML, "blueprint")
+
+
+def _write_idx_mod_map(path, counts):
+    """Write a SIXBM001 map whose bucket is `index % k` on each street."""
+    import numpy as np
+
+    import sixmax  # force-loaded above
+
+    arrays = []
+    for street, k in zip((1, 2, 3), counts):
+        size = sixmax.hand_index_size(street)
+        values = np.empty(size, dtype=np.uint8)
+        chunk = 1 << 22
+        for start in range(0, size, chunk):
+            stop = min(size, start + chunk)
+            values[start:stop] = (
+                np.arange(start, stop, dtype=np.uint64) % k).astype(np.uint8)
+        arrays.append(values)
+    sixmax._write_bucket_map_for_test(str(path), *arrays, "percentile")
+    return str(path)
+
+
+@pytest.fixture(scope="session")
+def synthetic_bucket_map(tmp_path_factory):
+    """Synthetic `index % k` bucket map at the real indexer sizes (7/5/3).
+
+    Shared across test modules so the full-size map is written only once;
+    the real (gitignored, multi-hundred-MB) tables are never touched here.
+    """
+    path = tmp_path_factory.mktemp("maps") / "idxmod.bin"
+    return _write_idx_mod_map(path, (7, 5, 3))

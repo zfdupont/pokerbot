@@ -70,6 +70,30 @@ def test_wrong_vocab_is_refused(tmp_path):
         sixmax.resume_blueprint(path, CFG, other, ABS, num_threads=1, seed=1)
 
 
+def test_resume_refuses_map_abstraction_for_legacy_checkpoint(
+        tmp_path, synthetic_bucket_map):
+    t = _trained(iters=40)
+    path = str(tmp_path / "bp.bin")
+    t.save(path, VOCAB, CFG, ABS)
+    map_abs = sixmax.Abstraction.from_bucket_map(synthetic_bucket_map)
+    with pytest.raises(RuntimeError, match="abstraction kind mismatch"):
+        sixmax.resume_blueprint(path, CFG, VOCAB, map_abs,
+                                num_threads=1, seed=1)
+
+
+def test_resume_refuses_different_legacy_abstraction(tmp_path):
+    t = _trained(iters=40)
+    path = str(tmp_path / "bp.bin")
+    t.save(path, VOCAB, CFG, ABS)
+    other = sixmax.Abstraction(flop_buckets=10, turn_buckets=10,
+                               river_buckets=5, equity_rollouts=40,
+                               quantile_samples=300, seed=7)
+    assert other.hash() != ABS.hash()
+    with pytest.raises(RuntimeError, match="abstraction hash mismatch"):
+        sixmax.resume_blueprint(path, CFG, VOCAB, other,
+                                num_threads=1, seed=1)
+
+
 def test_strategy_matches_trainer_and_keys_states(tmp_path):
     t = _trained()
     path = str(tmp_path / "bp.bin")
