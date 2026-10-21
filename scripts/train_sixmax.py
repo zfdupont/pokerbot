@@ -394,27 +394,36 @@ def main() -> None:
             completed += chunk
             trainer.save(cfg["checkpoint"], vocab, engine_cfg, abstraction)
             write_config_snapshot(cfg, cfg["checkpoint"])
+            # Name snapshots by the trainer's TOTAL iterations: `completed`
+            # restarts at 0 on --resume, so naming by it would reuse (and
+            # overwrite) earlier snapshots and break the `_<iters>.bin`
+            # contract scripts/arm_plateau.py pairs on.
+            total_iters = trainer.iterations()
             if cfg["snapshots"]:
                 base, ext = os.path.splitext(cfg["checkpoint"])
-                snap = f"{base}_{completed:08d}{ext}"
+                snap = f"{base}_{total_iters:08d}{ext}"
                 shutil.copy2(cfg["checkpoint"], snap)
                 logging.info(f"  snapshot -> {snap}")
             # Machine-readable throughput, one line per checkpoint save (the
-            # final one included). `it/s` is cumulative since this training
-            # loop started; `window_it/s` covers only the iterations since the
-            # previous save, so a slowdown shows up without arithmetic on the
-            # heartbeat lines. Timed before selection so an eval never skews it.
+            # final one included). `iters` is the trainer's total (resume
+            # included); `it/s` is cumulative since this training loop started
+            # and `window_it/s` covers only the iterations since the previous
+            # save, so a resumed run's own rate stays readable. `now` is taken
+            # before selection and the window restarts after it returns, so a
+            # selection eval is charged to neither window.
             now = time.monotonic()
             elapsed = now - loop_t0
             window_s = now - save_t0
             cumulative_rate = completed / elapsed if elapsed > 0 else 0.0
             window_rate = chunk / window_s if window_s > 0 else 0.0
-            save_t0 = now
-            logging.info(f"[rate] iters={trainer.iterations()} "
+            logging.info(f"[rate] iters={total_iters} "
                          f"it/s={cumulative_rate:.1f} "
                          f"window_it/s={window_rate:.1f}")
             if cfg["selection_enabled"]:
                 run_selection(cfg, repo_root, trainer)
+            # Reset the window start only now, after selection, so the next
+            # window measures training + saving alone.
+            save_t0 = time.monotonic()
             logging.info(f"[{completed:,}/{cfg['iterations']:,}] "
                          f"{trainer.num_infosets():,} infosets — "
                          f"saved {cfg['checkpoint']}")
