@@ -52,3 +52,21 @@ def test_legacy_hash_and_buckets_unchanged(name):
         assert got == expected, (
             f"{name}: bucket mismatch at deal {i} (hole={deal['hole']}, "
             f"board={deal['board']}): got {got}, expected {expected}")
+
+
+def test_every_sixbp001_checkpoint_loads():
+    """Every legacy artifact in sixmax/checkpoints/*.bin still loads."""
+    if not os.path.isdir(_CKPT_DIR):
+        pytest.skip(f"checkpoint directory not present: {_CKPT_DIR}")
+    import glob
+    paths = sorted(glob.glob(os.path.join(_CKPT_DIR, "*.bin")))
+    legacy = []
+    for path in paths:
+        with open(path, "rb") as f:
+            if f.read(8) == b"SIXBP001":
+                legacy.append(path)
+    if not legacy:
+        pytest.skip(f"no SIXBP001 checkpoints in {_CKPT_DIR}")
+    for path in legacy:
+        abs_ = sixmax.load_abstraction(path)
+        assert not abs_.is_map(), path

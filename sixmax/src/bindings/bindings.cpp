@@ -618,10 +618,12 @@ PYBIND11_MODULE(sixmax, m) {
             [&](uint64_t k) { return t.average_strategy(k); });
     });
     // --- Blueprint checkpoints + strategy (Phase 1b Task 4) ---
-    m.def("load_abstraction", [](const std::string& path) {
+    m.def("load_abstraction", [](const std::string& path,
+                                const std::string& bucket_map) {
         // Peek only the vocab hash: reuse the loader with the stored hash so
         // it cannot mismatch, then rebuild the abstraction (stored edges for
         // SIXBP001, resolved + hash-checked bucket map for SIXBP002).
+        // `bucket_map` is an optional explicit map path (config/CLI override).
         auto loaded = sixmax::load_blueprint(
             path, [&] {
                 std::ifstream i(path, std::ios::binary);
@@ -630,8 +632,8 @@ PYBIND11_MODULE(sixmax, m) {
                 i.read(reinterpret_cast<char*>(&h), sizeof h);
                 return h;
             }());
-        return sixmax::load_abstraction_for(path, loaded);
-    }, py::arg("path"));
+        return sixmax::load_abstraction_for(path, loaded, bucket_map);
+    }, py::arg("path"), py::arg("bucket_map") = "");
     // --- Read-only autopsy dump: recovers per-infoset visit-weight and regret
     //     that the normalized accessors discard (plateau diagnosis). ---
     m.def("dump_infosets", [](const std::string& path) {

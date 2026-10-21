@@ -1,3 +1,6 @@
+# Build context is the repo root (Makefile + .github/workflows pass "."), so
+# Docker only ever reads this file — docker/.dockerignore is NOT applied.
+
 # Large vendored deps not needed to build sixmax (only needed for neural_cfr)
 third_party/libtorch/
 
@@ -6,8 +9,9 @@ buck-out/
 **/__pycache__/
 **/*.pyc
 
-# Checkpoints (large, don't belong in build context)
+# Checkpoints + generated lookup tables (large, don't belong in build context)
 sixmax/checkpoints/
+sixmax/tables/
 neural_cfr/checkpoints/
 cfr/checkpoints/
 

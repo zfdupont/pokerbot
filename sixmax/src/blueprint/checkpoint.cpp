@@ -63,10 +63,23 @@ bool file_exists(const std::string& path) {
 }  // namespace
 
 std::string resolve_bucket_map(const std::string& ckpt_path,
-                               const std::string& hint) {
+                               const std::string& hint,
+                               const std::string& explicit_path) {
     std::vector<std::string> candidates;
+    // Process-wide override: applies to every SIXBP002 load in this process.
     if (const char* env = std::getenv("SIXMAX_BUCKET_MAP"); env && *env)
         candidates.push_back(env);
+    // Config/CLI override for THIS load. Warn when the file is not the one the
+    // checkpoint recorded: the content-hash check below still decides.
+    if (!explicit_path.empty()) {
+        if (!hint.empty() && base_name(explicit_path) != hint)
+            std::fprintf(stderr,
+                         "[checkpoint] warning: explicit bucket map '%s' "
+                         "does not match the checkpoint's map hint '%s'; "
+                         "the content hash decides\n",
+                         explicit_path.c_str(), hint.c_str());
+        candidates.push_back(explicit_path);
+    }
     if (!hint.empty()) {
         candidates.push_back(dir_name(ckpt_path) + "/" + hint);
         const char* env_dir = std::getenv("SIXMAX_TABLES_DIR");
@@ -84,12 +97,13 @@ std::string resolve_bucket_map(const std::string& ckpt_path,
 }
 
 Abstraction load_abstraction_for(const std::string& ckpt_path,
-                                 const LoadedBlueprint& loaded) {
+                                 const LoadedBlueprint& loaded,
+                                 const std::string& explicit_map) {
     if (loaded.abs_kind == 0)
         return Abstraction(loaded.abs_cfg, loaded.edges);
 
     const std::string map_path =
-        resolve_bucket_map(ckpt_path, loaded.map_hint);
+        resolve_bucket_map(ckpt_path, loaded.map_hint, explicit_map);
     auto map = BucketMap::open(map_path);
     if (map->content_hash() != loaded.map_hash)
         throw std::runtime_error(
