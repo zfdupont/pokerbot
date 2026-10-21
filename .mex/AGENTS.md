@@ -1,7 +1,7 @@
 ---
 name: agents
 description: Always-loaded project anchor. Read this first. Contains project identity, non-negotiables, commands, and pointer to ROUTER.md for full context.
-last_updated: 2026-10-20
+last_updated: 2026-10-21
 ---
 
 # pokerbot
@@ -13,7 +13,7 @@ A Python Texas Hold'em simulator with pluggable agents, plus self-contained CFR 
 - `cfr/`, `neural_cfr/`, and `sixmax/` never import `game/poker.py` or each other — hosts (`agents/`, `scripts/`, `web/`) bridge them; shared C++ lives only in `common/`.
 - In `cfr/` and `neural_cfr/`, the 6-action vocabulary order is fixed: `0=fold 1=check 2=call 3=b0.5 4=b1.0 5=allin`. In `sixmax/`, the vocabulary is config-defined and every checkpoint embeds its vocab hash (loaders refuse mismatches). Everywhere: mask illegal actions; never reorder or filter storage.
 - The C++ evaluator (`common/src/game/card.cpp`) keeps its `12 - rank` kicker inversion (lower = better) — removing it inverts learned hand strength. New consumers use only the opaque `safe_eval::HandRank` API; raw scores never leave `common/`.
-- Chip values crossing an engine boundary must be rescaled to the `starting_stack=100, big_blind=1` training frame (divide by the table's big blind). `sixmax/` is BB-denominated natively — no absolute-chip constants.
+- Chip values crossing an engine boundary must be rescaled to the big_blind=1 training frame. `cfr/`/`neural_cfr/` train at starting_stack=100; `sixmax/` checkpoints record their own starting_stack (read it from the checkpoint or its config, never assume 100).
 - Map-based checkpoints (`SIXBP002`) are bound to their bucket map by content hash; the hand indexer (`kHandIndexVersion`) is part of that contract; never change either without a version bump.
 - Never commit secrets (`OPENPOKER_API_KEY`) or checkpoint files.
 
