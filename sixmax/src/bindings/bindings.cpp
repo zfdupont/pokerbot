@@ -32,6 +32,18 @@
 
 namespace py = pybind11;
 
+namespace {
+
+bool same_pot_layout(const sixmax::PotLayout& a,
+                     const sixmax::PotLayout& b) {
+    if (a.mode != b.mode || a.edges.size() != b.edges.size()) return false;
+    for (size_t i = 0; i < a.edges.size(); ++i)
+        if (a.edges[i] != b.edges[i]) return false;
+    return true;
+}
+
+}  // namespace
+
 PYBIND11_MODULE(sixmax, m) {
     m.doc() = "Six-max blueprint + search subsystem";
     py::class_<safe_eval::HandRank>(m, "HandRank")
@@ -665,8 +677,9 @@ PYBIND11_MODULE(sixmax, m) {
                                 const std::string& bucket_map) {
         // Peek only the vocab hash: reuse the loader with the stored hash so
         // it cannot mismatch, then rebuild the abstraction (stored edges for
-        // SIXBP001, resolved + hash-checked bucket map for SIXBP002).
-        // `bucket_map` is an optional explicit map path (config/CLI override).
+        // SIXBP001, resolved + hash-checked bucket map for SIXBP002/SIXBP003).
+        // SIXBP003 also restores its stored pot layout. `bucket_map` is an
+        // optional explicit map path (config/CLI override).
         auto loaded = sixmax::load_blueprint(
             path, [&] {
                 std::ifstream i(path, std::ios::binary);
@@ -708,7 +721,13 @@ PYBIND11_MODULE(sixmax, m) {
               auto loaded = sixmax::load_blueprint(path, vocab->hash());
               // The abstraction is supplied by the caller, so refuse one that
               // does not match the artifact: resuming into the wrong key space
-              // would silently corrupt the imported table.
+              // would silently corrupt the imported table. The pot layout is
+              // checked first because a layout difference changes every key.
+              if (!same_pot_layout(abstraction->pot_layout(),
+                                   loaded.pot_layout))
+                  throw std::runtime_error(
+                      "pot layout mismatch: checkpoint " + path +
+                      " was trained with a different pot layout");
               if (loaded.abs_kind == 0) {
                   if (abstraction->is_map())
                       throw std::runtime_error(

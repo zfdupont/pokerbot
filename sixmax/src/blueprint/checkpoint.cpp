@@ -12,7 +12,9 @@ namespace {
 
 constexpr char kMagicV1[8] = {'S', 'I', 'X', 'B', 'P', '0', '0', '1'};
 constexpr char kMagicV2[8] = {'S', 'I', 'X', 'B', 'P', '0', '0', '2'};
+constexpr char kMagicV3[8] = {'S', 'I', 'X', 'B', 'P', '0', '0', '3'};
 constexpr size_t kMaxHintLength = 1u << 16;
+constexpr uint32_t kMaxPotEdges = 15;
 
 template <typename T>
 void put(std::ofstream& o, T v) {
@@ -99,23 +101,33 @@ std::string resolve_bucket_map(const std::string& ckpt_path,
 Abstraction load_abstraction_for(const std::string& ckpt_path,
                                  const LoadedBlueprint& loaded,
                                  const std::string& explicit_map) {
-    if (loaded.abs_kind == 0)
-        return Abstraction(loaded.abs_cfg, loaded.edges);
+    Abstraction abs = [&] {
+        if (loaded.abs_kind == 0)
+            return Abstraction(loaded.abs_cfg, loaded.edges);
 
-    const std::string map_path =
-        resolve_bucket_map(ckpt_path, loaded.map_hint, explicit_map);
-    auto map = BucketMap::open(map_path);
-    if (map->content_hash() != loaded.map_hash)
-        throw std::runtime_error(
-            "map hash mismatch: checkpoint " + ckpt_path +
-            " was trained with bucket map '" + loaded.map_hint +
-            "' but " + map_path + " has different content");
-    return Abstraction(std::move(map));
+        const std::string map_path =
+            resolve_bucket_map(ckpt_path, loaded.map_hint, explicit_map);
+        auto map = BucketMap::open(map_path);
+        if (map->content_hash() != loaded.map_hash)
+            throw std::runtime_error(
+                "map hash mismatch: checkpoint " + ckpt_path +
+                " was trained with bucket map '" + loaded.map_hint +
+                "' but " + map_path + " has different content");
+        return Abstraction(std::move(map));
+    }();
+    // SIXBP001/SIXBP002 imply the legacy layout; SIXBP003 stores its own.
+    abs.set_pot_layout(loaded.pot_layout);
+    return abs;
 }
 
 void save_blueprint(const std::string& path, const BlueprintMeta& meta,
                     const Abstraction& abs, const BlueprintTrainer& trainer) {
     const bool mapped = abs.is_map();
+    const bool layout_v3 = !abs.pot_layout().is_legacy();
+    if (layout_v3 && !mapped)
+        throw std::invalid_argument(
+            "blueprint checkpoint: non-legacy pot layout requires a "
+            "bucket map");
     std::string hint;
     if (mapped) {
         hint = base_name(abs.bucket_map()->path());
@@ -127,7 +139,7 @@ void save_blueprint(const std::string& path, const BlueprintMeta& meta,
     {
         std::ofstream o(tmp, std::ios::binary | std::ios::trunc);
         if (!o) throw std::runtime_error("cannot open " + tmp);
-        o.write(mapped ? kMagicV2 : kMagicV1, 8);
+        o.write(layout_v3 ? kMagicV3 : (mapped ? kMagicV2 : kMagicV1), 8);
         put<uint64_t>(o, meta.vocab_hash);
         put<int32_t>(o, meta.num_players);
         put<int32_t>(o, meta.action_dim);
@@ -138,6 +150,12 @@ void save_blueprint(const std::string& path, const BlueprintMeta& meta,
             put<uint64_t>(o, map->content_hash());
             put<uint32_t>(o, (uint32_t)hint.size());
             o.write(hint.data(), (std::streamsize)hint.size());
+            if (layout_v3) {
+                const PotLayout& layout = abs.pot_layout();
+                put<int32_t>(o, (int32_t)layout.mode);
+                put<uint32_t>(o, (uint32_t)layout.edges.size());
+                for (double edge : layout.edges) put<double>(o, edge);
+            }
         } else {
             const AbstractionConfig& c = abs.config();
             put<int32_t>(o, c.flop_buckets);
@@ -175,7 +193,8 @@ LoadedBlueprint load_blueprint(const std::string& path,
     if (!i) throw std::runtime_error("cannot open " + path);
     char magic[8];
     i.read(magic, 8);
-    const bool mapped = i && std::memcmp(magic, kMagicV2, 8) == 0;
+    const bool v3 = i && std::memcmp(magic, kMagicV3, 8) == 0;
+    const bool mapped = v3 || (i && std::memcmp(magic, kMagicV2, 8) == 0);
     if (!i || (!mapped && std::memcmp(magic, kMagicV1, 8) != 0))
         throw std::runtime_error("not a blueprint checkpoint: " + path);
     LoadedBlueprint out;
@@ -203,6 +222,28 @@ LoadedBlueprint load_blueprint(const std::string& path,
             i.read(&out.map_hint[0], (std::streamsize)hint_len);
         if (!i)
             throw std::runtime_error("blueprint checkpoint: truncated file");
+        if (v3) {
+            const int32_t mode = get<int32_t>(i);
+            if (mode != (int32_t)PotMode::BB &&
+                mode != (int32_t)PotMode::SPR)
+                throw std::runtime_error(
+                    "blueprint checkpoint: unknown pot mode " +
+                    std::to_string(mode) + ": " + path);
+            out.pot_layout.mode = (PotMode)mode;
+            const uint32_t n_edges = get<uint32_t>(i);
+            if (n_edges > kMaxPotEdges)
+                throw std::runtime_error(
+                    "blueprint checkpoint: pot layout too long: " + path);
+            out.pot_layout.edges.resize(n_edges);
+            for (auto& edge : out.pot_layout.edges) edge = get<double>(i);
+            try {
+                validate_pot_layout(out.pot_layout);
+            } catch (const std::invalid_argument& e) {
+                throw std::runtime_error(
+                    "blueprint checkpoint: invalid pot layout: " +
+                    std::string(e.what()));
+            }
+        }
     } else {
         out.abs_cfg.flop_buckets = get<int32_t>(i);
         out.abs_cfg.turn_buckets = get<int32_t>(i);

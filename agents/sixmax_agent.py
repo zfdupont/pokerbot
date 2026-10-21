@@ -5,10 +5,10 @@ and returns a chosen vocab index plus a raise-to (also in BB). Hosts (the live
 engine via SixmaxAgent, the openpoker connector via HandTracker) compute the
 legal mask and the (live, after) counts, and translate BB back to table chips.
 
-Key reconstruction routes through sixmax.pack_abstract_key so it is byte-
-identical to the trainer's EngineGameState::abstract_key. Bet legality and
-translation route through the C++ ActionVocab (target_bb), the single vocab
-translation layer.
+Key reconstruction routes through the checkpoint abstraction's pack_key so it
+is byte-identical to the trainer's EngineGameState::abstract_key, including a
+non-legacy pot layout. Bet legality and translation route through the C++
+ActionVocab (target_bb), the single vocab translation layer.
 """
 import importlib.util
 import os
@@ -130,10 +130,17 @@ class SixmaxDeployStrategy:
         return self._strategy.abstraction().bucket(hole, board)
 
     def decide(self, *, hole, board, street, raises_per_street, pot_bb,
-               current_bet_bb, to_call_bb, stack_bb, live, after, legal, rng):
+               current_bet_bb, to_call_bb, stack_bb, live, after, legal, rng,
+               eff_stack_bb=None):
+        abstraction = self._strategy.abstraction()
+        if eff_stack_bb is None:
+            if abstraction.pot_layout() != ("bb", [7.0, 15.0, 40.0]):
+                raise ValueError(
+                    "eff_stack_bb is required for non-legacy pot layouts")
+            eff_stack_bb = stack_bb
         card = self._card_bucket(hole, board, street)
-        key = sixmax.pack_abstract_key(card, street, list(raises_per_street),
-                                       pot_bb, live, after)
+        key = abstraction.pack_key(card, street, list(raises_per_street),
+                                   pot_bb, eff_stack_bb, live, after)
         probs = self._strategy.probs(key)  # [] if unseen
 
         legal_idx = [i for i, m in enumerate(legal) if m]
@@ -355,6 +362,9 @@ class SearchStrategy:
                 "search vocab must match the blueprint vocab "
                 f"(search={vocab.hash()} blueprint={blueprint_vocab.hash()})")
         bp = sixmax.BlueprintStrategy.load(checkpoint, vocab)
+        if bp.abstraction().pot_layout() != ("bb", [7.0, 15.0, 40.0]):
+            raise RuntimeError(
+                "search does not support non-legacy pot layouts")
         self._cfg = _load_search_config(config_toml)
         self._impl = sixmax.SearchStrategy(
             bp, vocab, sixmax.EngineConfig(num_players=2), self._cfg)
@@ -419,6 +429,9 @@ class SixmaxAgent(PokerAgent):
         current_bet_bb = game_state.current_bet / bb
         to_call_bb = to_call_chips / bb
         stack_bb = (player.current_bet + player.stack) / bb  # all-in target
+        other_stacks = [p.stack for p in players
+                        if p is not player and p.is_active]
+        eff_stack_bb = min(player.stack, max(other_stacks, default=0)) / bb
 
         legal = self._legal_mask(game_state, player, to_call_chips,
                                  current_bet_bb, pot_bb, to_call_bb, stack_bb)
@@ -460,8 +473,8 @@ class SixmaxAgent(PokerAgent):
             hole=hole, board=board, street=street,
             raises_per_street=raises, pot_bb=pot_bb,
             current_bet_bb=current_bet_bb, to_call_bb=to_call_bb,
-            stack_bb=stack_bb, live=live, after=after, legal=legal,
-            rng=self._rng)
+            stack_bb=stack_bb, eff_stack_bb=eff_stack_bb, live=live,
+            after=after, legal=legal, rng=self._rng)
         return self._translate(idx, to_call_chips, raise_to_bb, bb, player)
 
     def _action_to_vocab(self, state, action, amount, bb):

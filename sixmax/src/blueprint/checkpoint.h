@@ -13,12 +13,16 @@ namespace sixmax {
 // embeds the vocab hash and the full abstraction, so loaders can refuse
 // mismatches and reconstruct the exact keyer without re-sampling.
 //
-// Two magics:
+// Three magics:
 //  * SIXBP001 — legacy kind: config + quantile edges, as before.
 //  * SIXBP002 — map-backed kind: same layout up to starting_stack, then
 //    int32 kind=1, uint64 map content hash and a length-prefixed map filename
 //    hint, then the table as v1. The map itself is resolved at load time
 //    (see resolve_bucket_map) and refused if its content hash differs.
+//  * SIXBP003 — map-backed kind plus a non-legacy pot layout: the SIXBP002
+//    prefix through the map hint, then int32 mode, uint32 edge count and that
+//    many doubles, then the table. Legacy layouts keep the SIXBP001/SIXBP002
+//    bytes exactly.
 // Native-endian; artifacts move between same-arch machines.
 struct BlueprintMeta {
     uint64_t vocab_hash;
@@ -33,8 +37,9 @@ void save_blueprint(const std::string& path, const BlueprintMeta& meta,
 struct LoadedBlueprint {
     BlueprintMeta meta;
     int abs_kind = 0;  // 0 = legacy edges, 1 = bucket map
-    uint64_t map_hash = 0;   // SIXBP002 only
-    std::string map_hint;    // SIXBP002 only: the map's basename
+    uint64_t map_hash = 0;   // SIXBP002/SIXBP003 only
+    std::string map_hint;    // SIXBP002/SIXBP003 only: the map's basename
+    PotLayout pot_layout;    // legacy default for SIXBP001/SIXBP002
     AbstractionConfig abs_cfg;                    // legacy kind only
     std::array<std::vector<double>, 3> edges;     // legacy kind only
     uint64_t iterations;

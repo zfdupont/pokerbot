@@ -86,6 +86,8 @@ BUILTIN_DEFAULTS = {
     "flop_buckets": 50, "turn_buckets": 50, "river_buckets": 20,
     "equity_rollouts": 100, "quantile_samples": 10000,
     "abstraction_seed": 20260719,
+    "pot_mode": "bb",                 # "bb" or "spr"; map-backed only
+    "pot_edges": [7.0, 15.0, 40.0],   # legacy layout unless overridden
     # [train.blueprint]
     "num_players": 6, "starting_stack": 100.0,
     "iterations": 100_000, "num_threads": 0,
@@ -124,6 +126,11 @@ def resolve_config(args, repo_root: str) -> dict:
             cfg[key] = cli_value
     cfg["config_path"] = path
     return cfg
+
+
+def is_legacy_pot_config(cfg: dict) -> bool:
+    return (cfg["pot_mode"] == "bb" and
+            [float(e) for e in cfg["pot_edges"]] == [7.0, 15.0, 40.0])
 
 
 def write_config_snapshot(cfg: dict, checkpoint_path: str) -> None:
@@ -319,6 +326,10 @@ def main() -> None:
     cfg = resolve_config(args, repo_root)
     logging.info("Effective config: "
                  + ", ".join(f"{k}={v}" for k, v in sorted(cfg.items())))
+    if not cfg["bucket_map"] and not is_legacy_pot_config(cfg):
+        raise SystemExit(
+            "pot_edges requires bucket_map (set [abstraction].bucket_map "
+            "or pass --bucket-map)")
     vocab = _load_vocab(repo_root, cfg["config_path"])
     engine_cfg = sixmax.EngineConfig(num_players=cfg["num_players"],
                                      starting_stack=cfg["starting_stack"])
@@ -331,12 +342,22 @@ def main() -> None:
         # checkpoint's content hash still refuses a mismatched map.
         abstraction = sixmax.load_abstraction(
             args.resume, bucket_map=cfg["bucket_map"])
+        # The checkpoint restores its stored layout; if the config disagrees,
+        # refuse rather than silently training one key space over the other.
+        if (abstraction.pot_layout()[0] != cfg["pot_mode"] or
+                [float(e) for e in abstraction.pot_layout()[1]] !=
+                [float(e) for e in cfg["pot_edges"]]):
+            raise SystemExit(
+                "pot layout mismatch: checkpoint layout "
+                f"{abstraction.pot_layout()} differs from config "
+                f"({cfg['pot_mode']}, {cfg['pot_edges']})")
         trainer = sixmax.resume_blueprint(
             args.resume, engine_cfg, vocab, abstraction,
             num_threads=cfg["num_threads"], seed=cfg["seed"])
     elif cfg["bucket_map"]:
         logging.info(f"Loading bucket map {cfg['bucket_map']} …")
         abstraction = sixmax.Abstraction.from_bucket_map(cfg["bucket_map"])
+        abstraction.set_pot_layout(cfg["pot_mode"], list(cfg["pot_edges"]))
         buckets = [abstraction.num_buckets(s) for s in (1, 2, 3)]
         logging.info(f"Bucket map hash {abstraction.hash():016x} "
                      f"(buckets {buckets[0]}/{buckets[1]}/{buckets[2]})")
@@ -356,6 +377,8 @@ def main() -> None:
             engine_cfg, vocab, abstraction,
             num_threads=cfg["num_threads"], seed=cfg["seed"])
 
+    pot_mode, pot_edges = abstraction.pot_layout()
+    logging.info(f"pot layout {pot_mode} {pot_edges}")
     ckpt_interval = cfg["checkpoint_interval"] or cfg["iterations"]
     completed = 0
     logging.info(f"Running {cfg['iterations']:,} iterations …")
