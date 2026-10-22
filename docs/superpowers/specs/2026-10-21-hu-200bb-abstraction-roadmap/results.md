@@ -64,3 +64,10 @@ The same evaluator speeds up blueprint training, which calls it at every showdow
 
 Pairing helps less than hoped. The per-deck sd of the difference (1,602 and 1,714) is close to a single run's (about 1,620), so the two snapshots' results on a deck correlate only about 0.5: after their first differing action the random streams diverge. Pairing is worth about 2x the decks. The default is therefore 100k decks (se about 5 BB/100, about 7 min).
 
+
+## C1 (pot edges 4/8/16/40/100 BB), 2026-10-22
+
+- Probe (2M iterations, local): 46,507 infosets, 1.39x C0's 33,572 at 25M. Cap = 20M x 46,507 / 33,572 = 27,705,826.
+- Cloud: ccx33, CI trainer image with the new evaluator. 27,705,826 iterations at 12,827 it/s average (window 12,100-13,400), 38 min, about $0.13. Snapshots every 5M plus the cap.
+- Plateau (paired LBR, 100k decks, seed 1): 20M vs 10M, -1.05 BB/100, se 5.61, t=-0.19, converged. C1_plateau = 20M. LBR(20M) +391.6, LBR(10M) +392.6 BB/100.
+- ccx33 is now about 3.7x the pre-speedup 3,500 it/s; the Phase 2-3 cost table should use about 12,800 it/s.
