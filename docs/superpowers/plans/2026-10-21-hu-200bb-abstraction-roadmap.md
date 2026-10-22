@@ -320,11 +320,13 @@ Record every result in `docs/superpowers/specs/2026-10-21-hu-200bb-abstraction-r
    - the winner (or C0) to Slumbot at 13k hands;
    - apply the pass/block rules;
    - also check the Phase 2 extra stop (at least 2 SE better than -118).
-6. **D maps** (local, from `equity_v1.bin`):
-   - `scripts/build_bucket_map.py --method percentile --counts 100,100,50` and `--counts 200,200,100`;
-   - then `--method potential` at the better count.
+6. **D maps** (local, from `equity_v1.bin`; spec Phase 3 as revised 2026-10-21):
+   - Re-measure per-street context counts on the Phase 2 winner (`sixmax.dump_infosets`, street = key bits 8-9, contexts = distinct `key >> 8`) and redo the cost table.
+   - Before 3b: `arm_plateau.py --cap` still clamps to 150M; it needs a Phase 3 ceiling of 500M (spec 1d) before any Phase 3 cap is computed.
+   - Build the 3a maps: `scripts/build_bucket_map.py --method percentile --counts 200,200,20`, `--counts 50,50,100`, `--counts 100,100,50`.
+   - Score them offline (spec "3-pre"; the scoring script is still to be written) and drop any that fail the 10% rule.
    - Each arm reuses the winning C config with `--bucket-map` and a new `--checkpoint-name`.
-7. **D1-D3 and the interaction arm** (runner-up C + winning D) are trained like C arms, then **Gate 3.**
+7. **3a arms vs D0, then the 3b scale arm, then 3c** (`--method potential` at the 3b counts), each trained like a C arm and gated as the spec says. Then the interaction arm (runner-up C + final D map) and **Gate 3.**
 8. **Write the Phase 4 (B) plan** from the Gate 3 evidence, using the leak-2 aliasing measurement (`scripts/diagnose_key_aliasing.py`).
 9. **Phase 5:**
    - the best checkpoint at 50k Slumbot hands, sequential (about 14 h);

@@ -116,12 +116,12 @@ From the 3,000-hand Slumbot run (baseline score, BB, summed):
 - **Plateau rule (my call):**
   - Snapshots every 5M iterations.
   - An arm is converged at snapshot N when N does not beat snapshot N-10M head-to-head at `|t| >= 2`. Check after each sync, locally, while training continues.
-  - **Iteration caps:** C0 is capped at 60M. Every other arm's cap is `C0_plateau × (arm_infosets / C0_infosets)`, at least 20M and at most 150M.
+  - **Iteration caps:** C0 is capped at 60M. Every other arm's cap is `C0_plateau × (arm_infosets / C0_infosets)`, at least 20M. The ceiling is 150M for Phase 2 arms and 500M for Phase 3 arms (revised 2026-10-21: the 255/255/255 maximum is about 8.1x C0, and a 150M ceiling would undertrain every map above about 2.5x C0). The budget rules below still apply to every arm.
   - Worked example: if C0 plateaus at 25M with 40k infosets, an arm with 120k infosets is capped at 75M.
   - Infoset counts come from the trained checkpoint (C0) or a 2M-iteration probe run (other arms).
   - An arm that hits its cap is compared at the cap and flagged as possibly undertrained.
   - Arms are always compared at their own plateau or cap, never at a shared iteration count.
-- **Budget checkpoint:** after the ccx33 benchmark and C0's plateau are known, re-estimate the whole schedule before launching C1. If it exceeds the $40 budget, cut arms in this order: C3, D2, the C-D interaction sanity arm.
+- **Budget checkpoint:** after the ccx33 benchmark and C0's plateau are known, re-estimate the whole schedule before launching C1. If it exceeds the $40 budget, cut arms in this order: C3, D1, the C-D interaction sanity arm, then step 3b down to its smaller variant.
 
 ### Phase 2: C (pot buckets), with A in, at 200 BB
 
@@ -149,14 +149,46 @@ From the 3,000-hand Slumbot run (baseline score, BB, summed):
 
 Build the maps locally from `equity_v1.bin` (percentile about 30 s, potential-aware about 5 min) and upload them.
 
-| Arm | Map |
-|---|---|
-| D0 | pct 50/50/20 (the Phase 2 winner, no retrain) |
-| D1 | pct 100/100/50 |
-| D2 | pct 200/200/100 |
-| D3 | potential-aware at the better of D1/D2 |
+**Revised 2026-10-21 (owner-approved), replacing the D1/D2/D3 ladder.** The ladder scaled every street together, so it could not say which street's buckets are worth their cost.
 
-**Gate 3:** the gate policy below. Add one sanity arm at the runner-up C with the D winner, to check that C and D don't interact strongly.
+**Evidence behind the revision.**
+- **Infosets are betting contexts × card buckets, per street.** Measured on the C0 5M snapshot (`hu200_c0_05000000.bin`, `sixmax.dump_infosets`): preflop 3,042 infosets (18 contexts × 169), flop 73 contexts, turn 242, river 753. So at C0's pot layout `infosets ≈ 3,042 + 73·F + 242·T + 753·R` (predicts 33,852 for 50/50/20; measured 33,831). A river bucket costs about 10x a flop bucket.
+- **Rare river infosets are already undertrained:** the river's 10th-percentile visit mass is about 10x below the other streets'.
+- **Hard ceiling: 255 buckets per street.** Bucket ids are `uint8` in SIXBM001 (`kMaxBucketCount`) and the key's card field is bits 0-7. Libratus-scale maps need a new map format, a new key layout and about 10^9 infosets; out of scope.
+- **Published blueprints** (`docs/papers/`): Libratus used no card abstraction preflop or on the flop, 2.5M turn and 1.25M river buckets (Science 2018). Pluribus used lossless preflop and 200 k-means buckets per later street, and 500 per street inside search (Science 2019 supplementary). Pluribus scale is reachable here; Libratus scale is not.
+- **Equity percentiles ignore potential.** On the flop and turn, a made hand and a draw with equal equity share a bucket. The river has no cards to come, so river equity is close to a sufficient statistic and extra river buckets have the weakest case on paper.
+
+**Cost model.** Re-measure the context counts on the Phase 2 winner's checkpoint before building maps: a finer pot layout multiplies contexts (C2's 8 buckets roughly doubles them) and every number below scales with it. Estimates at C0's layout, assuming C0 plateaus at 60M and iterations scale with infosets:
+
+| Map (F/T/R) | Infosets | × C0 | Iterations | About |
+|---|---:|---:|---:|---:|
+| 50/50/20 | 33.8k | 1.0 | 60M | $1 |
+| 100/100/50 | 72k | 2.1 | 126M | $2.3 |
+| 200/200/20 | 81k | 2.4 | 144M | $2.6 |
+| 50/50/100 | 94k | 2.8 | 168M | $3.0 |
+| 200/200/200 | 217k | 6.4 | 384M | $7 |
+| 255/255/255 | 275k | 8.1 | 486M | $9 |
+
+**3-pre. Offline map scoring (free, before any D training; my call on the metric and threshold).**
+- Score each candidate map by its multiplicity-weighted within-bucket spread: equity variance on the river, and the earth mover's distance between each hand's next-street equity histogram and its bucket's mean histogram on the flop and turn.
+- A candidate whose score improves on the next-coarser candidate for the same street by less than 10% is dropped without training. Record every score in `results.md`.
+
+**3a. Where to spend buckets** (percentile maps, at the Phase 2 winner):
+
+| Arm | Map | Question |
+|---|---|---|
+| D0 | pct 50/50/20 (the Phase 2 winner, no retrain) | control |
+| DF | pct 200/200/20 | do flop and turn buckets pay? (cheap direction, Libratus-like) |
+| DR | pct 50/50/100 | do river buckets pay? (where the 100+ BB pots resolve) |
+| D1 | pct 100/100/50 | balanced reference |
+
+**3b. Scale the 3a winner** (one arm):
+- DF wins: 255/255/20. DR wins: 50/50/255. D1 wins: 200/200/200 (Pluribus counts). Pick the largest variant that fits the budget.
+- If no 3a arm beats D0, skip 3b: counts are not the binding constraint, and 3c runs at 50/50/20.
+
+**3c. Bucketing method:** `--method potential` (k-means over next-street equity histograms on the flop and turn, river percentile) at the 3b counts, against the percentile map at the same counts.
+
+**Gate 3:** the gate policy below, applied per stage: each 3a arm against D0, the 3b arm against the 3a winner, 3c against 3b. Then one sanity arm at the runner-up C with the final D map, to check that C and D don't interact strongly.
 
 ### Phase 4: B (facing-bet size and raise depth)
 
@@ -183,6 +215,7 @@ Build the maps locally from `equity_v1.bin` (percentile about 30 s, potential-aw
 ## Budget
 
 - **Training:** about 115 ccx33 machine-hours estimated (C about 40, D about 55, evals about 20). That's **about $25-30** at the legacy rate, likely less at map speed.
+  - Revised 2026-10-21 from the measured 3,935 it/s benchmark and the Phase 3 cost model: Phase 2 about $6, Phase 3 about $22 (3a about $8, 3b about $7, 3c about $7), about **$28** in total before Phase 4. Re-estimate at the budget checkpoint and again after Gate 2, when the winner's context counts are known.
   - Ask before exceeding **$40 total**, or before any single arm exceeds 2x its benchmark-based estimate.
 - **Slumbot:** about 13k hands per gate × 3-4 gates, plus 50k final, all local and free. At most one evaluator process at a time.
 - **Wall time:** serial, so roughly 4-6 days of machine time across the phases.
