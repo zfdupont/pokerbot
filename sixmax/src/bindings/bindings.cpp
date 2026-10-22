@@ -661,7 +661,26 @@ PYBIND11_MODULE(sixmax, m) {
                  return e.decide(state, hero, range, rng);
              },
              py::arg("hand"), py::arg("hero"), py::arg("range"),
-             py::arg("seed") = 1);
+             py::arg("seed") = 1)
+        .def("run",
+             [](const sixmax::LbrEvaluator& e, int decks, uint64_t seed) {
+                 sixmax::LbrReport r;
+                 {
+                     // The evaluation loop is long; release the GIL only for
+                     // the C++ run, never while building the Python result.
+                     py::gil_scoped_release release;
+                     r = e.run(decks, seed);
+                 }
+                 py::dict out;
+                 out["decks"] = r.decks;
+                 out["seat_bb100"] = r.seat_bb100;
+                 out["seat_stderr"] = r.seat_stderr;
+                 out["bb100"] = r.bb100;
+                 out["stderr"] = r.stderr;
+                 out["per_deck"] = r.per_deck;
+                 return out;
+             },
+             py::arg("decks"), py::arg("seed") = 1);
     // --- Multithreaded blueprint trainer (Phase 1b Task 3) ---
     py::class_<sixmax::BlueprintTrainer>(m, "BlueprintTrainer")
         .def(py::init([](const sixmax::EngineConfig& cfg,

@@ -1,8 +1,10 @@
 """LBR (Lisy & Bowling 2017): win probability, LocalBR decide, range removal."""
 import importlib.util
 import os
+import math
 import random
 
+import pytest
 import sixmax
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -541,3 +543,80 @@ def test_remove_blocked_keeps_the_prior_when_everything_is_blocked(tmp_path):
     before = tracker.range(0)
     tracker.remove_blocked(list(range(52)))  # zero mass left: keep the prior
     assert tracker.range(0) == before
+
+
+# --- Duplicate evaluation loop ---------------------------------------------
+
+def test_run_is_deterministic_in_seed(tmp_path):
+    ev = _evaluator(_strategy(tmp_path, iters=20), act_streets=[0],
+                    preflop_wp_samples=16, num_threads=2)
+    a = ev.run(3, 11)
+    b = ev.run(3, 11)
+    assert a["per_deck"] == b["per_deck"]
+    assert a["seat_bb100"] == b["seat_bb100"]
+    assert a["bb100"] == b["bb100"]
+
+
+def test_run_thread_count_independent(tmp_path):
+    strat = _strategy(tmp_path, iters=20)
+    kw = dict(act_streets=[0, 3], preflop_wp_samples=16)
+    one = _evaluator(strat, num_threads=1, **kw).run(6, 5)
+    three = _evaluator(strat, num_threads=3, **kw).run(6, 5)
+    assert one["per_deck"] == three["per_deck"]
+    assert one["seat_bb100"] == three["seat_bb100"]
+    assert one["seat_stderr"] == three["seat_stderr"]
+
+
+def test_run_exploits_uniform_opponents(tmp_path):
+    # Default profile (turn + river): the flop would enumerate 1,326 x 990
+    # exact showdowns per decision (~16 s with the opaque safe_eval), so an
+    # all-street 300-deck run is a 20-minute test; the significance claim is
+    # checked on the profile the tool actually ships with.
+    ev = _evaluator(_strategy(tmp_path, iters=20), uniform_opponents=True,
+                    act_streets=[2, 3])
+    rep = ev.run(300, 1)
+    assert rep["bb100"] > 0.0
+    assert rep["bb100"] > 3.0 * rep["stderr"]
+
+
+def test_run_all_streets_is_finite(tmp_path):
+    # One deck through every street (including the expensive flop) so the
+    # per-street showdown cache and the board/range updates are all exercised.
+    ev = _evaluator(_strategy(tmp_path, iters=20), uniform_opponents=True,
+                    act_streets=[0, 1, 2, 3], preflop_wp_samples=8,
+                    num_threads=2)
+    rep = ev.run(1, 1)
+    assert len(rep["per_deck"]) == 1
+    assert all(math.isfinite(x) for x in rep["seat_bb100"])
+    assert all(math.isfinite(x) for x in rep["seat_stderr"])
+    assert math.isfinite(rep["bb100"]) and math.isfinite(rep["stderr"])
+    assert rep["bb100"] == rep["per_deck"][0]
+
+
+def test_run_call_only_streets_vs_uniform_is_positive(tmp_path):
+    # act_streets=[] forces check/call only: no betting and no fold, but the
+    # loop must still finish and return finite numbers.
+    ev = _evaluator(_strategy(tmp_path, iters=20), uniform_opponents=True,
+                    act_streets=[])
+    rep = ev.run(50, 3)
+    for key in ("seat_bb100", "seat_stderr"):
+        assert all(math.isfinite(x) for x in rep[key])
+    assert math.isfinite(rep["bb100"]) and math.isfinite(rep["stderr"])
+    assert all(math.isfinite(x) for x in rep["per_deck"])
+    assert len(rep["per_deck"]) == 50
+
+
+def test_run_rejects_six_max(tmp_path):
+    strat = _strategy(tmp_path, iters=20)
+    with pytest.raises(ValueError, match="heads-up"):
+        sixmax.LbrEvaluator(strat, VOCAB, sixmax.EngineConfig(num_players=6),
+                            sixmax.LbrConfig())
+
+
+def test_run_zero_decks_is_finite(tmp_path):
+    rep = _evaluator(_strategy(tmp_path, iters=20)).run(0, 1)
+    assert rep["decks"] == 0
+    assert rep["per_deck"] == []
+    assert rep["seat_bb100"] == [0.0, 0.0]
+    assert rep["seat_stderr"] == [0.0, 0.0]
+    assert rep["bb100"] == 0.0 and rep["stderr"] == 0.0

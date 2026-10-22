@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Six-max LBR exploitability estimator.
+"""Heads-up LBR exploitability estimator (Lisy & Bowling 2017).
 
-Reports each seat's best-response gain (BB/100) against the blueprint's own
-profile: Pass A plays the blueprint in the hero seat, Pass B plays the LBR
-exploiter, both over identical decks (common random numbers). The gain is a
-lower bound on the true best-response gain; a plateau at a positive value means
-the abstraction, not training, is the limit.
+Duplicate evaluation: every deck is played twice, with the local best response
+(LBR) in seat 0 and in seat 1 and the blueprint in the other seat. The LBR
+payoff is the blueprint's best-response gain against that deck pair, so the
+duplicate mean is a lower bound on the blueprint's exploitability in BB/100.
+Chip values stay in the engine frame (big blinds); pots and stacks come from
+the checkpoint's training configuration unless --stack-bb overrides it.
 """
 import argparse
 import os
@@ -13,17 +14,52 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+CSV_COLUMNS = ("checkpoint,act_streets,fold_call_only,decks,bb100,stderr,"
+               "seat0_bb100,seat1_bb100")
+
+
+def parse_act_streets(text):
+    """Comma-separated street list (0 preflop .. 3 river); empty = no acting."""
+    if text.strip() == "":
+        return []
+    streets = []
+    for token in text.split(","):
+        token = token.strip()
+        try:
+            street = int(token)
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                "act streets must be integers in 0-3, got %r" % token)
+        if street < 0 or street > 3:
+            raise argparse.ArgumentTypeError(
+                "act streets must be integers in 0-3, got %r" % token)
+        if street not in streets:
+            streets.append(street)
+    return streets
+
 
 def parse_args(argv=None):
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    p = argparse.ArgumentParser(description="Six-max LBR exploitability")
+    p = argparse.ArgumentParser(
+        description="Heads-up LBR exploitability (Lisy & Bowling 2017)")
     p.add_argument("--checkpoint", required=True)
     p.add_argument("--config", default=os.path.join(
         root, "sixmax", "configs", "default.toml"))
-    p.add_argument("--decks", type=int, default=200)
-    p.add_argument("--samples", type=int, default=64)
+    p.add_argument("--decks", type=int, default=2000,
+                   help="duplicate deck pairs (each is played twice)")
     p.add_argument("--seed", type=int, default=1)
-    p.add_argument("--uniform-opponents", action="store_true")
+    p.add_argument("--act-streets", type=parse_act_streets, default=[2, 3],
+                   metavar="LIST",
+                   help="streets LBR may bet on, comma separated (0-3); "
+                        "empty means check/call only")
+    p.add_argument("--fold-call-only", action="store_true",
+                   help="LBR considers only fold and check/call")
+    p.add_argument("--preflop-wp-samples", type=int, default=500,
+                   help="sampled boards behind a preflop win probability")
+    p.add_argument("--threads", type=int, default=0,
+                   help="worker threads (0 = hardware concurrency)")
+    p.add_argument("--uniform-opponents", action="store_true",
+                   help="test hook: opponent model is uniform over the mask")
     p.add_argument("--stack-bb", type=float, default=None,
                    help="starting stack in BB (default: the checkpoint's "
                         "training stack)")
@@ -31,10 +67,24 @@ def parse_args(argv=None):
     return p.parse_args(argv)
 
 
-def report_rows(path, report):
-    return [(os.path.basename(path), seat, gain, se, report["decks"])
-            for seat, (gain, se) in enumerate(zip(report["gains"],
-                                                  report["stderrs"]))]
+def csv_header():
+    return CSV_COLUMNS
+
+
+def report_row(path, args, report):
+    """One CSV row: checkpoint, config, and the duplicate + per-seat values."""
+    return (os.path.basename(path),
+            ",".join(str(s) for s in args.act_streets),
+            bool(args.fold_call_only),
+            int(report["decks"]),
+            float(report["bb100"]),
+            float(report["stderr"]),
+            float(report["seat_bb100"][0]),
+            float(report["seat_bb100"][1]))
+
+
+def _ci(stderr):
+    return 1.96 * stderr
 
 
 def main(argv=None):
@@ -45,32 +95,38 @@ def main(argv=None):
 
     vocab = _load_vocab(args.config, "blueprint")
     strategy = sixmax.BlueprintStrategy.load(args.checkpoint, vocab)
-    # The checkpoint's own training stack (a 200 BB blueprint keys pots and
-    # stacks in that frame); --stack-bb overrides it.
+    # The checkpoint records its own training stack; --stack-bb overrides it.
     stack = args.stack_bb or strategy.starting_stack()
     cfg = sixmax.EngineConfig(num_players=strategy.num_players(),
                               starting_stack=stack)
-    lbr = sixmax.LbrConfig(samples=args.samples, seed=args.seed,
-                           uniform_opponents=args.uniform_opponents)
+    lbr = sixmax.LbrConfig(act_streets=args.act_streets,
+                           fold_call_only=args.fold_call_only,
+                           preflop_wp_samples=args.preflop_wp_samples,
+                           uniform_opponents=args.uniform_opponents,
+                           num_threads=args.threads, seed=args.seed)
     ev = sixmax.LbrEvaluator(strategy, vocab, cfg, lbr)
     report = ev.run(args.decks, args.seed)
 
-    print(f"\nLBR exploitability — {os.path.basename(args.checkpoint)} "
-          f"({strategy.iterations()} iters, {stack:g} BB), {args.decks} decks, "
-          f"samples={args.samples}, seed {args.seed}\n")
-    print(f"{'seat':>4}  {'gain BB/100':>12}  {'95% CI':>9}")
-    for seat, (gain, se) in enumerate(zip(report["gains"], report["stderrs"])):
-        print(f"{seat:>4}  {gain:>+12.2f}  {'±' + format(1.96 * se, '.2f'):>9}")
-    print(f"\nmax gain {report['max_gain']:+.2f}  "
-          f"mean gain {report['mean_gain']:+.2f} BB/100")
+    streets = ",".join(str(s) for s in args.act_streets) or "none"
+    model = "uniform" if args.uniform_opponents else "blueprint"
+    print("\nLBR duplicate evaluation - %s (%d iters, %g BB), %d decks, "
+          "seed %d" % (os.path.basename(args.checkpoint),
+                       strategy.iterations(), stack, args.decks, args.seed))
+    print("LBR acts on streets: %s; opponent model: %s" % (streets, model))
+    print("\n%6s  %12s  %9s" % ("seat", "LBR BB/100", "95% CI"))
+    for seat, (value, se) in enumerate(zip(report["seat_bb100"],
+                                           report["seat_stderr"])):
+        print("%6d  %+12.2f  %9s" % (
+            seat, value, "+-" + format(_ci(se), ".2f")))
+    print("\nduplicate  %+.2f BB/100  (+-%0.2f)  =  %+.1f mBB/h" % (
+        report["bb100"], _ci(report["stderr"]), report["bb100"] * 10.0))
 
     if args.csv:
         with open(args.csv, "w") as f:
-            f.write("checkpoint,seat,gain_bb100,stderr,decks\n")
-            for ckpt, seat, gain, se, decks in report_rows(
-                    args.checkpoint, report):
-                f.write(f"{ckpt},{seat},{gain:.4f},{se:.4f},{decks}\n")
-        print(f"\nwrote {args.csv}")
+            f.write(csv_header() + "\n")
+            row = report_row(args.checkpoint, args, report)
+            f.write(",".join(str(x) for x in row) + "\n")
+        print("\nwrote %s" % args.csv)
 
 
 if __name__ == "__main__":
