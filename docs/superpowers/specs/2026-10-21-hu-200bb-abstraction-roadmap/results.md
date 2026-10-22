@@ -5,5 +5,24 @@
 | 2026-10-21 | Local benchmark (M-series laptop) | C0 hu200.toml | 600,000 | 33,647 | 939 cumulative (994/999/841 per 200k window) | - | - | $0 |
 | 2026-10-21 | ccx33 benchmark (8 dedicated vCPU) | C0 hu200.toml | 600,000 | 33,637 | 3,935 | - | - | $0.01 (351 s incl. setup) |
 | 2026-10-21 | Slumbot freeze check (guest) | hu_blueprint_50000000.bin, hu.toml | 50,000,000 | - | - | - | raw -107.2 ±42.5, baseline -95.1 ±41.1 (3,000 hands); PASS vs -118.3 ±42 | $0 |
+| 2026-10-21 | C0 training (ccx33), stopped at plateau | C0 hu200.toml, pct 50/50/20 | 29.3M run; snapshots to 25M | 33,848 | 3,542 | plateau: 15M vs 5M +6.86 (t=1.71, converged); 20M vs 10M -2.03 (t=-1.04, converged) | - | $0.49 (2.35 h) |
 
 Estimates at 3,935 it/s and about $0.22/h (before larger arms grow the infoset table): C0 to the 60M cap is about 4.2 h, about $1. Six to eight arms at that scale is under $10, well inside the $40 budget. Re-estimate after C0 shows how it/s holds as infosets grow.
+
+## C0 plateau
+
+First converged snapshot: 15M (t=1.71, borderline; 7 of 8 seeds positive). Confirmed at 20M vs 10M (t=-1.04). Run stopped at about 29M; snapshots 5M-25M are local. For arm caps use C0_plateau = 20M (my call: the confirmed point, not the borderline one; costs about $0.3 more per arm than 15M). Gate 2 compares C0 at its 25M snapshot, the most-trained converged checkpoint.
+
+## Map scoring (3-pre), 2026-10-21
+
+`scripts/score_bucket_map.py`, local, free. Spread left = within-bucket spread / one-bucket spread (lower is better). Contexts 73/242/753 (C0 layout).
+
+| Map | Flop | Turn | River | Verdict |
+|---|---:|---:|---:|---|
+| pct 50/50/20 (D0) | 15.4% | 21.0% | 4.9% | reference |
+| pct 100/100/50 (D1) | 15.1% | 20.8% | 2.0% | keep (river step is the best step) |
+| pct 200/200/20 (DF) | 15.0% | 20.8% | 4.9% | drop (flop 9%, turn 2% of best) |
+| pct 50/50/100 (DR) | 15.4% | 21.0% | 1.0% | drop (river step 21% of best) |
+| potential 50/50/20 | 12.1% | 12.6% | 4.9% | same infosets as D0 |
+
+Equity-percentile flop/turn buckets plateau near 15%/21% whatever the count; potential-aware clustering at equal counts cuts that by 21%/40%. Raw rows: `map_scores_3a.json`.

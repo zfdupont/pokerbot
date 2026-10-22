@@ -1,0 +1,169 @@
+{
+  "contexts": [
+    73,
+    242,
+    753
+  ],
+  "fraction": 0.5,
+  "rows": [
+    {
+      "map": "sixmax/tables/map_pct_50_50_20.bin",
+      "street": 1,
+      "buckets": 50,
+      "error": 0.03098119529051987,
+      "baseline": 0.2015227568959136
+    },
+    {
+      "map": "sixmax/tables/map_pct_50_50_20.bin",
+      "street": 2,
+      "buckets": 50,
+      "error": 0.05162492250407312,
+      "baseline": 0.24551715551032788
+    },
+    {
+      "map": "sixmax/tables/map_pct_50_50_20.bin",
+      "street": 3,
+      "buckets": 20,
+      "error": 0.01254154949482378,
+      "baseline": 0.25625421873025267
+    },
+    {
+      "map": "sixmax/tables/map_pct_200_200_20.bin",
+      "street": 1,
+      "buckets": 200,
+      "error": 0.030292943436916145,
+      "baseline": 0.2015227568959136
+    },
+    {
+      "map": "sixmax/tables/map_pct_200_200_20.bin",
+      "street": 2,
+      "buckets": 200,
+      "error": 0.05100676962447481,
+      "baseline": 0.24551715551032788
+    },
+    {
+      "map": "sixmax/tables/map_pct_200_200_20.bin",
+      "street": 3,
+      "buckets": 20,
+      "error": 0.01254154949482378,
+      "baseline": 0.25625421873025267
+    },
+    {
+      "map": "sixmax/tables/map_pct_50_50_100.bin",
+      "street": 1,
+      "buckets": 50,
+      "error": 0.03098119529051987,
+      "baseline": 0.2015227568959136
+    },
+    {
+      "map": "sixmax/tables/map_pct_50_50_100.bin",
+      "street": 2,
+      "buckets": 50,
+      "error": 0.05162492250407312,
+      "baseline": 0.24551715551032788
+    },
+    {
+      "map": "sixmax/tables/map_pct_50_50_100.bin",
+      "street": 3,
+      "buckets": 100,
+      "error": 0.002450577759145709,
+      "baseline": 0.25625421873025267
+    },
+    {
+      "map": "sixmax/tables/map_pct_100_100_50.bin",
+      "street": 1,
+      "buckets": 100,
+      "error": 0.03046745757372848,
+      "baseline": 0.2015227568959136
+    },
+    {
+      "map": "sixmax/tables/map_pct_100_100_50.bin",
+      "street": 2,
+      "buckets": 100,
+      "error": 0.05116708680142592,
+      "baseline": 0.24551715551032788
+    },
+    {
+      "map": "sixmax/tables/map_pct_100_100_50.bin",
+      "street": 3,
+      "buckets": 50,
+      "error": 0.005064828896323152,
+      "baseline": 0.25625421873025267
+    }
+  ],
+  "verdicts": {
+    "sixmax/tables/map_pct_200_200_20.bin": {
+      "streets": [
+        {
+          "street": "flop",
+          "vs": "sixmax/tables/map_pct_100_100_50.bin",
+          "extra_infosets": 7300,
+          "gain": 0.005727886430629381,
+          "efficiency": 1.186270300531055e-07,
+          "keep": false,
+          "relative": 0.09184589717805523
+        },
+        {
+          "street": "turn",
+          "vs": "sixmax/tables/map_pct_100_100_50.bin",
+          "extra_infosets": 24200,
+          "gain": 0.00313320900158498,
+          "efficiency": 2.698254107639387e-08,
+          "keep": false,
+          "relative": 0.020890986583712808
+        }
+      ],
+      "keep": false
+    },
+    "sixmax/tables/map_pct_50_50_100.bin": {
+      "streets": [
+        {
+          "street": "river",
+          "vs": "sixmax/tables/map_pct_100_100_50.bin",
+          "extra_infosets": 37650,
+          "gain": 0.5161578388314908,
+          "efficiency": 2.7096381678095777e-07,
+          "keep": false,
+          "relative": 0.20979126632350298
+        }
+      ],
+      "keep": false
+    },
+    "sixmax/tables/map_pct_100_100_50.bin": {
+      "streets": [
+        {
+          "street": "flop",
+          "vs": "sixmax/tables/map_pct_50_50_20.bin",
+          "extra_infosets": 3650,
+          "gain": 0.01658224325994906,
+          "efficiency": 6.984325818229988e-07,
+          "keep": true,
+          "relative": 0.5407550628823948
+        },
+        {
+          "street": "turn",
+          "vs": "sixmax/tables/map_pct_50_50_20.bin",
+          "extra_infosets": 12100,
+          "gain": 0.008868501499659898,
+          "efficiency": 1.5411412411142107e-07,
+          "keep": false,
+          "relative": 0.11932145642091012
+        },
+        {
+          "street": "river",
+          "vs": "sixmax/tables/map_pct_50_50_20.bin",
+          "extra_infosets": 22590,
+          "gain": 0.5961560492654008,
+          "efficiency": 1.2915876887035198e-06,
+          "keep": true,
+          "relative": 1.0
+        }
+      ],
+      "keep": true
+    },
+    "sixmax/tables/map_pct_50_50_20.bin": {
+      "streets": [],
+      "keep": true
+    }
+  }
+}
