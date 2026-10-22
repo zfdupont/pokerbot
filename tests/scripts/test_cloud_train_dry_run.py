@@ -54,7 +54,18 @@ def test_dry_run_excludes_local_envs_and_worktrees():
     result = _run("--dry-run", "--config", _HU200, "--bucket-map", _MAP)
     assert result.returncode == 0, result.stderr
     assert "--exclude='.worktrees/'" in result.stdout
+    # Claude Code worktrees (with their own .venv) and SDD scratch.
+    assert "--exclude='.claude/'" in result.stdout
+    assert "--exclude='.superpowers/'" in result.stdout
     assert "--exclude='.venv/'" in result.stdout
+
+
+def test_dry_run_excludes_env_files():
+    # .env holds HCLOUD_TOKEN, GHCR_PAT and API keys. The script sources it
+    # locally and sends GHCR_PAT separately, so the server never needs it.
+    result = _run("--dry-run", "--config", _HU200, "--bucket-map", _MAP)
+    assert result.returncode == 0, result.stderr
+    assert "--exclude='.env*'" in result.stdout
 
 
 def test_dry_run_relative_map_path():

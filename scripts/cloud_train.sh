@@ -38,7 +38,10 @@ SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o Connect
 # rsync exclude flags for the source sync (--dry-run prints these verbatim).
 # sixmax/tables/ holds gitignored build artifacts (equity store + bucket maps,
 # 130-530 MB each); the one map an arm needs is uploaded via --bucket-map.
+# .env* holds the cloud and API secrets: the script sources it locally and
+# sends GHCR_PAT to the server separately, so it never ships.
 RSYNC_EXCLUDES=(
+    --exclude='.env*'
     --exclude='third_party/'
     --exclude='buck-out/'
     --exclude='sixmax/tables/'
@@ -47,6 +50,8 @@ RSYNC_EXCLUDES=(
     --exclude='cfr/checkpoints/'
     --exclude='.git/'
     --exclude='.worktrees/'
+    --exclude='.claude/'
+    --exclude='.superpowers/'
     --exclude='.venv/'
     --exclude='__pycache__/'
     --exclude='*.pyc'
