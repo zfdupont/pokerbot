@@ -1,4 +1,5 @@
 """Argument parsing + CSV shape for the LBR driver (no engine run)."""
+import csv
 import importlib.util
 import os
 
@@ -35,6 +36,21 @@ def test_csv_row_shape():
     assert row[4] == -0.25 and row[5] == 0.4
     assert row[6] == 1.5 and row[7] == -2.0
     assert m.csv_header() == CSV_HEADER
+
+
+def test_csv_file_round_trips(tmp_path):
+    # The writer must keep "2,3" as one field: a bare join would emit nine
+    # columns under the eight-column header.
+    m = _load_driver()
+    args = m.parse_args(["--checkpoint", "bp.bin"])
+    path = tmp_path / "lbr.csv"
+    m.write_csv(str(path), "bp.bin", args, _report())
+    with open(path, newline="") as f:
+        rows = list(csv.reader(f))
+    assert rows[0] == CSV_HEADER.split(",")
+    assert len(rows) == 2
+    assert len(rows[1]) == 8
+    assert rows[1][1] == "2,3"
 
 
 def test_parse_args_defaults():

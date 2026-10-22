@@ -593,7 +593,7 @@ def test_run_all_streets_is_finite(tmp_path):
     assert rep["bb100"] == rep["per_deck"][0]
 
 
-def test_run_call_only_streets_vs_uniform_is_positive(tmp_path):
+def test_run_call_only_streets_is_finite(tmp_path):
     # act_streets=[] forces check/call only: no betting and no fold, but the
     # loop must still finish and return finite numbers.
     ev = _evaluator(_strategy(tmp_path, iters=20), uniform_opponents=True,

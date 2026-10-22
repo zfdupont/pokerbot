@@ -9,6 +9,7 @@ Chip values stay in the engine frame (big blinds); pots and stacks come from
 the checkpoint's training configuration unless --stack-bb overrides it.
 """
 import argparse
+import csv
 import os
 import sys
 
@@ -71,6 +72,18 @@ def csv_header():
     return CSV_COLUMNS
 
 
+def write_csv(path, checkpoint, args, report):
+    """Write the header and the single data row through csv.writer.
+
+    `act_streets` stays one field (e.g. "2,3"), so the writer quotes it and the
+    row keeps exactly len(CSV_COLUMNS) fields.
+    """
+    with open(path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(csv_header().split(","))
+        writer.writerow(report_row(checkpoint, args, report))
+
+
 def report_row(path, args, report):
     """One CSV row: checkpoint, config, and the duplicate + per-seat values."""
     return (os.path.basename(path),
@@ -96,7 +109,8 @@ def main(argv=None):
     vocab = _load_vocab(args.config, "blueprint")
     strategy = sixmax.BlueprintStrategy.load(args.checkpoint, vocab)
     # The checkpoint records its own training stack; --stack-bb overrides it.
-    stack = args.stack_bb or strategy.starting_stack()
+    stack = (strategy.starting_stack() if args.stack_bb is None
+             else args.stack_bb)
     cfg = sixmax.EngineConfig(num_players=strategy.num_players(),
                               starting_stack=stack)
     lbr = sixmax.LbrConfig(act_streets=args.act_streets,
@@ -122,10 +136,7 @@ def main(argv=None):
         report["bb100"], _ci(report["stderr"]), report["bb100"] * 10.0))
 
     if args.csv:
-        with open(args.csv, "w") as f:
-            f.write(csv_header() + "\n")
-            row = report_row(args.checkpoint, args, report)
-            f.write(",".join(str(x) for x in row) + "\n")
+        write_csv(args.csv, args.checkpoint, args, report)
         print("\nwrote %s" % args.csv)
 
 
