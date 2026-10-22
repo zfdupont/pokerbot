@@ -32,6 +32,10 @@ public:
     void observe(const BlueprintStrategy& blueprint, const EngineGameState& pre_action,
                  int actor, int action);
 
+    // Zero every combo holding one of `cards` (newly revealed board cards) and
+    // renormalise. If that would leave zero mass, the prior is kept.
+    void remove_blocked(const std::vector<int>& cards);
+
     // Overwrite the posterior with `prior` (renormalised copy). A wrong-size or
     // all-zero prior is ignored, leaving the current range (e.g. a uniform
     // reset) intact — the degenerate-safe path the search relies on.

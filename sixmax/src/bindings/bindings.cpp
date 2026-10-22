@@ -597,18 +597,30 @@ PYBIND11_MODULE(sixmax, m) {
           py::arg("strategy"), py::arg("state"), py::arg("uniform") = false,
           py::arg("seed") = 1);
     py::class_<sixmax::LbrConfig>(m, "LbrConfig")
-        .def(py::init([](int samples, bool condition_on_history,
-                         bool uniform_opponents, int hero_action_limit,
-                         int max_steps, uint64_t seed) {
-                 return sixmax::LbrConfig{samples, condition_on_history,
-                                          uniform_opponents, hero_action_limit,
-                                          max_steps, seed};
+        .def(py::init([](const std::vector<int>& act_streets,
+                         bool fold_call_only, int preflop_wp_samples,
+                         bool uniform_opponents, int num_threads,
+                         uint64_t seed) {
+                 sixmax::LbrConfig cfg;
+                 cfg.act_streets = {false, false, false, false};
+                 for (int street : act_streets) {
+                     if (street < 0 || street > 3)
+                         throw py::value_error(
+                             "act_streets entries must be 0-3");
+                     cfg.act_streets[street] = true;
+                 }
+                 cfg.fold_call_only = fold_call_only;
+                 cfg.preflop_wp_samples = preflop_wp_samples;
+                 cfg.uniform_opponents = uniform_opponents;
+                 cfg.num_threads = num_threads;
+                 cfg.seed = seed;
+                 return cfg;
              }),
-             py::kw_only(), py::arg("samples") = 64,
-             py::arg("condition_on_history") = true,
+             py::kw_only(), py::arg("act_streets") = std::vector<int>{2, 3},
+             py::arg("fold_call_only") = false,
+             py::arg("preflop_wp_samples") = 500,
              py::arg("uniform_opponents") = false,
-             py::arg("hero_action_limit") = 0,
-             py::arg("max_steps") = 4096, py::arg("seed") = 1);
+             py::arg("num_threads") = 0, py::arg("seed") = 1);
     py::class_<sixmax::LbrEvaluator>(m, "LbrEvaluator")
         .def(py::init<const sixmax::BlueprintStrategy&,
                       const sixmax::ActionVocab&, const sixmax::EngineConfig&,
@@ -616,52 +628,27 @@ PYBIND11_MODULE(sixmax, m) {
              py::arg("strategy"), py::arg("vocab"), py::arg("cfg"),
              py::arg("lbr") = sixmax::LbrConfig{},
              py::keep_alive<1, 2>(), py::keep_alive<1, 3>())
+        .def("win_probability",
+             [](const sixmax::LbrEvaluator& e,
+                const std::array<int, 2>& hero_hole,
+                const std::vector<int>& board,
+                const std::vector<double>& range, uint64_t seed) {
+                 std::mt19937_64 rng(seed);
+                 return e.win_probability(hero_hole, board, range, rng);
+             },
+             py::arg("hero_hole"), py::arg("board"), py::arg("range"),
+             py::arg("seed") = 1)
         .def("decide",
-             [](sixmax::LbrEvaluator& e, const sixmax::HandState& s, int hero,
-                const std::vector<int>& actors,
-                const std::vector<int>& actions, uint64_t seed) {
+             [](const sixmax::LbrEvaluator& e, const sixmax::HandState& s,
+                int hero, const std::vector<double>& range, uint64_t seed) {
+                 // The evaluator's vocab and the strategy's own abstraction
+                 // make the wrapped state key exactly like the blueprint did.
+                 sixmax::EngineGameState state(s, &e.vocab(), &e.abstraction());
                  std::mt19937_64 rng(seed);
-                 return e.decide(s, hero, actors, actions, rng);
+                 return e.decide(state, hero, range, rng);
              },
-             py::arg("hand"), py::arg("hero"),
-             py::arg("actors") = std::vector<int>{},
-             py::arg("actions") = std::vector<int>{}, py::arg("seed") = 1)
-        .def("sampled_rollouts_exhausted",
-             &sixmax::LbrEvaluator::sampled_rollouts_exhausted)
-        .def("debug_sample_deals",
-             [](sixmax::LbrEvaluator& e, const sixmax::HandState& s, int hero,
-                const std::vector<int>& actors,
-                const std::vector<int>& actions, uint64_t seed) {
-                 std::mt19937_64 rng(seed);
-                 py::list hands, weights;
-                 for (auto& smp : e.debug_sample_deals(s, hero, actors, actions,
-                                                       rng)) {
-                     hands.append(smp.current);
-                     weights.append(smp.weight);
-                 }
-                 return py::make_tuple(hands, weights);
-             },
-             py::arg("hand"), py::arg("hero"),
-             py::arg("actors") = std::vector<int>{},
-             py::arg("actions") = std::vector<int>{}, py::arg("seed") = 1)
-        .def("run",
-             [](sixmax::LbrEvaluator& e, int decks, uint64_t seed) {
-                 auto r = e.run(decks, seed);
-                 py::dict out;
-                 py::list gains, ses;
-                 for (auto& s : r.seats) {
-                     gains.append(s.gain_bb100);
-                     ses.append(s.stderr);
-                 }
-                 out["gains"] = gains;
-                 out["stderrs"] = ses;
-                 out["max_gain"] = r.max_gain_bb100;
-                 out["mean_gain"] = r.mean_gain_bb100;
-                 out["decks"] = r.decks;
-                 out["num_players"] = r.num_players;
-                 return out;
-             },
-             py::arg("decks"), py::arg("seed") = 1);
+             py::arg("hand"), py::arg("hero"), py::arg("range"),
+             py::arg("seed") = 1);
     // --- Multithreaded blueprint trainer (Phase 1b Task 3) ---
     py::class_<sixmax::BlueprintTrainer>(m, "BlueprintTrainer")
         .def(py::init([](const sixmax::EngineConfig& cfg,
@@ -864,6 +851,7 @@ PYBIND11_MODULE(sixmax, m) {
         .def("reset", &sixmax::RangeTracker::reset)
         .def("range", [](const sixmax::RangeTracker& t, int p) { return t.range(p); })
         .def("combo_prob", &sixmax::RangeTracker::combo_prob)
+        .def("remove_blocked", &sixmax::RangeTracker::remove_blocked)
         .def("set_range_for_test", &sixmax::RangeTracker::set_range_for_test)
         .def("observe_with_probs", &sixmax::RangeTracker::observe_with_probs)
         .def("set_prior", &sixmax::RangeTracker::set_prior);

@@ -76,6 +76,28 @@ void RangeTracker::observe_with_probs(int, const std::vector<double>& w) {
     range_ = std::move(post);
 }
 
+void RangeTracker::remove_blocked(const std::vector<int>& cards) {
+    std::array<bool, 52> blocked{};
+    bool any = false;
+    for (int c : cards) {
+        if (c < 0 || c >= 52 || blocked[c]) continue;
+        blocked[c] = true;
+        any = true;
+    }
+    if (!any) return;
+    std::vector<double> post(range_.size(), 0.0);
+    double total = 0.0;
+    for (size_t i = 0; i < range_.size(); ++i) {
+        const auto hole = combo_cards((int)i);
+        if (hole[0] < 0 || blocked[hole[0]] || blocked[hole[1]]) continue;
+        post[i] = range_[i];
+        total += post[i];
+    }
+    if (total <= 0.0) return;  // everything blocked: keep the prior
+    for (double& v : post) v /= total;
+    range_ = std::move(post);
+}
+
 void RangeTracker::set_prior(const std::vector<double>& prior) {
     if (prior.size() != range_.size()) return;        // malformed: ignore
     double total = 0.0;
