@@ -46,6 +46,8 @@ RSYNC_EXCLUDES=(
     --exclude='neural_cfr/checkpoints/'
     --exclude='cfr/checkpoints/'
     --exclude='.git/'
+    --exclude='.worktrees/'
+    --exclude='.venv/'
     --exclude='__pycache__/'
     --exclude='*.pyc'
 )

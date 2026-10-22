@@ -49,6 +49,14 @@ def test_dry_run_with_map():
     assert "HCLOUD_TOKEN" not in out + result.stderr
 
 
+def test_dry_run_excludes_local_envs_and_worktrees():
+    # Sibling worktrees and virtualenvs (torch alone is GBs) never ship.
+    result = _run("--dry-run", "--config", _HU200, "--bucket-map", _MAP)
+    assert result.returncode == 0, result.stderr
+    assert "--exclude='.worktrees/'" in result.stdout
+    assert "--exclude='.venv/'" in result.stdout
+
+
 def test_dry_run_relative_map_path():
     # Review Focus 4: a relative path with ../ segments resolves to its basename
     # on the box, and the dry run must not require the file to exist.
