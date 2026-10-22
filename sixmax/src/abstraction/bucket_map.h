@@ -80,6 +80,47 @@ std::vector<float> flop_potential_hist(
     const std::vector<int>& order);
 
 // ---------------------------------------------------------------------------
+// Map scoring (roadmap Phase 3 "3-pre": rank candidate maps before training)
+// ---------------------------------------------------------------------------
+
+// Within-bucket spread of per-hand features: the multiplicity-weighted mean,
+// over hands, of sum_t |feature[t] - bucket_mean[t]| / dims. For a CDF over
+// equal-width equity bins that is the 1-D earth mover's distance to the
+// bucket's mean distribution, in equity units; for a scalar equity it is the
+// mean absolute deviation. `baseline` is the same spread with every hand in
+// one bucket, so error / baseline is the share of the spread a map leaves.
+struct BucketSpread {
+    double error = 0.0;
+    double baseline = 0.0;
+};
+
+// Throws std::invalid_argument on ragged or empty features, a length
+// mismatch, k outside [1, kMaxBucketCount], a bucket id >= k, or zero total
+// weight. Deterministic and independent of the thread count.
+BucketSpread bucket_spread(const std::vector<std::vector<float>>& features,
+                           const std::vector<uint32_t>& weight,
+                           const std::vector<uint8_t>& buckets, int k,
+                           int num_threads = 0);
+
+struct MapScore {
+    std::string path;
+    int street = 0;   // 1=flop 2=turn 3=river
+    int buckets = 0;
+    BucketSpread spread;
+};
+
+// Scores every map on every postflop street against map-independent features
+// from the equity store: river = the hand's river equity; turn = the CDF of
+// its 46 river equities over kPotentialTurnBins bins; flop = the CDF of its
+// 47 turn equities over the same bins. Weights are HandIndexer multiplicity.
+// Features are computed once per hand and shared by all maps. Results are in
+// map order, then street order. Throws std::runtime_error if the equity store
+// or a map fails to load.
+std::vector<MapScore> score_bucket_maps(
+    const std::string& equity_path, const std::vector<std::string>& map_paths,
+    int num_threads = 0);
+
+// ---------------------------------------------------------------------------
 // SIXBM001 file format
 // ---------------------------------------------------------------------------
 //

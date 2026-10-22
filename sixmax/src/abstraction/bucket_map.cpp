@@ -493,29 +493,142 @@ std::vector<uint8_t> kmeans_from_cdf_impl(const float* cdf, uint64_t n,
 // Potential-aware features
 // ---------------------------------------------------------------------------
 
+// Histogram over `bins` equal-width equity bins of the next street's equity,
+// one entry per card that can come next (each weighing 1/cards).
+template <typename NextEquity>
+std::vector<float> next_card_hist_impl(const std::array<int, 2>& hole,
+                                       const std::vector<int>& board, int bins,
+                                       size_t board_size, int expected_cards,
+                                       const char* what,
+                                       NextEquity next_equity) {
+    if (bins < 1)
+        throw std::invalid_argument(std::string(what) +
+                                    ": bins must be >= 1");
+    const auto used = validate_hand(hole, board, board_size, what);
+
+    std::vector<float> hist(static_cast<size_t>(bins), 0.0f);
+    std::vector<int> next_board = board;
+    int cards = 0;
+    for (int c = 0; c < static_cast<int>(kCards); ++c) {
+        if (used[static_cast<size_t>(c)]) continue;
+        next_board.push_back(c);
+        const int bin = equity_bin(next_equity(next_board), bins);
+        hist[static_cast<size_t>(bin)] +=
+            1.0f / static_cast<float>(expected_cards);
+        next_board.pop_back();
+        ++cards;
+    }
+    if (cards != expected_cards)
+        throw std::runtime_error(std::string(what) +
+                                 ": unexpected deck size");
+    return hist;
+}
+
 template <typename RiverEquity>
 std::vector<float> turn_hist_impl(const std::array<int, 2>& hole,
                                   const std::vector<int>& board, int bins,
                                   RiverEquity river_equity) {
-    if (bins < 1)
-        throw std::invalid_argument("turn_potential_hist: bins must be >= 1");
-    const auto used = validate_hand(hole, board, 4, "turn_potential_hist");
+    return next_card_hist_impl(hole, board, bins, 4, kTurnCards,
+                               "turn_potential_hist", river_equity);
+}
 
-    std::vector<float> hist(static_cast<size_t>(bins), 0.0f);
-    std::vector<int> river_board = board;
-    int cards = 0;
-    for (int c = 0; c < static_cast<int>(kCards); ++c) {
-        if (used[static_cast<size_t>(c)]) continue;
-        river_board.push_back(c);
-        const int bin = equity_bin(river_equity(river_board), bins);
-        hist[static_cast<size_t>(bin)] +=
-            1.0f / static_cast<float>(kTurnCards);
-        river_board.pop_back();
-        ++cards;
+// ---------------------------------------------------------------------------
+// Map scoring
+// ---------------------------------------------------------------------------
+
+// Two passes over n hands: per-(map, bucket) mean features, then the mean
+// |feature - bucket mean|. Features are recomputed in the second pass rather
+// than stored (the turn has 14M hands x 50 dims). `feature(idx, out)` writes
+// `dims` floats; `bucket(m, idx)` is hand idx's bucket in map m, which has
+// ks[m] buckets. Per-shard accumulators merged in shard order keep results
+// independent of the thread count.
+template <typename FeatureFn, typename WeightFn, typename BucketFn>
+std::vector<BucketSpread> spread_impl(uint64_t n, int dims,
+                                      const std::vector<int>& ks,
+                                      FeatureFn feature, WeightFn weight,
+                                      BucketFn bucket, int num_threads) {
+    const size_t d = static_cast<size_t>(dims);
+    const size_t maps = ks.size();
+    std::vector<size_t> offset(maps + 1, 0);  // bucket rows before map m
+    for (size_t m = 0; m < maps; ++m)
+        offset[m + 1] = offset[m] + static_cast<size_t>(ks[m]);
+    const size_t rows = offset[maps];
+
+    // Pass 1: weighted feature sums per bucket row, plus the all-hands row.
+    std::vector<std::vector<double>> sum(kShards), wsum(kShards);
+    run_shards(n, kShards, num_threads,
+               [&](int shard, uint64_t begin, uint64_t end) {
+                   auto& s = sum[static_cast<size_t>(shard)];
+                   auto& w = wsum[static_cast<size_t>(shard)];
+                   s.assign((rows + 1) * d, 0.0);
+                   w.assign(rows + 1, 0.0);
+                   std::vector<float> f(d);
+                   for (uint64_t idx = begin; idx < end; ++idx) {
+                       const double wt = static_cast<double>(weight(idx));
+                       feature(idx, f.data());
+                       for (size_t m = 0; m <= maps; ++m) {
+                           const size_t row =
+                               m == maps ? rows
+                                         : offset[m] + bucket(m, idx);
+                           w[row] += wt;
+                           double* out = &s[row * d];
+                           for (size_t t = 0; t < d; ++t) out[t] += wt * f[t];
+                       }
+                   }
+               });
+    std::vector<double> mean((rows + 1) * d, 0.0), rw(rows + 1, 0.0);
+    for (size_t sh = 0; sh < kShards; ++sh) {
+        if (wsum[sh].empty()) continue;
+        for (size_t r = 0; r <= rows; ++r) rw[r] += wsum[sh][r];
+        for (size_t i = 0; i < mean.size(); ++i) mean[i] += sum[sh][i];
     }
-    if (cards != kTurnCards)
-        throw std::runtime_error("turn_potential_hist: unexpected deck size");
-    return hist;
+    for (size_t r = 0; r <= rows; ++r)
+        if (rw[r] > 0.0)
+            for (size_t t = 0; t < d; ++t) mean[r * d + t] /= rw[r];
+    std::vector<std::vector<double>>().swap(sum);
+
+    // Pass 2: weighted |feature - mean| per map, plus the one-bucket baseline.
+    std::vector<std::vector<double>> dev(kShards);
+    run_shards(n, kShards, num_threads,
+               [&](int shard, uint64_t begin, uint64_t end) {
+                   auto& out = dev[static_cast<size_t>(shard)];
+                   out.assign(maps + 1, 0.0);
+                   std::vector<float> f(d);
+                   for (uint64_t idx = begin; idx < end; ++idx) {
+                       const double wt = static_cast<double>(weight(idx));
+                       feature(idx, f.data());
+                       for (size_t m = 0; m <= maps; ++m) {
+                           const size_t row =
+                               m == maps ? rows
+                                         : offset[m] + bucket(m, idx);
+                           const double* mu = &mean[row * d];
+                           double acc = 0.0;
+                           for (size_t t = 0; t < d; ++t)
+                               acc += std::fabs(static_cast<double>(f[t]) -
+                                                mu[t]);
+                           out[m] += wt * acc;
+                       }
+                   }
+               });
+    std::vector<double> total(maps + 1, 0.0);
+    for (size_t sh = 0; sh < kShards; ++sh)
+        for (size_t m = 0; m < dev[sh].size(); ++m) total[m] += dev[sh][m];
+
+    const double norm = rw[rows] * static_cast<double>(d);
+    if (!(norm > 0.0))
+        throw std::invalid_argument("bucket_spread: total weight is zero");
+    std::vector<BucketSpread> result(maps);
+    for (size_t m = 0; m < maps; ++m)
+        result[m] = {total[m] / norm, total[maps] / norm};
+    return result;
+}
+
+void cdf_in_place(std::vector<float>& hist) {
+    float running = 0.0f;
+    for (float& v : hist) {
+        running += v;
+        v = running;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -976,6 +1089,110 @@ int BucketMap::num_buckets(int street) const {
         throw std::invalid_argument(
             "num_buckets: street must be 1, 2 or 3");
     return static_cast<int>(buckets_[static_cast<size_t>(street - 1)]);
+}
+
+// ---------------------------------------------------------------------------
+// Map scoring
+// ---------------------------------------------------------------------------
+
+BucketSpread bucket_spread(const std::vector<std::vector<float>>& features,
+                           const std::vector<uint32_t>& weight,
+                           const std::vector<uint8_t>& buckets, int k,
+                           int num_threads) {
+    if (features.empty())
+        throw std::invalid_argument("bucket_spread: no features");
+    if (weight.size() != features.size() || buckets.size() != features.size())
+        throw std::invalid_argument(
+            "bucket_spread: weight/bucket size does not match features");
+    if (k < 1 || k > kMaxBucketCount)
+        throw std::invalid_argument("bucket_spread: k must be in [1, 255]");
+    const size_t dims = features[0].size();
+    if (dims == 0)
+        throw std::invalid_argument("bucket_spread: features must be non-empty");
+    for (size_t i = 0; i < features.size(); ++i) {
+        if (features[i].size() != dims)
+            throw std::invalid_argument(
+                "bucket_spread: features must all have the same length");
+        if (buckets[i] >= k)
+            throw std::invalid_argument("bucket_spread: bucket id >= k");
+    }
+    return spread_impl(
+        features.size(), static_cast<int>(dims), {k},
+        [&](uint64_t idx, float* out) {
+            const auto& f = features[static_cast<size_t>(idx)];
+            std::copy(f.begin(), f.end(), out);
+        },
+        [&](uint64_t idx) { return weight[static_cast<size_t>(idx)]; },
+        [&](size_t, uint64_t idx) {
+            return static_cast<size_t>(buckets[static_cast<size_t>(idx)]);
+        },
+        num_threads)[0];
+}
+
+std::vector<MapScore> score_bucket_maps(
+    const std::string& equity_path, const std::vector<std::string>& map_paths,
+    int num_threads) {
+    if (map_paths.empty())
+        throw std::invalid_argument("score_bucket_maps: no maps given");
+    const auto& indexer = HandIndexer::instance();
+    std::vector<std::shared_ptr<const BucketMap>> maps;
+    for (const auto& p : map_paths) maps.push_back(BucketMap::open(p));
+    const EquityStore store = load_equity_store(equity_path);
+    const auto& turn_eq = store.eq[1];
+    const auto& river_eq = store.eq[2];
+    const int bins = kPotentialTurnBins;
+
+    std::vector<MapScore> scores(maps.size() * 3);
+    for (int street = 1; street <= 3; ++street) {
+        std::vector<int> ks;
+        for (const auto& m : maps) ks.push_back(m->num_buckets(street));
+        const auto weight = street_weights(street, num_threads);
+        const auto weight_fn = [&](uint64_t idx) {
+            return static_cast<uint32_t>(weight[static_cast<size_t>(idx)]);
+        };
+        const auto bucket_fn = [&](size_t m, uint64_t idx) {
+            return static_cast<size_t>(maps[m]->bucket(street, idx));
+        };
+        std::fprintf(stderr, "[score] street %d (%llu hands, %zu maps)\n",
+                     street,
+                     static_cast<unsigned long long>(indexer.size(street)),
+                     maps.size());
+        std::vector<BucketSpread> spread;
+        if (street == 3) {
+            spread = spread_impl(
+                indexer.size(3), 1, ks,
+                [&](uint64_t idx, float* out) {
+                    out[0] = river_eq[static_cast<size_t>(idx)];
+                },
+                weight_fn, bucket_fn, num_threads);
+        } else {
+            // Flop reads the turn table, turn reads the river table.
+            const auto& next_eq = street == 1 ? turn_eq : river_eq;
+            const size_t board_size = street == 1 ? 3 : 4;
+            const int cards = street == 1 ? kFlopCards : kTurnCards;
+            spread = spread_impl(
+                indexer.size(street), bins, ks,
+                [&](uint64_t idx, float* out) {
+                    std::array<int, 2> hole{};
+                    std::vector<int> board;
+                    indexer.unindex(street, idx, hole, board);
+                    auto hist = next_card_hist_impl(
+                        hole, board, bins, board_size, cards,
+                        "score_bucket_maps",
+                        [&](const std::vector<int>& next_board) {
+                            return next_eq[static_cast<size_t>(indexer.index(
+                                street + 1, hole, next_board))];
+                        });
+                    cdf_in_place(hist);
+                    std::copy(hist.begin(), hist.end(), out);
+                },
+                weight_fn, bucket_fn, num_threads);
+        }
+        for (size_t m = 0; m < maps.size(); ++m)
+            scores[m * 3 + static_cast<size_t>(street - 1)] = {
+                map_paths[m], street, ks[m], spread[m]};
+    }
+    return scores;
 }
 
 // ---------------------------------------------------------------------------

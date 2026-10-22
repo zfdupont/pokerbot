@@ -378,6 +378,45 @@ PYBIND11_MODULE(sixmax, m) {
           },
           py::arg("hole"), py::arg("board"), py::arg("turn_buckets"),
           py::arg("num_buckets"), py::arg("order"));
+    m.def("_bucket_spread",
+          [](const std::vector<std::vector<float>>& features,
+             const std::vector<uint32_t>& weight,
+             const std::vector<uint8_t>& buckets, int k, int num_threads) {
+              try {
+                  const auto s = sixmax::bucket_spread(features, weight,
+                                                       buckets, k, num_threads);
+                  return py::make_tuple(s.error, s.baseline);
+              } catch (const std::invalid_argument& e) {
+                  throw py::value_error(e.what());
+              }
+          },
+          py::arg("features"), py::arg("weight"), py::arg("buckets"),
+          py::arg("k"), py::arg("num_threads") = 0);
+    m.def("score_bucket_maps",
+          [](const std::string& equity_path,
+             const std::vector<std::string>& map_paths, int num_threads) {
+              std::vector<sixmax::MapScore> scores;
+              try {
+                  py::gil_scoped_release release;
+                  scores = sixmax::score_bucket_maps(equity_path, map_paths,
+                                                     num_threads);
+              } catch (const std::exception& e) {
+                  throw py::value_error(e.what());
+              }
+              py::list out;
+              for (const auto& s : scores) {
+                  py::dict row;
+                  row["map"] = s.path;
+                  row["street"] = s.street;
+                  row["buckets"] = s.buckets;
+                  row["error"] = s.spread.error;
+                  row["baseline"] = s.spread.baseline;
+                  out.append(row);
+              }
+              return out;
+          },
+          py::arg("equity_path"), py::arg("map_paths"),
+          py::arg("num_threads") = 0);
     py::class_<sixmax::BucketMap, std::shared_ptr<sixmax::BucketMap>>(
         m, "BucketMap")
         .def_static("open",
