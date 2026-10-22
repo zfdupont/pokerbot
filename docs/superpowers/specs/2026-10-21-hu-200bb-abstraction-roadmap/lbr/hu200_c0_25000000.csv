@@ -1,0 +1,2 @@
+checkpoint,act_streets,fold_call_only,decks,bb100,stderr,seat0_bb100,seat1_bb100,stack_bb,seed,uniform_opponents,preflop_wp_samples,iterations,config,opp_unseen_rate
+hu200_c0_25000000.bin,"2,3",False,4000,424.9996352636129,25.59645714320271,487.8759526622264,362.1233178649999,200.0,1,False,500,25000000,sixmax/configs/hu200.toml,0.0

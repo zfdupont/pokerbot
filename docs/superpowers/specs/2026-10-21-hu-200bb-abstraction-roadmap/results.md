@@ -33,3 +33,18 @@ Equity-percentile flop/turn buckets plateau near 15%/21% whatever the count; pot
 P0 (potential-aware 50/50/20) did not beat C0 at 25M: +2.68 ±3.0 BB/100, t=0.91 (per seed +16.6, +2.9, -5.7, +5.2, -0.3, +10.9, +0.9, -9.1). Per the spec, C0 stays the control and Phase 2 runs on the percentile map. The map-score gain (flop/turn spread left 15.4/21.0% -> 12.1/12.6%) did not translate into a measurable head-to-head edge at these counts.
 
 Note: P0's own 25M snapshot lost to its 15M snapshot (-7.21, t=-2.31). Head-to-head between two near-converged strategies is not monotone in training (a less-equilibrium strategy can beat a closer one), so the plateau rule reads this as converged, not as training making P0 worse.
+
+## Paper LBR (Lisy & Bowling 2017), 2026-10-22
+
+`scripts/eval_sixmax_lbr.py` (branch feature/lbr-paper). LBR acts on turn and river with the checkpoint's own bet sizes and checks or calls before that. 4,000 duplicate decks, seed 1, 200 BB, about 19 min each, local and free. The opponent unseen-infoset rate was 0.00% for all four. Raw output: `lbr/`.
+
+| Checkpoint | LBR BB/100 (95% CI) | mBB/h | Seat 0 (SB) | Seat 1 (BB) |
+|---|---:|---:|---:|---:|
+| C0 @ 15M | +425.7 ±48.4 | 4,257 | +494.8 | +356.7 |
+| C0 @ 25M | +425.0 ±50.2 | 4,250 | +487.9 | +362.1 |
+| P0 @ 15M | +398.1 ±53.6 | 3,981 | +487.9 | +308.3 |
+| P0 @ 25M | +417.7 ±52.0 | 4,177 | +554.0 | +281.4 |
+
+- C0 at 15M and 25M agree within 1 BB/100: C0 had converged by 15M, which matches the head-to-head plateau checks.
+- P0 vs C0 is not significant: the differences are 7-28 BB/100 against about ±70 combined. This matches the head-to-head gate (+2.68, t=0.91). The four runs share decks (same seed), so a paired per-deck comparison would be tighter, but the driver does not save per-deck values yet.
+- For scale, the paper reports Slumbot 2016 at about 4,020 mBB/h with LBR acting on turn and river (its "fcpa 3-4" row). By this probe these blueprints are about as exploitable as Slumbot was, even though Slumbot beats them by about 100 BB/100 head-to-head.

@@ -1,0 +1,13 @@
+
+LBR duplicate evaluation - hu200_p0_15000000.bin
+config: sixmax/configs/hu200.toml; iterations: 15000000; stack: 200 BB; decks: 4000; seed: 1
+preflop wp samples: 500; opponent model: blueprint; LBR acts on streets: 2,3
+opponent unseen-infoset rate: 0.00% (0/28760 decisions)
+
+                  seat    LBR BB/100     95% CI
+    seat 0 (button/SB)       +487.89    +-81.79
+           seat 1 (BB)       +308.34    +-79.65
+
+duplicate               +398.12 BB/100  (+-53.59)  =  +3981.2 mBB/h
+
+wrote docs/superpowers/specs/2026-10-21-hu-200bb-abstraction-roadmap/lbr/hu200_p0_15000000.csv
