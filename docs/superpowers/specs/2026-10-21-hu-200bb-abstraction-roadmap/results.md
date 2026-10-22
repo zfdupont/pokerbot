@@ -6,6 +6,7 @@
 | 2026-10-21 | ccx33 benchmark (8 dedicated vCPU) | C0 hu200.toml | 600,000 | 33,637 | 3,935 | - | - | $0.01 (351 s incl. setup) |
 | 2026-10-21 | Slumbot freeze check (guest) | hu_blueprint_50000000.bin, hu.toml | 50,000,000 | - | - | - | raw -107.2 ±42.5, baseline -95.1 ±41.1 (3,000 hands); PASS vs -118.3 ±42 | $0 |
 | 2026-10-21 | C0 training (ccx33), stopped at plateau | C0 hu200.toml, pct 50/50/20 | 29.3M run; snapshots to 25M | 33,848 | 3,542 | plateau: 15M vs 5M +6.86 (t=1.71, converged); 20M vs 10M -2.03 (t=-1.04, converged) | - | $0.49 (2.35 h) |
+| 2026-10-22 | P0 training (ccx33) + gate | P0 hu200.toml, potential 50/50/20 | 25M | 33,850 | 3,515 | gate P0@25M vs C0@25M: +2.68 ±3.0 (t=0.91), keep C0; plateau 25M vs 15M: -7.21 ±3.1 (t=-2.31), converged | - | $0.42 (2.0 h) |
 
 Estimates at 3,935 it/s and about $0.22/h (before larger arms grow the infoset table): C0 to the 60M cap is about 4.2 h, about $1. Six to eight arms at that scale is under $10, well inside the $40 budget. Re-estimate after C0 shows how it/s holds as infosets grow.
 
@@ -26,3 +27,9 @@ First converged snapshot: 15M (t=1.71, borderline; 7 of 8 seeds positive). Confi
 | potential 50/50/20 | 12.1% | 12.6% | 4.9% | same infosets as D0 |
 
 Equity-percentile flop/turn buckets plateau near 15%/21% whatever the count; potential-aware clustering at equal counts cuts that by 21%/40%. Raw rows: `map_scores_3a.json`.
+
+## Phase 1.5 result (P0), 2026-10-22
+
+P0 (potential-aware 50/50/20) did not beat C0 at 25M: +2.68 ±3.0 BB/100, t=0.91 (per seed +16.6, +2.9, -5.7, +5.2, -0.3, +10.9, +0.9, -9.1). Per the spec, C0 stays the control and Phase 2 runs on the percentile map. The map-score gain (flop/turn spread left 15.4/21.0% -> 12.1/12.6%) did not translate into a measurable head-to-head edge at these counts.
+
+Note: P0's own 25M snapshot lost to its 15M snapshot (-7.21, t=-2.31). Head-to-head between two near-converged strategies is not monotone in training (a less-equilibrium strategy can beat a closer one), so the plateau rule reads this as converged, not as training making P0 worse.
