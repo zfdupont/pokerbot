@@ -50,3 +50,5 @@ Note: P0's own 25M snapshot lost to its 15M snapshot (-7.21, t=-2.31). Head-to-h
 - For scale, the paper reports Slumbot 2016 at about 4,020 mBB/h with LBR acting on turn and river (its "fcpa 3-4" row). By this probe these blueprints are about as exploitable as Slumbot was, even though Slumbot beats them by about 100 BB/100 head-to-head.
 
 Speedup (2026-10-22, before merge): the shared 7-card evaluator was rewritten allocation-free (60 ns vs ~14.5 us per hand, bit-identical scores over all 133,784,560 hands) and RangeTracker::observe memoises by infoset key. 4,000 decks: ~19 min -> 12 s on 8 local cores, with byte-identical output (C0@25M still +425.00 +-50.17). Acting on the flop as well (`--act-streets 1,2,3`) now costs about 2 min per 4,000 decks.
+
+The same evaluator speeds up blueprint training, which calls it at every showdown: hu200 + map_pct_50_50_20, 300k iterations on 8 local threads, 947 -> 4,236 it/s (4.5x). A 20k-iteration single-thread run with seed 7 writes a byte-identical checkpoint on both builds. Cloud (ccx33) rates measured before this change (about 3,500 it/s) are stale; re-measure on the next run before estimating cost.
