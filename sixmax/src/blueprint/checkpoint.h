@@ -92,14 +92,21 @@ public:
     // dropped at load, so this can be < the trainer's num_infosets().
     size_t num_infosets() const { return probs_.size(); }
     int num_players() const { return num_players_; }
+    // Training stack in BB, from the checkpoint metadata. Evaluators must use
+    // it rather than assume 100 (a 200 BB blueprint keys pots and stacks in
+    // its own frame).
+    double starting_stack() const { return starting_stack_; }
     const Abstraction& abstraction() const { return abs_; }
 
 private:
-    BlueprintStrategy(Abstraction abs, uint64_t iters, int num_players)
-        : abs_(std::move(abs)), iterations_(iters), num_players_(num_players) {}
+    BlueprintStrategy(Abstraction abs, uint64_t iters, int num_players,
+                      double starting_stack)
+        : abs_(std::move(abs)), iterations_(iters), num_players_(num_players),
+          starting_stack_(starting_stack) {}
     Abstraction abs_;
     uint64_t iterations_;
     int num_players_;
+    double starting_stack_;
     std::unordered_map<uint64_t, std::vector<double>> probs_;
 };
 

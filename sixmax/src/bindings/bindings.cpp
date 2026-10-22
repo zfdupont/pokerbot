@@ -812,6 +812,7 @@ PYBIND11_MODULE(sixmax, m) {
         .def("iterations", &sixmax::BlueprintStrategy::iterations)
         .def("num_infosets", &sixmax::BlueprintStrategy::num_infosets)
         .def("num_players", &sixmax::BlueprintStrategy::num_players)
+        .def("starting_stack", &sixmax::BlueprintStrategy::starting_stack)
         .def("abstraction", &sixmax::BlueprintStrategy::abstraction,
              py::return_value_policy::reference_internal);
     // --- Phase 2 search: vector CFR+ core (Task 1) ---

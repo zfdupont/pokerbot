@@ -182,3 +182,14 @@ def test_run_zero_decks_is_finite(tmp_path):
     assert len(r["gains"]) == 2
     assert all(math.isfinite(g) for g in r["gains"])
     assert math.isfinite(r["max_gain"]) and math.isfinite(r["mean_gain"])
+
+
+def test_strategy_reports_its_training_stack(tmp_path):
+    # Evaluators read the stack from the checkpoint instead of assuming 100.
+    assert _strategy(tmp_path, iters=20).starting_stack() == 100.0
+    cfg200 = sixmax.EngineConfig(num_players=2, starting_stack=200.0)
+    t = sixmax.BlueprintTrainer(cfg200, VOCAB, ABS, num_threads=1, seed=3)
+    t.train(20)
+    path = str(tmp_path / "bp200.bin")
+    t.save(path, VOCAB, cfg200, ABS)
+    assert sixmax.BlueprintStrategy.load(path, VOCAB).starting_stack() == 200.0

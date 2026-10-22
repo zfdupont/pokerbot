@@ -276,7 +276,8 @@ BlueprintStrategy BlueprintStrategy::load(const std::string& path,
                                           const ActionVocab& vocab) {
     auto loaded = load_blueprint(path, vocab.hash());
     BlueprintStrategy s(load_abstraction_for(path, loaded),
-                        loaded.iterations, loaded.meta.num_players);
+                        loaded.iterations, loaded.meta.num_players,
+                        loaded.meta.starting_stack);
     for (const auto& [k, d] : loaded.table) {
         double total = 0.0;
         for (double v : d.strategy_sum) total += v;

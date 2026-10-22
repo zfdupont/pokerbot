@@ -24,6 +24,9 @@ def parse_args(argv=None):
     p.add_argument("--samples", type=int, default=64)
     p.add_argument("--seed", type=int, default=1)
     p.add_argument("--uniform-opponents", action="store_true")
+    p.add_argument("--stack-bb", type=float, default=None,
+                   help="starting stack in BB (default: the checkpoint's "
+                        "training stack)")
     p.add_argument("--csv", default=None)
     return p.parse_args(argv)
 
@@ -42,14 +45,18 @@ def main(argv=None):
 
     vocab = _load_vocab(args.config, "blueprint")
     strategy = sixmax.BlueprintStrategy.load(args.checkpoint, vocab)
-    cfg = sixmax.EngineConfig(num_players=strategy.num_players())
+    # The checkpoint's own training stack (a 200 BB blueprint keys pots and
+    # stacks in that frame); --stack-bb overrides it.
+    stack = args.stack_bb or strategy.starting_stack()
+    cfg = sixmax.EngineConfig(num_players=strategy.num_players(),
+                              starting_stack=stack)
     lbr = sixmax.LbrConfig(samples=args.samples, seed=args.seed,
                            uniform_opponents=args.uniform_opponents)
     ev = sixmax.LbrEvaluator(strategy, vocab, cfg, lbr)
     report = ev.run(args.decks, args.seed)
 
     print(f"\nLBR exploitability — {os.path.basename(args.checkpoint)} "
-          f"({strategy.iterations()} iters), {args.decks} decks, "
+          f"({strategy.iterations()} iters, {stack:g} BB), {args.decks} decks, "
           f"samples={args.samples}, seed {args.seed}\n")
     print(f"{'seat':>4}  {'gain BB/100':>12}  {'95% CI':>9}")
     for seat, (gain, se) in enumerate(zip(report["gains"], report["stderrs"])):

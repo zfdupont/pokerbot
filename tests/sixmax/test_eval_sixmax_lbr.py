@@ -26,3 +26,10 @@ def test_parse_args_defaults():
     m = _load_driver()
     args = m.parse_args(["--checkpoint", "bp.bin"])
     assert args.decks == 200 and args.seed == 1 and args.samples == 64
+
+
+def test_stack_defaults_to_checkpoint():
+    m = _load_driver()
+    assert m.parse_args(["--checkpoint", "bp.bin"]).stack_bb is None
+    assert m.parse_args(["--checkpoint", "bp.bin",
+                         "--stack-bb", "200"]).stack_bb == 200.0
