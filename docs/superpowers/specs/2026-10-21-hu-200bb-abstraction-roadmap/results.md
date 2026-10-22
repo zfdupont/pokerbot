@@ -71,3 +71,10 @@ Pairing helps less than hoped. The per-deck sd of the difference (1,602 and 1,71
 - Cloud: ccx33, CI trainer image with the new evaluator. 27,705,826 iterations at 12,827 it/s average (window 12,100-13,400), 38 min, about $0.13. Snapshots every 5M plus the cap.
 - Plateau (paired LBR, 100k decks, seed 1): 20M vs 10M, -1.05 BB/100, se 5.61, t=-0.19, converged. C1_plateau = 20M. LBR(20M) +391.6, LBR(10M) +392.6 BB/100.
 - ccx33 is now about 3.7x the pre-speedup 3,500 it/s; the Phase 2-3 cost table should use about 12,800 it/s.
+
+## C2 (pot edges 3/6/12/24/48/96/192 BB), 2026-10-22
+
+- Probe (2M iterations, local): 64,589 infosets, 1.92x C0. Cap = 20M x 64,589 / 33,572 = 38,477,898.
+- Cloud: ccx33, 38,477,898 iterations at 10,584 it/s average (the larger table is slower than C1's 12,827), 63 min, about $0.22. 65,016 infosets at the cap.
+- Plateau (paired LBR, 100k decks, seed 1): 15M vs 5M, -4.24 BB/100, se 6.25, t=-0.68, converged at the first check. C2_plateau = 15M. LBR(15M) +363.2, LBR(5M) +367.5 BB/100.
+- LBR at plateau falls as pot buckets get finer: C0 (4) about +414-422, C1 (6) +391.6, C2 (8) +363.2. These are separate runs, not paired; Gate 2's head-to-head decides strength.
