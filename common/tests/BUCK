@@ -1,0 +1,6 @@
+cxx_test(
+    name = "test_evaluator",
+    srcs = ["test_evaluator.cpp"],
+    deps = ["//common:evaluator", "//third_party:gtest"],
+    compiler_flags = ["-std=c++17", "-O2"],
+)
