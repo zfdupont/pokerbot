@@ -45,7 +45,7 @@ last_updated: 2026-07-18
 **Decision:** `evaluate_5card` in `neural_cfr/src/game/card.cpp` encodes `category << 20 | kicker_bits` with kickers stored as `12 - rank`, so lower = better holds within categories.
 **Reasoning:** Without the inversion, Ace kickers rank worse than 2s within a category (AA loses to 22), which inverts learned hand strength — this was a confirmed training bug (commit `1c606c5`): the bot folded AA and raised 22.
 **Alternatives considered:** higher = better encoding throughout (rejected — would require touching every comparison site and the 21-combo `min` in `evaluate_7card`).
-**Consequences:** Any change to the encoding must preserve the inversion. Verify with the C++ evaluator tests before trusting any training run.
+**Consequences:** Any change to the encoding must preserve the inversion. Verify with the C++ evaluator tests before trusting any training run. The 2026-10-22 rewrite (direct best-hand evaluation instead of the 21-combo `min`) kept every score bit-identical, checked exhaustively over all 7-card hands; `//common/tests:test_evaluator` re-checks every 5-card hand and 300k random 7-card hands against the original code.
 
 ### Faithful Brown et al. 2019 traversal (M_π only at opponent nodes)
 **Date:** 2026-07-02
