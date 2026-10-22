@@ -171,7 +171,7 @@ Build the maps locally from `equity_v1.bin` (percentile about 30 s, potential-aw
 
 **3-pre. Offline map scoring (free, before any D training; my call on the metric and threshold).**
 - Score each candidate map by its multiplicity-weighted within-bucket spread: equity variance on the river, and the earth mover's distance between each hand's next-street equity histogram and its bucket's mean histogram on the flop and turn.
-- A candidate whose score improves on the next-coarser candidate for the same street by less than 10% is dropped without training. Record every score in `results.md`.
+- Each candidate is compared, per street, with the next-coarser candidate on that street. A step's efficiency is the share of the street's one-bucket spread it removes per extra infoset (contexts × extra buckets). A step below half the best step's efficiency is dropped, and a map with no kept step is dropped without training. Revised 2026-10-21 from a flat 10% relative gain: river percentile buckets halve their spread whenever their count doubles, so a relative rule never drops a river candidate, while each river bucket costs about 10x a flop bucket. Tool: `scripts/score_bucket_map.py`. Record every score in `results.md`.
 
 **3a. Where to spend buckets** (percentile maps, at the Phase 2 winner):
 
