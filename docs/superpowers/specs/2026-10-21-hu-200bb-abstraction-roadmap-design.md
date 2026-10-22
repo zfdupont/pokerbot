@@ -115,7 +115,10 @@ From the 3,000-hand Slumbot run (baseline score, BB, summed):
 - Use `scripts/eval_blueprint_h2h.py` (duplicate deals, shared random numbers, `|t| >= 2` gate per `.mex/patterns/eval-checkpoint-ab.md`) at 200 BB.
 - **Plateau rule (my call):**
   - Snapshots every 5M iterations.
-  - An arm is converged at snapshot N when N does not beat snapshot N-10M head-to-head at `|t| >= 2`. Check after each sync, locally, while training continues.
+  - An arm is converged at snapshot N when N is not less exploitable than snapshot N-10M by **paired LBR** at `|t| >= 2` (revised 2026-10-22): `scripts/arm_plateau.py --config <arm config>` runs local best response (turn and river, the paper's "fcpa 3-4") against both snapshots on the same 100k duplicate decks and t-tests the per-deck differences. Check after each sync, locally, while training continues.
+    - Why: head-to-head between two near-converged snapshots is not transitive (P0's 25M lost to its own 15M at t=-2.31), while LBR measures one fixed thing, a lower bound on exploitability.
+    - LBR decides when an arm has stopped improving. It does not pick winners: the gates below stay head-to-head plus Slumbot, since Slumbot is about as exploitable by LBR as our blueprints yet beats them by about 100 BB/100.
+    - The earlier head-to-head rule stays available as `--method h2h`.
   - **Iteration caps:** C0 is capped at 60M. Every other arm's cap is `C0_plateau × (arm_infosets / C0_infosets)`, at least 20M. The ceiling is 150M for Phase 2 arms and 500M for Phase 3 arms (revised 2026-10-21: the 255/255/255 maximum is about 8.1x C0, and a 150M ceiling would undertrain every map above about 2.5x C0). The budget rules below still apply to every arm.
   - Worked example: if C0 plateaus at 25M with 40k infosets, an arm with 120k infosets is capped at 75M.
   - Infoset counts come from the trained checkpoint (C0) or a 2M-iteration probe run (other arms).

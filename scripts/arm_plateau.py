@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Decide when an abstraction arm has plateaued, and its iteration cap.
 
-An arm is converged at snapshot N when N does not beat snapshot N-lag
-head-to-head at |t| >= 2 (spec 1d, patterns/eval-checkpoint-ab.md). Snapshots
+An arm is converged at snapshot N when N is not less exploitable than
+snapshot N-lag by paired LBR at |t| >= 2 (spec 1d, revised 2026-10-22): both
+snapshots face local best response on the same decks and the per-deck
+differences are t-tested. `--method h2h` keeps the earlier rule, N does not
+beat N-lag head-to-head at |t| >= 2 (patterns/eval-checkpoint-ab.md). Snapshots
 are the trainer's `<base>_<iters>.bin` files; any digit count is accepted, and
 a lag that lands between snapshots uses the newest one at or below N-lag.
 
@@ -12,7 +15,8 @@ The iteration cap is C0's plateau scaled by the arm's infoset count, clamped to
 
 Usage:
     uv run python scripts/arm_plateau.py \\
-        --snapshots 'sixmax/checkpoints/hu200_c0_*.bin' --lag 10000000
+        --snapshots 'sixmax/checkpoints/hu200_c0_*.bin' --lag 10000000 \\
+        --config sixmax/configs/hu200.toml
     uv run python scripts/arm_plateau.py --infosets sixmax/checkpoints/hu200_c0.bin
     uv run python scripts/arm_plateau.py --cap 25000000 40000 120000
     uv run python scripts/arm_plateau.py --cap 60000000 33831 217000 --phase 3
@@ -82,6 +86,13 @@ def converged(stats):
     return not (stats["mean"] > 0 and stats["t"] >= 2.0)
 
 
+def converged_lbr(stats):
+    """Converged unless the newer snapshot is still less exploitable: lower
+    LBR is better, so `mean` (newer - older) must be <= -2 standard errors
+    to keep training."""
+    return not (stats["mean"] < 0 and stats["t"] <= -2.0)
+
+
 def _infosets(path):
     """Queryable infoset count of a checkpoint as deployment sees it."""
     from agents.sixmax_agent import SixmaxDeployStrategy
@@ -95,10 +106,20 @@ def main():
                    help="glob of <base>_<iters>.bin snapshots")
     p.add_argument("--lag", type=int, default=10_000_000,
                    help="iterations between the compared snapshots")
-    p.add_argument("--hands", type=int, default=20000)
-    p.add_argument("--seeds", default="1,2,3,4,5,6,7,8")
-    p.add_argument("--bb", type=int, default=2)
-    p.add_argument("--stack", type=int, default=400)
+    p.add_argument("--method", choices=("lbr", "h2h"), default="lbr",
+                   help="paired LBR exploitability (default) or head-to-head")
+    p.add_argument("--decks", type=int, default=100000,
+                   help="lbr: duplicate decks shared by both snapshots "
+                        "(100k gives se ~5 BB/100, about 7 min on 8 cores)")
+    p.add_argument("--seed", type=int, default=1, help="lbr: deck seed")
+    p.add_argument("--config", default=_DEFAULT_TOML,
+                   help="lbr: config whose blueprint vocab the snapshots use")
+    p.add_argument("--threads", type=int, default=0,
+                   help="lbr: worker threads (0 = hardware concurrency)")
+    p.add_argument("--hands", type=int, default=20000, help="h2h only")
+    p.add_argument("--seeds", default="1,2,3,4,5,6,7,8", help="h2h only")
+    p.add_argument("--bb", type=int, default=2, help="h2h only")
+    p.add_argument("--stack", type=int, default=400, help="h2h only")
     p.add_argument("--infosets", metavar="PATH",
                    help="print the checkpoint's queryable infoset count")
     p.add_argument("--cap", nargs=3, type=int,
@@ -122,12 +143,16 @@ def main():
         p.error("--lag must be positive (a lag of 0 would compare a snapshot "
                 "with itself)")
 
-    from scripts.eval_blueprint_h2h import run_h2h
-
     try:
         newest, older = pick_pair(glob.glob(args.snapshots), args.lag)
     except ValueError as exc:
         p.error(str(exc))
+    if args.method == "lbr":
+        _plateau_lbr(p, args, newest, older)
+        return
+
+    from scripts.eval_blueprint_h2h import run_h2h
+
     seeds = [int(s) for s in args.seeds.split(",")]
     if len(seeds) < 2:
         # A t-test on one seed has no spread: t is 0, so converged() always
@@ -147,6 +172,26 @@ def main():
     print(f"A - B: {stats['mean']:+.2f} BB/100  sd {stats['sd']:.1f}  "
           f"se {stats['se']:.1f}  t={stats['t']:.2f}")
     print(f"VERDICT: {'converged' if converged(stats) else 'training'}")
+
+
+def _plateau_lbr(parser, args, newest, older):
+    from scripts.eval_sixmax_lbr import paired_lbr
+
+    if args.decks < 2:
+        parser.error("--decks must be at least 2 (the t-test needs a spread)")
+    print(f"A = {newest} (iters={snapshot_iters(newest)})")
+    print(f"B = {older} (iters={snapshot_iters(older)})")
+    try:
+        stats = paired_lbr(newest, older, args.config, args.decks, args.seed,
+                           threads=args.threads)
+    except ValueError as exc:
+        parser.error(str(exc))
+    print(f"LBR(A) {stats['a_bb100']:+.2f}  LBR(B) {stats['b_bb100']:+.2f} "
+          f"BB/100 (turn+river, seed {args.seed})")
+    print(f"\nn={stats['n']} paired decks")
+    print(f"A - B: {stats['mean']:+.2f} BB/100  sd {stats['sd']:.1f}  "
+          f"se {stats['se']:.2f}  t={stats['t']:.2f}")
+    print(f"VERDICT: {'converged' if converged_lbr(stats) else 'training'}")
 
 
 if __name__ == "__main__":

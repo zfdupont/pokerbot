@@ -10,6 +10,7 @@ the checkpoint's training configuration unless --stack-bb overrides it.
 """
 import argparse
 import csv
+import math
 import os
 import sys
 
@@ -114,32 +115,76 @@ def _ci(std_err):
     return 1.96 * std_err
 
 
-def main(argv=None):
-    args = parse_args(argv)
+def run_lbr(checkpoint, config, decks, seed, act_streets=(2, 3),
+            fold_call_only=False, preflop_wp_samples=500,
+            uniform_opponents=False, threads=0, stack_bb=None):
+    """LBR report dict for one checkpoint, plus the stack and iterations used.
+
+    Decks depend only on (seed, deck index), so two checkpoints run with the
+    same seed see the same cards: `paired_lbr` relies on this.
+    """
     from agents.sixmax_agent import _ensure_sixmax_extension, _load_vocab
     _ensure_sixmax_extension()
     import sixmax
 
-    vocab = _load_vocab(args.config, "blueprint")
-    strategy = sixmax.BlueprintStrategy.load(args.checkpoint, vocab)
-    # The checkpoint records its own training stack; --stack-bb overrides it.
-    stack = (strategy.starting_stack() if args.stack_bb is None
-             else args.stack_bb)
+    vocab = _load_vocab(config, "blueprint")
+    strategy = sixmax.BlueprintStrategy.load(checkpoint, vocab)
+    # The checkpoint records its own training stack; stack_bb overrides it.
+    stack = strategy.starting_stack() if stack_bb is None else stack_bb
     cfg = sixmax.EngineConfig(num_players=strategy.num_players(),
                               starting_stack=stack)
-    lbr = sixmax.LbrConfig(act_streets=args.act_streets,
-                           fold_call_only=args.fold_call_only,
-                           preflop_wp_samples=args.preflop_wp_samples,
-                           uniform_opponents=args.uniform_opponents,
-                           num_threads=args.threads)
-    ev = sixmax.LbrEvaluator(strategy, vocab, cfg, lbr)
-    report = ev.run(args.decks, args.seed)
+    lbr = sixmax.LbrConfig(act_streets=list(act_streets),
+                           fold_call_only=fold_call_only,
+                           preflop_wp_samples=preflop_wp_samples,
+                           uniform_opponents=uniform_opponents,
+                           num_threads=threads)
+    report = dict(sixmax.LbrEvaluator(strategy, vocab, cfg, lbr)
+                  .run(decks, seed))
+    report["stack_bb"] = float(stack)
+    report["iterations"] = int(strategy.iterations())
+    return report
+
+
+def paired_lbr(path_a, path_b, config, decks, seed, **lbr_kwargs):
+    """LBR(A) - LBR(B) over the same decks, tested on per-deck differences.
+
+    Deck luck is shared by both runs and cancels in each difference, so the
+    standard error is far below that of two independent runs. Returns
+    {mean, sd, se, t, n, a_bb100, b_bb100} in BB/100; negative means A is
+    less exploitable. Refuses checkpoints trained at different stacks: the
+    same deck would not be the same game.
+    """
+    a = run_lbr(path_a, config, decks, seed, **lbr_kwargs)
+    b = run_lbr(path_b, config, decks, seed, **lbr_kwargs)
+    if a["stack_bb"] != b["stack_bb"]:
+        raise ValueError("paired LBR needs equal stacks, got %g and %g BB"
+                         % (a["stack_bb"], b["stack_bb"]))
+    diffs = [x - y for x, y in zip(a["per_deck"], b["per_deck"])]
+    n = len(diffs)
+    mean = sum(diffs) / n if n else 0.0
+    sd = (math.sqrt(sum((d - mean) ** 2 for d in diffs) / (n - 1))
+          if n > 1 else 0.0)
+    se = sd / math.sqrt(n) if n > 1 else 0.0
+    return {"mean": mean, "sd": sd, "se": se,
+            "t": mean / se if se > 0 else 0.0, "n": n,
+            "a_bb100": float(a["bb100"]), "b_bb100": float(b["bb100"])}
+
+
+def main(argv=None):
+    args = parse_args(argv)
+    report = run_lbr(args.checkpoint, args.config, args.decks, args.seed,
+                     act_streets=args.act_streets,
+                     fold_call_only=args.fold_call_only,
+                     preflop_wp_samples=args.preflop_wp_samples,
+                     uniform_opponents=args.uniform_opponents,
+                     threads=args.threads, stack_bb=args.stack_bb)
+    stack = report["stack_bb"]
 
     streets = ",".join(str(s) for s in args.act_streets) or "none"
     model = "uniform" if args.uniform_opponents else "blueprint"
     print("\nLBR duplicate evaluation - %s" % os.path.basename(args.checkpoint))
     print("config: %s; iterations: %d; stack: %g BB; decks: %d; seed: %d"
-          % (args.config, strategy.iterations(), stack, args.decks, args.seed))
+          % (args.config, report["iterations"], stack, args.decks, args.seed))
     print("preflop wp samples: %d; opponent model: %s; LBR acts on streets: %s"
           % (args.preflop_wp_samples, model, streets))
     print("opponent unseen-infoset rate: %.2f%% (%d/%d decisions)"
@@ -157,7 +202,7 @@ def main(argv=None):
 
     if args.csv:
         write_csv(args.csv, args.checkpoint, args, report, stack,
-                  strategy.iterations())
+                  report["iterations"])
         print("\nwrote %s" % args.csv)
 
 

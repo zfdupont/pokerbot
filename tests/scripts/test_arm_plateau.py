@@ -9,11 +9,13 @@ import pytest
 import sixmax
 from scripts.arm_plateau import (
     converged,
+    converged_lbr,
     iteration_cap,
     pick_pair,
     snapshot_iters,
 )
 from scripts.eval_blueprint_h2h import run_h2h
+from scripts.eval_sixmax_lbr import paired_lbr, run_lbr
 
 _ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -91,6 +93,14 @@ def test_cap_cli_phase3(monkeypatch, capsys):
     assert capsys.readouterr().out.strip() == "500000000"
 
 
+def test_converged_lbr_rule():
+    # Lower LBR is better: only a significant drop keeps the arm training.
+    assert converged_lbr({"mean": -6.0, "t": -2.5}) is False
+    assert converged_lbr({"mean": -6.0, "t": -1.5}) is True
+    assert converged_lbr({"mean": 8.0, "t": 3.0}) is True
+    assert converged_lbr({"mean": 0.0, "t": 0.0}) is True
+
+
 def test_converged_rule():
     assert converged({"mean": 3.0, "t": 2.5}) is False
     assert converged({"mean": 3.0, "t": 1.2}) is True
@@ -165,7 +175,7 @@ def test_plateau_cli_self_snapshots_converge(monkeypatch, capsys, tiny_ckpt):
     shutil.copyfile(tiny_ckpt, newer)
     monkeypatch.setattr(sys, "argv", [
         "arm_plateau.py", "--snapshots", os.path.join(directory, "tiny_*.bin"),
-        "--lag", "100", "--hands", "2", "--seeds", "1",
+        "--lag", "100", "--method", "h2h", "--hands", "2", "--seeds", "1",
         "--bb", "2", "--stack", "400"])
     arm_plateau.main()
     out = capsys.readouterr().out
@@ -208,7 +218,7 @@ def test_single_seed_warns_on_stderr(monkeypatch, capsys, tiny_ckpt):
                         os.path.join(directory, f"warn_{iters}.bin"))
     monkeypatch.setattr(sys, "argv", [
         "arm_plateau.py", "--snapshots", os.path.join(directory, "warn_*.bin"),
-        "--lag", "100", "--hands", "2", "--seeds", "1"])
+        "--lag", "100", "--method", "h2h", "--hands", "2", "--seeds", "1"])
     arm_plateau.main()
     captured = capsys.readouterr()
     assert "warning" in captured.err
@@ -225,6 +235,93 @@ def test_multi_seed_does_not_warn(monkeypatch, capsys, tiny_ckpt):
                         os.path.join(directory, f"quiet_{iters}.bin"))
     monkeypatch.setattr(sys, "argv", [
         "arm_plateau.py", "--snapshots", os.path.join(directory, "quiet_*.bin"),
-        "--lag", "100", "--hands", "2", "--seeds", "1,2"])
+        "--lag", "100", "--method", "h2h", "--hands", "2", "--seeds", "1,2"])
     arm_plateau.main()
     assert "warning" not in capsys.readouterr().err
+
+
+_CONFIG = os.path.join(_ROOT, "sixmax", "configs", "default.toml")
+
+
+@pytest.fixture(scope="module")
+def older_ckpt(tmp_path_factory, synthetic_bucket_map, default_vocab):
+    """Like tiny_ckpt but trained less, so its strategy differs."""
+    tmp = tmp_path_factory.mktemp("arm_plateau_older")
+    map_copy = tmp / os.path.basename(synthetic_bucket_map)
+    shutil.copyfile(synthetic_bucket_map, map_copy)
+    abs_ = sixmax.Abstraction.from_bucket_map(str(map_copy))
+    cfg = sixmax.EngineConfig(num_players=2, starting_stack=200.0)
+    trainer = sixmax.BlueprintTrainer(cfg, default_vocab, abs_,
+                                      num_threads=1, seed=13)
+    trainer.train(40)
+    path = str(tmp / "older.bin")
+    trainer.save(path, default_vocab, cfg, abs_)
+    return path
+
+
+def test_paired_lbr_self_is_zero(tiny_ckpt):
+    stats = paired_lbr(tiny_ckpt, tiny_ckpt, _CONFIG, 20, 3, threads=2)
+    assert stats["n"] == 20
+    assert stats["mean"] == 0.0 and stats["se"] == 0.0 and stats["t"] == 0.0
+    assert stats["a_bb100"] == stats["b_bb100"]
+
+
+def test_paired_lbr_mean_is_difference_of_runs(tiny_ckpt, older_ckpt):
+    stats = paired_lbr(tiny_ckpt, older_ckpt, _CONFIG, 30, 5, threads=2)
+    a = run_lbr(tiny_ckpt, _CONFIG, 30, 5, threads=1)
+    b = run_lbr(older_ckpt, _CONFIG, 30, 5, threads=1)
+    # Same seed -> same decks, and runs are thread-count independent.
+    assert stats["a_bb100"] == pytest.approx(a["bb100"])
+    assert stats["b_bb100"] == pytest.approx(b["bb100"])
+    assert stats["mean"] == pytest.approx(a["bb100"] - b["bb100"])
+    assert stats["se"] > 0.0
+    assert stats["t"] == pytest.approx(stats["mean"] / stats["se"])
+
+
+def test_paired_lbr_refuses_different_stacks(monkeypatch, tiny_ckpt):
+    from scripts import eval_sixmax_lbr as drv
+
+    real = drv.run_lbr
+    stacks = iter([200.0, 100.0])
+
+    def run_with_stack(*args, **kwargs):
+        report = real(*args, **kwargs)
+        report["stack_bb"] = next(stacks)
+        return report
+
+    monkeypatch.setattr(drv, "run_lbr", run_with_stack)
+    with pytest.raises(ValueError, match="equal stacks"):
+        drv.paired_lbr(tiny_ckpt, tiny_ckpt, _CONFIG, 2, 1)
+
+
+def test_plateau_cli_lbr_self_snapshots_converge(monkeypatch, capsys,
+                                                 tiny_ckpt):
+    from scripts import arm_plateau
+
+    directory = os.path.dirname(tiny_ckpt)
+    for iters in (100, 200):
+        shutil.copyfile(tiny_ckpt,
+                        os.path.join(directory, f"lbr_{iters}.bin"))
+    monkeypatch.setattr(sys, "argv", [
+        "arm_plateau.py", "--snapshots", os.path.join(directory, "lbr_*.bin"),
+        "--lag", "100", "--decks", "8", "--config", _CONFIG])
+    arm_plateau.main()
+    out = capsys.readouterr().out
+    assert "iters=200" in out and "iters=100" in out
+    assert "n=8 paired decks" in out
+    assert "VERDICT: converged" in out
+
+
+def test_plateau_cli_lbr_rejects_one_deck(monkeypatch, capsys, tiny_ckpt):
+    from scripts import arm_plateau
+
+    directory = os.path.dirname(tiny_ckpt)
+    for iters in (100, 200):
+        shutil.copyfile(tiny_ckpt,
+                        os.path.join(directory, f"one_{iters}.bin"))
+    monkeypatch.setattr(sys, "argv", [
+        "arm_plateau.py", "--snapshots", os.path.join(directory, "one_*.bin"),
+        "--lag", "100", "--decks", "1", "--config", _CONFIG])
+    with pytest.raises(SystemExit):
+        arm_plateau.main()
+    assert "at least 2" in capsys.readouterr().err

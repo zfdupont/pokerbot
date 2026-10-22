@@ -52,3 +52,15 @@ Note: P0's own 25M snapshot lost to its 15M snapshot (-7.21, t=-2.31). Head-to-h
 Speedup (2026-10-22, before merge): the shared 7-card evaluator was rewritten allocation-free (60 ns vs ~14.5 us per hand, bit-identical scores over all 133,784,560 hands) and RangeTracker::observe memoises by infoset key. 4,000 decks: ~19 min -> 12 s on 8 local cores, with byte-identical output (C0@25M still +425.00 +-50.17). Acting on the flop as well (`--act-streets 1,2,3`) now costs about 2 min per 4,000 decks.
 
 The same evaluator speeds up blueprint training, which calls it at every showdown: hu200 + map_pct_50_50_20, 300k iterations on 8 local threads, 947 -> 4,236 it/s (4.5x). A 20k-iteration single-thread run with seed 7 writes a byte-identical checkpoint on both builds. Cloud (ccx33) rates measured before this change (about 3,500 it/s) are stale; re-measure on the next run before estimating cost.
+
+## Paired LBR plateau check, 2026-10-22
+
+`scripts/arm_plateau.py` (now LBR by default), 25M vs 15M, 40,000 paired decks, seed 1, about 2.7 min each:
+
+| Arm | LBR 25M | LBR 15M | 25M - 15M | se | t | Verdict |
+|---|---:|---:|---:|---:|---:|---|
+| C0 | +413.6 | +422.3 | -8.68 | 8.01 | -1.08 | converged |
+| P0 | +404.3 | +400.8 | +3.41 | 8.57 | +0.40 | converged |
+
+Pairing helps less than hoped. The per-deck sd of the difference (1,602 and 1,714) is close to a single run's (about 1,620), so the two snapshots' results on a deck correlate only about 0.5: after their first differing action the random streams diverge. Pairing is worth about 2x the decks. The default is therefore 100k decks (se about 5 BB/100, about 7 min).
+
