@@ -638,6 +638,19 @@ PYBIND11_MODULE(sixmax, m) {
              },
              py::arg("hero_hole"), py::arg("board"), py::arg("range"),
              py::arg("seed") = 1)
+        .def("candidate_utilities",
+             [](const sixmax::LbrEvaluator& e, const sixmax::HandState& s,
+                int hero, const std::vector<double>& range, uint64_t seed) {
+                 sixmax::EngineGameState state(s, &e.vocab(), &e.abstraction());
+                 std::mt19937_64 rng(seed);
+                 py::list out;
+                 for (const auto& cand :
+                      e.candidate_utilities(state, hero, range, rng))
+                     out.append(py::make_tuple(cand.first, cand.second));
+                 return out;
+             },
+             py::arg("hand"), py::arg("hero"), py::arg("range"),
+             py::arg("seed") = 1)
         .def("decide",
              [](const sixmax::LbrEvaluator& e, const sixmax::HandState& s,
                 int hero, const std::vector<double>& range, uint64_t seed) {

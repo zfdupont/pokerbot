@@ -159,6 +159,48 @@ def _assert_legal(action, to_call):
                      sixmax.ActionType.AllIn)
 
 
+def _action_index(kind):
+    for i in range(VOCAB.size()):
+        if VOCAB.at(i).type == kind:
+            return i
+    raise AssertionError("no %s action in the vocab" % kind)
+
+
+# Preflop call + BB check, flop check/check, turn check/check -> river, seat 1
+# to act. Every step is a check/call, so the same list drives HandState and
+# EngineGameState.
+_RIVER_PREFIX = [2, 1, 1, 1, 1, 1]
+_POT_BET = 7  # default vocab: the 0.75-pot bet entry
+_ALLIN = VOCAB.size() - 1
+
+
+def _engine_at(deck, actions, stacks=None):
+    st = sixmax.EngineGameState(CFG, 0, list(deck), VOCAB,
+                                [] if stacks is None else list(stacks))
+    for a in actions:
+        st.apply(a)
+    return st
+
+
+def _range_wp(hero, board, weights):
+    """River-only win probability of `hero` against weighted combos."""
+    used = set(hero) | set(board)
+    num = den = 0.0
+    for c0, c1, w in weights:
+        if c0 in used or c1 in used:
+            continue
+        num += w * _showdown(hero, (c0, c1), board)
+        den += w
+    return num / den
+
+
+def _candidate_u(candidates, index):
+    for a, u in candidates:
+        if a == index:
+            return u
+    raise AssertionError("no candidate %d in %r" % (index, candidates))
+
+
 def _showdown(hero, opp, board5):
     a = sixmax.rank7(list(hero) + list(board5))
     b = sixmax.rank7(list(opp) + list(board5))
@@ -287,6 +329,109 @@ def test_decide_never_folds_the_nuts(tmp_path):
     assert VOCAB.at(a).type != sixmax.ActionType.Fold
 
 
+def test_decide_bets_the_nuts_when_unbet(tmp_path):
+    # No bet to call and a live opponent range full of losing hands: the
+    # Figure 1 bet branch must beat the check utility, so LBR bets.
+    ev = _evaluator(_strategy(tmp_path, iters=20), uniform_opponents=True)
+    board = [_A_C, _7_D, _2_H, _9_S, _4_C]  # trips aces for hero
+    s = _to_river(_AA, _KK, board)
+    s.apply_check_call()
+    assert s.current_player() == 0 and s.to_call() == 0.0
+    a = ev.decide(s, 0, _index_range([(_K_D, _K_H, 1.0)]), 1)
+    assert VOCAB.at(a).type in (sixmax.ActionType.Bet, sixmax.ActionType.AllIn)
+
+
+def test_candidate_utilities_match_the_figure1_formula(tmp_path):
+    # Hand-built river spot, uniform opponent, independently recomputed maths.
+    hero = [_7_C, _7_H]
+    opp = [_K_D, _K_H]
+    board = [_A_C, _7_D, _2_H, _9_S, _4_C]
+    deck = _deck(hero, opp, board)
+
+    pre = _engine_at(deck, _RIVER_PREFIX)
+    assert pre.current_player() == 1
+    assert abs(pre.bet_context().to_call) < 1e-12
+    hand = sixmax.HandState(CFG, 0, deck)
+    for _ in _RIVER_PREFIX:
+        hand.apply_check_call()
+    hand.apply_raise_to(VOCAB.target_bb(_POT_BET, pre.bet_context()))
+    assert hand.current_player() == 0 and hand.to_call() > 0.0
+    eng = _engine_at(deck, _RIVER_PREFIX + [_POT_BET])
+    assert eng.current_player() == 0
+    assert abs(eng.bet_context().to_call - hand.to_call()) < 1e-12
+
+    ev = _evaluator(_strategy(tmp_path, iters=20), uniform_opponents=True)
+    weights = [(_A_S, _A_H, 0.4), (_K_D, _K_H, 0.6)]
+    cands = ev.candidate_utilities(hand, 0, _index_range(weights), 1)
+    call = _action_index(sixmax.ActionType.Call)
+    assert cands[0][0] == call  # the check/call candidate comes first
+
+    pot, asked = hand.pot(), hand.to_call()
+    wp = _range_wp(hero, board, weights)
+    assert abs(_candidate_u(cands, call) - (wp * pot - (1.0 - wp) * asked)) < 1e-9
+
+    bet = _POT_BET + 1  # 1.5-pot raise
+    target = VOCAB.target_bb(bet, eng.bet_context())
+    raised = hand.clone()
+    raised.apply_raise_to(target)
+    hero_put = hand.stack(0) - raised.stack(0)
+    assert abs(hero_put - target) < 1e-12
+    assert raised.current_player() == 1
+    opp_call = raised.to_call()  # engine-capped by the opponent's stack
+    nxt = _engine_at(deck, _RIVER_PREFIX + [_POT_BET, bet])
+    assert nxt.current_player() == 1 and not nxt.is_terminal()
+    opp_mask = nxt.legal_mask()
+    assert opp_mask[0] == 1  # the opponent may fold
+    fp = 1.0 / sum(opp_mask)  # uniform opponent
+    wp_next = _range_wp(
+        hero, board, [(c0, c1, w * (1.0 - fp)) for c0, c1, w in weights])
+    want = fp * pot + (1.0 - fp) * (wp_next * (pot + opp_call) -
+                                    (1.0 - wp_next) * hero_put)
+    assert abs(_candidate_u(cands, bet) - want) < 1e-9
+
+
+def test_candidate_utilities_use_the_capped_opponent_call(tmp_path):
+    # The opponent has 2 BB behind on the river, so a hero all-in is only
+    # matched for 2 BB; the utility must use that capped call, not hero_put.
+    hero = [_7_C, _7_H]
+    opp = [_K_D, _K_H]
+    board = [_A_C, _7_D, _2_H, _9_S, _4_C]
+    deck = _deck(hero, opp, board)
+    stacks = [100.0, 3.0]
+
+    pre = _engine_at(deck, _RIVER_PREFIX + [1], stacks)
+    assert pre.current_player() == 0
+    assert abs(pre.bet_context().to_call) < 1e-12
+    hand = sixmax.HandState(CFG, 0, deck, stacks)
+    for _ in _RIVER_PREFIX:
+        hand.apply_check_call()
+    hand.apply_check_call()  # seat 1 checks the river
+    assert hand.current_player() == 0 and hand.to_call() == 0.0
+
+    ev = _evaluator(_strategy(tmp_path, iters=20), uniform_opponents=True)
+    weights = [(_A_S, _A_H, 0.4), (_K_D, _K_H, 0.6)]
+    cands = ev.candidate_utilities(hand, 0, _index_range(weights), 1)
+
+    pot = hand.pot()
+    target = VOCAB.target_bb(_ALLIN, pre.bet_context())
+    shoved = hand.clone()
+    shoved.apply_raise_to(target)
+    hero_put = hand.stack(0) - shoved.stack(0)
+    assert shoved.current_player() == 1
+    opp_call = shoved.to_call()
+    assert abs(opp_call - 2.0) < 1e-9  # capped by the short stack
+    assert opp_call < hero_put
+    nxt = _engine_at(deck, _RIVER_PREFIX + [1, _ALLIN], stacks)
+    assert nxt.current_player() == 1 and not nxt.is_terminal()
+
+    fp = 1.0 / sum(nxt.legal_mask())  # fold + call only, so 1/2
+    wp_next = _range_wp(
+        hero, board, [(c0, c1, w * (1.0 - fp)) for c0, c1, w in weights])
+    want = fp * pot + (1.0 - fp) * (wp_next * (pot + opp_call) -
+                                    (1.0 - wp_next) * hero_put)
+    assert abs(_candidate_u(cands, _ALLIN) - want) < 1e-9
+
+
 def test_decide_folds_zero_equity_facing_bet(tmp_path):
     # Uniform opponent so the fold probability is small and fixed: no bluff is
     # profitable, so a hand losing to the whole range must fold.
@@ -339,8 +484,14 @@ def test_fold_call_only_never_bets(tmp_path):
 def test_zero_mass_range_still_returns_a_legal_action(tmp_path):
     ev = _evaluator(_strategy(tmp_path, iters=20))
     s = _to_river(_AA, _KK)
-    s.apply_raise_to(2.0)
-    _assert_legal(ev.decide(s, 0, [0.0] * 1326, 1), s.to_call())
+    s.apply_raise_to(2.0)  # facing a bet: the forced policy is Call
+    assert ev.decide(s, 0, [0.0] * 1326, 1) == _action_index(
+        sixmax.ActionType.Call)
+    s = _to_river(_AA, _KK)
+    s.apply_check_call()  # nothing to call: the forced policy is Check
+    assert s.to_call() == 0.0
+    assert ev.decide(s, 0, [0.0] * 1326, 1) == _action_index(
+        sixmax.ActionType.Check)
 
 
 def test_decide_short_stacks_still_returns_a_legal_action(tmp_path):
@@ -357,6 +508,18 @@ def test_decide_short_stacks_still_returns_a_legal_action(tmp_path):
         hero = s.current_player()
         _assert_legal(ev.decide(s, hero, _uniform_range(s, hero), 1),
                       s.to_call())
+
+
+def test_win_probability_preflop_is_sampled_and_deterministic(tmp_path):
+    ev = _evaluator(_strategy(tmp_path, iters=20))
+    weights = [(_7_C, _card(2, 1), 1.0)]  # 7♣2♦ offsuit
+    r = _index_range(weights)
+    a = ev.win_probability(_AA, [], r, 3)
+    b = ev.win_probability(_AA, [], r, 3)
+    c = ev.win_probability(_AA, [], r, 4)
+    assert a == b               # deterministic for a fixed seed
+    assert 0.0 <= a <= 1.0 and 0.0 <= c <= 1.0
+    assert a > 0.8              # AA vs 72o is ~0.88
 
 
 def test_remove_blocked_renormalises(tmp_path):
