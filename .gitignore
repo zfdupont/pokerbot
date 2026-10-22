@@ -196,3 +196,6 @@ sixmax/tables/
 
 # Local SDD/executing-plans scratch workspace
 .superpowers/
+
+# Reference papers (publisher PDFs, local only)
+docs/papers/
