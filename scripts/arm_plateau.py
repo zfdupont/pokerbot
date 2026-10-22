@@ -7,14 +7,15 @@ are the trainer's `<base>_<iters>.bin` files; any digit count is accepted, and
 a lag that lands between snapshots uses the newest one at or below N-lag.
 
 The iteration cap is C0's plateau scaled by the arm's infoset count, clamped to
-[20M, 150M]. `--cap` and `--infosets` print a bare integer so they are
-machine-readable.
+[20M, 150M] for Phase 2 arms and [20M, 500M] for Phase 3 arms (`--phase 3`).
+`--cap` and `--infosets` print a bare integer so they are machine-readable.
 
 Usage:
     uv run python scripts/arm_plateau.py \\
         --snapshots 'sixmax/checkpoints/hu200_c0_*.bin' --lag 10000000
     uv run python scripts/arm_plateau.py --infosets sixmax/checkpoints/hu200_c0.bin
     uv run python scripts/arm_plateau.py --cap 25000000 40000 120000
+    uv run python scripts/arm_plateau.py --cap 60000000 33831 217000 --phase 3
 """
 import argparse
 import glob
@@ -26,7 +27,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 _SNAPSHOT_RE = re.compile(r"_(\d+)\.bin$")
 _MIN_CAP = 20_000_000
-_MAX_CAP = 150_000_000
+# Ceiling per roadmap phase (spec 1d, revised 2026-10-21): Phase 3 card maps
+# reach about 8x C0's infosets, which a 150M ceiling would undertrain.
+_MAX_CAP = {2: 150_000_000, 3: 500_000_000}
 _DEFAULT_TOML = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "sixmax", "configs", "default.toml")
@@ -63,12 +66,15 @@ def pick_pair(paths, lag):
     return newest, older[-1][1]
 
 
-def iteration_cap(c0_plateau, c0_infosets, arm_infosets):
-    """C0's plateau scaled by infoset count, clamped to [20M, 150M]."""
+def iteration_cap(c0_plateau, c0_infosets, arm_infosets, phase=2):
+    """C0's plateau scaled by infoset count, clamped to [20M, the phase's
+    ceiling]: 150M in Phase 2, 500M in Phase 3."""
     if c0_infosets <= 0:
         raise ValueError("c0_infosets must be positive")
+    if phase not in _MAX_CAP:
+        raise ValueError(f"phase must be one of {sorted(_MAX_CAP)}")
     scaled = round(c0_plateau * arm_infosets / c0_infosets)
-    return int(min(max(scaled, _MIN_CAP), _MAX_CAP))
+    return int(min(max(scaled, _MIN_CAP), _MAX_CAP[phase]))
 
 
 def converged(stats):
@@ -98,12 +104,14 @@ def main():
     p.add_argument("--cap", nargs=3, type=int,
                    metavar=("C0_PLATEAU", "C0_INFOSETS", "ARM_INFOSETS"),
                    help="print the arm's iteration cap")
+    p.add_argument("--phase", type=int, choices=sorted(_MAX_CAP), default=2,
+                   help="roadmap phase whose cap ceiling applies (with --cap)")
     args = p.parse_args()
 
     if args.cap is not None and args.infosets is not None:
         p.error("--cap and --infosets are mutually exclusive")
     if args.cap is not None:
-        print(iteration_cap(*args.cap))
+        print(iteration_cap(*args.cap, phase=args.phase))
         return
     if args.infosets is not None:
         print(_infosets(args.infosets))

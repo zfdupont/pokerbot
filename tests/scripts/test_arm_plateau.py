@@ -69,6 +69,28 @@ def test_cap_clamps():
     assert iteration_cap(60_000_000, 40_000, 400_000) == 150_000_000
 
 
+def test_cap_phase3_ceiling():
+    # Spec 1d (revised 2026-10-21): Phase 3 arms clamp at 500M, not 150M.
+    assert iteration_cap(60_000_000, 33_831, 217_000, phase=3) == 384_854_128
+    assert iteration_cap(60_000_000, 40_000, 400_000, phase=3) == 500_000_000
+    assert iteration_cap(25_000_000, 40_000, 10_000, phase=3) == 20_000_000
+
+
+def test_cap_unknown_phase_rejected():
+    with pytest.raises(ValueError, match="phase"):
+        iteration_cap(60_000_000, 40_000, 400_000, phase=4)
+
+
+def test_cap_cli_phase3(monkeypatch, capsys):
+    from scripts import arm_plateau
+
+    monkeypatch.setattr(sys, "argv", [
+        "arm_plateau.py", "--cap", "60000000", "40000", "400000",
+        "--phase", "3"])
+    arm_plateau.main()
+    assert capsys.readouterr().out.strip() == "500000000"
+
+
 def test_converged_rule():
     assert converged({"mean": 3.0, "t": 2.5}) is False
     assert converged({"mean": 3.0, "t": 1.2}) is True
