@@ -123,6 +123,18 @@ From the 3,000-hand Slumbot run (baseline score, BB, summed):
   - Arms are always compared at their own plateau or cap, never at a shared iteration count.
 - **Budget checkpoint:** after the ccx33 benchmark and C0's plateau are known, re-estimate the whole schedule before launching C1. If it exceeds the $40 budget, cut arms in this order: C3, D1, the C-D interaction sanity arm, then step 3b down to its smaller variant.
 
+### Phase 1.5: P0 (card-map method check), inserted 2026-10-21 (owner-approved)
+
+**Why.** Offline map scoring (`results.md`, "Map scoring") found that equity-percentile flop and turn buckets leave about 15% / 21% of the next-street spread whatever their count (50 to 200 buckets moves it under 1%), while the potential-aware map at the same 50/50/20 counts leaves 12.1% / 12.6%. Phase 2 was going to measure pot layouts on the percentile map, which Phase 3 would likely replace, and pot and card buckets interact in the key.
+
+**Arm.** P0 = C0's config (`hu200.toml`, pot edges 7/15/40) with `map_pot_50_50_20.bin` (`build_bucket_map.py --method potential --counts 50,50,20`, seed 0). Same infosets as C0 (33.8k).
+- Trained to 25M with 5M snapshots, the iteration of C0's comparison snapshot (my call: the formula cap is 20M, but comparing at C0's 25M snapshot removes an iteration mismatch for about $0.10). Plateau checks as in 1d.
+- **Gate:** local head-to-head, P0 vs C0 at 25M, `|t| >= 2` (gate policy below). No Slumbot run.
+
+**Outcomes.**
+- **P0 wins:** the potential map becomes Phase 2's base. C1-C3 use `map_pot_50_50_20.bin`, P0 replaces C0 as the Phase 2 control, and Phase 3's D0 is the potential map. Phase 3's 3a arms are re-planned from the map scores (proposal: drop DF and DR; P1 = potential 50/50/50), and 3c folds into 3a.
+- **P0 does not win:** Phase 2 runs as written on the percentile map, and the map-score evidence is recorded as not translating into play at these counts.
+
 ### Phase 2: C (pot buckets), with A in, at 200 BB
 
 **Key change and versioning (my call).**
