@@ -1,6 +1,7 @@
 #include "search/range_tracker.h"
 #include <algorithm>
 #include <cmath>
+#include <unordered_map>
 
 namespace sixmax {
 
@@ -11,12 +12,16 @@ int RangeTracker::combo_index(int c0, int c1) {
 }
 
 std::array<int, 2> RangeTracker::combo_cards(int idx) {
-    for (int c0 = 0; c0 < 52; ++c0) {
-        const int base = c0 * 51 - (c0 * (c0 - 1)) / 2;
-        const int count = 51 - c0;
-        if (idx < base + count) return {c0, c0 + 1 + (idx - base)};
-    }
-    return {-1, -1};
+    // Inverse of combo_index, built once: hot loops call this per combo.
+    static const std::array<std::array<int, 2>, 1326> table = [] {
+        std::array<std::array<int, 2>, 1326> t{};
+        for (int c0 = 0; c0 < 52; ++c0)
+            for (int c1 = c0 + 1; c1 < 52; ++c1)
+                t[combo_index(c0, c1)] = {c0, c1};
+        return t;
+    }();
+    if (idx < 0 || idx >= 1326) return {-1, -1};
+    return table[idx];
 }
 
 void RangeTracker::reset(const std::vector<int>& board,
@@ -40,24 +45,35 @@ void RangeTracker::observe(const BlueprintStrategy& blueprint,
                            const EngineGameState& pre_action, int actor, int action) {
     if (action < 0) return;   // unknown/off-tree observation: no update
     std::vector<double> likelihood(range_.size(), 0.0);
+    // Legality is hole-independent, so the unseen-infoset fallback (uniform
+    // over the legal mask) is one number for every combo.
+    std::vector<uint8_t> mask;
+    pre_action.legal_mask(mask);
+    int legal = 0;
+    for (uint8_t m : mask) legal += m ? 1 : 0;
+    const double fallback =
+        (legal > 0 && action < (int)mask.size() && mask[action]) ? 1.0 / legal
+                                                                 : 0.0;
+    // One probe whose actor hole cards are overwritten per combo; combos
+    // differ only through the card bucket, so the likelihood is memoised by
+    // infoset key.
+    EngineGameState probe = pre_action;
+    std::unordered_map<uint64_t, double> by_key;
     for (size_t i = 0; i < range_.size(); ++i) {
         if (range_[i] <= 0.0) continue;
         auto hole = combo_cards(static_cast<int>(i));
         if (hole[0] < 0) continue;
-        EngineGameState probe = pre_action;   // value copy: set_hole_cards below
         probe.mutable_hand().set_hole_cards(actor, hole[0], hole[1]);
-        std::vector<double> probs = blueprint.probs_for(probe);
-        std::vector<uint8_t> mask;
-        probe.legal_mask(mask);
-        if (!probs.empty() && action < (int)probs.size()) {
-            likelihood[i] = probs[action];
-        } else {
-            int legal = 0;
-            for (uint8_t m : mask) legal += m ? 1 : 0;
-            likelihood[i] = (legal > 0 && action < (int)mask.size() && mask[action])
-                                ? 1.0 / legal
-                                : 0.0;
+        const uint64_t key = probe.abstract_key(blueprint.abstraction());
+        auto it = by_key.find(key);
+        if (it == by_key.end()) {
+            const std::vector<double> probs = blueprint.probs(key);
+            const double v = (!probs.empty() && action < (int)probs.size())
+                                 ? probs[action]
+                                 : fallback;
+            it = by_key.emplace(key, v).first;
         }
+        likelihood[i] = it->second;
     }
     observe_with_probs(actor, likelihood);
 }
