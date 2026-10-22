@@ -42,6 +42,34 @@ bool same_pot_layout(const sixmax::PotLayout& a,
     return true;
 }
 
+// A bare HandState keeps no per-street raise history, so a blueprint key built
+// from it is wrong once anyone has bet beyond the blinds. Only the uniform
+// opponent model ignores the key, so the shortcut is safe there.
+void require_keyable_hand(const sixmax::LbrEvaluator& e,
+                          const sixmax::HandState& s) {
+    if (e.lbr_config().uniform_opponents) return;
+    bool bet_beyond_blinds = false;
+    for (int p = 0; p < s.num_players(); ++p)
+        if (s.player(p).total_bet > 1.0 + sixmax::kChipEps)
+            bet_beyond_blinds = true;
+    const double threshold =
+        s.street() == sixmax::Street::Preflop ? 1.0 : 0.0;
+    if (s.current_bet() > threshold + sixmax::kChipEps)
+        bet_beyond_blinds = true;
+    if (bet_beyond_blinds)
+        throw py::value_error(
+            "LbrEvaluator: a bare HandState carries no per-street raise "
+            "history, so blueprint keys are wrong after a bet; pass an "
+            "EngineGameState built by applying actions, or set "
+            "uniform_opponents");
+}
+
+sixmax::EngineGameState wrap_hand(const sixmax::LbrEvaluator& e,
+                                  const sixmax::HandState& s) {
+    require_keyable_hand(e, s);
+    return sixmax::EngineGameState(s, &e.vocab(), &e.abstraction());
+}
+
 }  // namespace
 
 PYBIND11_MODULE(sixmax, m) {
@@ -599,8 +627,7 @@ PYBIND11_MODULE(sixmax, m) {
     py::class_<sixmax::LbrConfig>(m, "LbrConfig")
         .def(py::init([](const std::vector<int>& act_streets,
                          bool fold_call_only, int preflop_wp_samples,
-                         bool uniform_opponents, int num_threads,
-                         uint64_t seed) {
+                         bool uniform_opponents, int num_threads) {
                  sixmax::LbrConfig cfg;
                  cfg.act_streets = {false, false, false, false};
                  for (int street : act_streets) {
@@ -610,17 +637,21 @@ PYBIND11_MODULE(sixmax, m) {
                      cfg.act_streets[street] = true;
                  }
                  cfg.fold_call_only = fold_call_only;
+                 if (preflop_wp_samples < 1)
+                     throw py::value_error(
+                         "preflop_wp_samples must be at least 1");
                  cfg.preflop_wp_samples = preflop_wp_samples;
                  cfg.uniform_opponents = uniform_opponents;
+                 if (num_threads < 0)
+                     throw py::value_error("num_threads must not be negative");
                  cfg.num_threads = num_threads;
-                 cfg.seed = seed;
                  return cfg;
              }),
              py::kw_only(), py::arg("act_streets") = std::vector<int>{2, 3},
              py::arg("fold_call_only") = false,
              py::arg("preflop_wp_samples") = 500,
              py::arg("uniform_opponents") = false,
-             py::arg("num_threads") = 0, py::arg("seed") = 1);
+             py::arg("num_threads") = 0);
     py::class_<sixmax::LbrEvaluator>(m, "LbrEvaluator")
         .def(py::init<const sixmax::BlueprintStrategy&,
                       const sixmax::ActionVocab&, const sixmax::EngineConfig&,
@@ -639,9 +670,22 @@ PYBIND11_MODULE(sixmax, m) {
              py::arg("hero_hole"), py::arg("board"), py::arg("range"),
              py::arg("seed") = 1)
         .def("candidate_utilities",
+             [](const sixmax::LbrEvaluator& e,
+                const sixmax::EngineGameState& state, int hero,
+                const std::vector<double>& range, uint64_t seed) {
+                 std::mt19937_64 rng(seed);
+                 py::list out;
+                 for (const auto& cand :
+                      e.candidate_utilities(state, hero, range, rng))
+                     out.append(py::make_tuple(cand.first, cand.second));
+                 return out;
+             },
+             py::arg("state"), py::arg("hero"), py::arg("range"),
+             py::arg("seed") = 1)
+        .def("candidate_utilities",
              [](const sixmax::LbrEvaluator& e, const sixmax::HandState& s,
                 int hero, const std::vector<double>& range, uint64_t seed) {
-                 sixmax::EngineGameState state(s, &e.vocab(), &e.abstraction());
+                 const sixmax::EngineGameState state = wrap_hand(e, s);
                  std::mt19937_64 rng(seed);
                  py::list out;
                  for (const auto& cand :
@@ -652,11 +696,20 @@ PYBIND11_MODULE(sixmax, m) {
              py::arg("hand"), py::arg("hero"), py::arg("range"),
              py::arg("seed") = 1)
         .def("decide",
+             [](const sixmax::LbrEvaluator& e,
+                const sixmax::EngineGameState& state, int hero,
+                const std::vector<double>& range, uint64_t seed) {
+                 // Keys go through the state's own raise history, exactly as
+                 // the blueprint saw it while training.
+                 std::mt19937_64 rng(seed);
+                 return e.decide(state, hero, range, rng);
+             },
+             py::arg("state"), py::arg("hero"), py::arg("range"),
+             py::arg("seed") = 1)
+        .def("decide",
              [](const sixmax::LbrEvaluator& e, const sixmax::HandState& s,
                 int hero, const std::vector<double>& range, uint64_t seed) {
-                 // The evaluator's vocab and the strategy's own abstraction
-                 // make the wrapped state key exactly like the blueprint did.
-                 sixmax::EngineGameState state(s, &e.vocab(), &e.abstraction());
+                 const sixmax::EngineGameState state = wrap_hand(e, s);
                  std::mt19937_64 rng(seed);
                  return e.decide(state, hero, range, rng);
              },
@@ -674,9 +727,11 @@ PYBIND11_MODULE(sixmax, m) {
                  py::dict out;
                  out["decks"] = r.decks;
                  out["seat_bb100"] = r.seat_bb100;
-                 out["seat_stderr"] = r.seat_stderr;
+                 out["seat_stderr"] = r.seat_std_err;
                  out["bb100"] = r.bb100;
-                 out["stderr"] = r.stderr;
+                 out["stderr"] = r.std_err;
+                 out["opp_unseen"] = r.opp_unseen;
+                 out["opp_decisions"] = r.opp_decisions;
                  out["per_deck"] = r.per_deck;
                  return out;
              },

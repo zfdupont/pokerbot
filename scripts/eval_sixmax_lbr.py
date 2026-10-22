@@ -2,9 +2,9 @@
 """Heads-up LBR exploitability estimator (Lisy & Bowling 2017).
 
 Duplicate evaluation: every deck is played twice, with the local best response
-(LBR) in seat 0 and in seat 1 and the blueprint in the other seat. The LBR
-payoff is the blueprint's best-response gain against that deck pair, so the
-duplicate mean is a lower bound on the blueprint's exploitability in BB/100.
+(LBR) in seat 0 and in seat 1 and the blueprint in the other seat. The reported
+BB/100 is LBR's winnings against the blueprint: a lower bound on the
+blueprint's exploitability (not the best-response gain of the blueprint).
 Chip values stay in the engine frame (big blinds); pots and stacks come from
 the checkpoint's training configuration unless --stack-bb overrides it.
 """
@@ -16,7 +16,8 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 CSV_COLUMNS = ("checkpoint,act_streets,fold_call_only,decks,bb100,stderr,"
-               "seat0_bb100,seat1_bb100")
+               "seat0_bb100,seat1_bb100,stack_bb,seed,uniform_opponents,"
+               "preflop_wp_samples,iterations,config,opp_unseen_rate")
 
 
 def parse_act_streets(text):
@@ -72,7 +73,7 @@ def csv_header():
     return CSV_COLUMNS
 
 
-def write_csv(path, checkpoint, args, report):
+def write_csv(path, checkpoint, args, report, stack_bb, iterations):
     """Write the header and the single data row through csv.writer.
 
     `act_streets` stays one field (e.g. "2,3"), so the writer quotes it and the
@@ -81,10 +82,16 @@ def write_csv(path, checkpoint, args, report):
     with open(path, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(csv_header().split(","))
-        writer.writerow(report_row(checkpoint, args, report))
+        writer.writerow(report_row(checkpoint, args, report, stack_bb,
+                                   iterations))
 
 
-def report_row(path, args, report):
+def _opp_unseen_rate(report):
+    total = int(report["opp_decisions"])
+    return float(report["opp_unseen"]) / total if total else 0.0
+
+
+def report_row(path, args, report, stack_bb, iterations):
     """One CSV row: checkpoint, config, and the duplicate + per-seat values."""
     return (os.path.basename(path),
             ",".join(str(s) for s in args.act_streets),
@@ -93,11 +100,18 @@ def report_row(path, args, report):
             float(report["bb100"]),
             float(report["stderr"]),
             float(report["seat_bb100"][0]),
-            float(report["seat_bb100"][1]))
+            float(report["seat_bb100"][1]),
+            float(stack_bb),
+            int(args.seed),
+            bool(args.uniform_opponents),
+            int(args.preflop_wp_samples),
+            int(iterations),
+            args.config,
+            _opp_unseen_rate(report))
 
 
-def _ci(stderr):
-    return 1.96 * stderr
+def _ci(std_err):
+    return 1.96 * std_err
 
 
 def main(argv=None):
@@ -117,26 +131,33 @@ def main(argv=None):
                            fold_call_only=args.fold_call_only,
                            preflop_wp_samples=args.preflop_wp_samples,
                            uniform_opponents=args.uniform_opponents,
-                           num_threads=args.threads, seed=args.seed)
+                           num_threads=args.threads)
     ev = sixmax.LbrEvaluator(strategy, vocab, cfg, lbr)
     report = ev.run(args.decks, args.seed)
 
     streets = ",".join(str(s) for s in args.act_streets) or "none"
     model = "uniform" if args.uniform_opponents else "blueprint"
-    print("\nLBR duplicate evaluation - %s (%d iters, %g BB), %d decks, "
-          "seed %d" % (os.path.basename(args.checkpoint),
-                       strategy.iterations(), stack, args.decks, args.seed))
-    print("LBR acts on streets: %s; opponent model: %s" % (streets, model))
-    print("\n%6s  %12s  %9s" % ("seat", "LBR BB/100", "95% CI"))
-    for seat, (value, se) in enumerate(zip(report["seat_bb100"],
-                                           report["seat_stderr"])):
-        print("%6d  %+12.2f  %9s" % (
-            seat, value, "+-" + format(_ci(se), ".2f")))
-    print("\nduplicate  %+.2f BB/100  (+-%0.2f)  =  %+.1f mBB/h" % (
-        report["bb100"], _ci(report["stderr"]), report["bb100"] * 10.0))
+    print("\nLBR duplicate evaluation - %s" % os.path.basename(args.checkpoint))
+    print("config: %s; iterations: %d; stack: %g BB; decks: %d; seed: %d"
+          % (args.config, strategy.iterations(), stack, args.decks, args.seed))
+    print("preflop wp samples: %d; opponent model: %s; LBR acts on streets: %s"
+          % (args.preflop_wp_samples, model, streets))
+    print("opponent unseen-infoset rate: %.2f%% (%d/%d decisions)"
+          % (100.0 * _opp_unseen_rate(report), report["opp_unseen"],
+             report["opp_decisions"]))
+    print("\n%22s  %12s  %9s" % ("seat", "LBR BB/100", "95% CI"))
+    labels = ("seat 0 (button/SB)", "seat 1 (BB)")
+    for label, value, se in zip(labels, report["seat_bb100"],
+                                report["seat_stderr"]):
+        print("%22s  %+12.2f  %9s" % (
+            label, value, "+-" + format(_ci(se), ".2f")))
+    print("\n%-22s  %+.2f BB/100  (+-%0.2f)  =  %+.1f mBB/h" % (
+        "duplicate", report["bb100"], _ci(report["stderr"]),
+        report["bb100"] * 10.0))
 
     if args.csv:
-        write_csv(args.csv, args.checkpoint, args, report)
+        write_csv(args.csv, args.checkpoint, args, report, stack,
+                  strategy.iterations())
         print("\nwrote %s" % args.csv)
 
 

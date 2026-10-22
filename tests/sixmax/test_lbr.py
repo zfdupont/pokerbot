@@ -324,9 +324,10 @@ def test_decide_returns_minus_one_when_not_hero_to_act(tmp_path):
 def test_decide_never_folds_the_nuts(tmp_path):
     ev = _evaluator(_strategy(tmp_path, iters=20))
     board = [_A_C, _7_D, _2_H, _9_S, _4_C]  # trips aces for hero
-    s = _to_river(_AA, _KK, board)
-    s.apply_raise_to(2.0)
-    assert s.current_player() == 0 and s.to_call() == 2.0
+    # Keyed through an applied action history: a raised river line needs the
+    # per-street raise counts a bare HandState does not carry.
+    s = _engine_at(_deck(_AA, _KK, board), _RIVER_PREFIX + [_POT_BET])
+    assert s.current_player() == 0 and s.bet_context().to_call > 0.0
     a = ev.decide(s, 0, _index_range([(_K_D, _K_H, 1.0)]), 1)
     assert VOCAB.at(a).type != sixmax.ActionType.Fold
 
@@ -387,8 +388,11 @@ def test_candidate_utilities_match_the_figure1_formula(tmp_path):
     fp = 1.0 / sum(opp_mask)  # uniform opponent
     wp_next = _range_wp(
         hero, board, [(c0, c1, w * (1.0 - fp)) for c0, c1, w in weights])
+    # Only the called part of the raise is at risk, so the loss term is
+    # min(hero_put, asked + opp_call); here hero had nothing to call.
+    at_risk = min(hero_put, asked + opp_call)
     want = fp * pot + (1.0 - fp) * (wp_next * (pot + opp_call) -
-                                    (1.0 - wp_next) * hero_put)
+                                    (1.0 - wp_next) * at_risk)
     assert abs(_candidate_u(cands, bet) - want) < 1e-9
 
 
@@ -429,8 +433,12 @@ def test_candidate_utilities_use_the_capped_opponent_call(tmp_path):
     fp = 1.0 / sum(nxt.legal_mask())  # fold + call only, so 1/2
     wp_next = _range_wp(
         hero, board, [(c0, c1, w * (1.0 - fp)) for c0, c1, w in weights])
+    # The uncalled excess of the shove comes back: the loss is capped by the
+    # amount hero actually had to put in (asked + the opponent's call).
+    at_risk = min(hero_put, 0.0 + opp_call)
+    assert abs(at_risk - 2.0) < 1e-9
     want = fp * pot + (1.0 - fp) * (wp_next * (pot + opp_call) -
-                                    (1.0 - wp_next) * hero_put)
+                                    (1.0 - wp_next) * at_risk)
     assert abs(_candidate_u(cands, _ALLIN) - want) < 1e-9
 
 
@@ -471,13 +479,11 @@ def test_fold_call_only_never_bets(tmp_path):
     for seed in range(50):
         deck = list(range(52))
         random.Random(seed).shuffle(deck)
-        s = sixmax.HandState(CFG, 0, deck)
-        for _ in range(3):
-            s.apply_check_call()
-            s.apply_check_call()
-        assert s.street() == sixmax.Street.River
-        if seed % 2 == 0:
-            s.apply_raise_to(2.0)  # hero faces a bet in half the spots
+        # Half the spots face a river bet, so they need the keyed path.
+        actions = (_RIVER_PREFIX + [_POT_BET] if seed % 2 == 0
+                   else _RIVER_PREFIX)
+        s = _engine_at(deck, actions)
+        assert s.street() == int(sixmax.Street.River)
         hero = s.current_player()
         a = ev.decide(s, hero, _uniform_range(s, hero), seed)
         assert VOCAB.at(a).type not in banned
@@ -485,13 +491,13 @@ def test_fold_call_only_never_bets(tmp_path):
 
 def test_zero_mass_range_still_returns_a_legal_action(tmp_path):
     ev = _evaluator(_strategy(tmp_path, iters=20))
-    s = _to_river(_AA, _KK)
-    s.apply_raise_to(2.0)  # facing a bet: the forced policy is Call
+    deck = _deck(_AA, _KK, _RIVER_BOARD)
+    s = _engine_at(deck, _RIVER_PREFIX + [_POT_BET])
+    assert s.bet_context().to_call > 0.0  # facing a bet: the policy is Call
     assert ev.decide(s, 0, [0.0] * 1326, 1) == _action_index(
         sixmax.ActionType.Call)
-    s = _to_river(_AA, _KK)
-    s.apply_check_call()  # nothing to call: the forced policy is Check
-    assert s.to_call() == 0.0
+    s = _engine_at(deck, _RIVER_PREFIX + [1])
+    assert s.bet_context().to_call == 0.0  # nothing to call: policy is Check
     assert ev.decide(s, 0, [0.0] * 1326, 1) == _action_index(
         sixmax.ActionType.Check)
 
@@ -510,6 +516,52 @@ def test_decide_short_stacks_still_returns_a_legal_action(tmp_path):
         hero = s.current_player()
         _assert_legal(ev.decide(s, hero, _uniform_range(s, hero), 1),
                       s.to_call())
+
+
+def test_handstate_binding_rejects_a_line_with_bets(tmp_path):
+    # A bare HandState has no per-street raise history, so its blueprint key
+    # would be wrong after a bet; the binding must refuse instead of guessing.
+    ev = _evaluator(_strategy(tmp_path, iters=20))
+    deck = _deck(_AA, _KK, _RIVER_BOARD)
+    hand = sixmax.HandState(CFG, 0, deck)
+    for _ in _RIVER_PREFIX:
+        hand.apply_check_call()
+    hand.apply_raise_to(2.0)
+    weights = _index_range([(_K_D, _K_H, 1.0)])
+    with pytest.raises(ValueError, match="EngineGameState"):
+        ev.decide(hand, 0, weights, 1)
+    with pytest.raises(ValueError, match="EngineGameState"):
+        ev.candidate_utilities(hand, 0, weights, 1)
+
+
+def test_handstate_binding_allows_uniform_opponents_after_a_bet(tmp_path):
+    # The uniform model never reads the key, so the shortcut stays valid.
+    ev = _evaluator(_strategy(tmp_path, iters=20), uniform_opponents=True)
+    hand = sixmax.HandState(CFG, 0, _deck(_AA, _KK, _RIVER_BOARD))
+    for _ in _RIVER_PREFIX:
+        hand.apply_check_call()
+    hand.apply_raise_to(2.0)
+    weights = _index_range([(_K_D, _K_H, 1.0)])
+    assert 0 <= ev.decide(hand, 0, weights, 1) < VOCAB.size()
+    assert ev.candidate_utilities(hand, 0, weights, 1)
+
+
+def test_enginegamestate_binding_accepts_the_same_spot(tmp_path):
+    # Built by applying actions, the state carries the raise counts the
+    # blueprint keyed on while training.
+    ev = _evaluator(_strategy(tmp_path, iters=20))
+    st = _engine_at(_deck(_AA, _KK, _RIVER_BOARD), _RIVER_PREFIX + [_POT_BET])
+    weights = _index_range([(_K_D, _K_H, 1.0)])
+    assert ev.candidate_utilities(st, 0, weights, 1)
+    assert 0 <= ev.decide(st, 0, weights, 1) < VOCAB.size()
+
+
+@pytest.mark.parametrize("kw", [{"preflop_wp_samples": 0},
+                                {"preflop_wp_samples": -3},
+                                {"num_threads": -1}])
+def test_lbr_config_rejects_invalid_values(kw):
+    with pytest.raises(ValueError):
+        sixmax.LbrConfig(**kw)
 
 
 def test_win_probability_preflop_is_sampled_and_deterministic(tmp_path):
@@ -565,6 +617,17 @@ def test_run_thread_count_independent(tmp_path):
     assert one["per_deck"] == three["per_deck"]
     assert one["seat_bb100"] == three["seat_bb100"]
     assert one["seat_stderr"] == three["seat_stderr"]
+    assert one["opp_unseen"] == three["opp_unseen"]
+    assert one["opp_decisions"] == three["opp_decisions"]
+
+
+def test_run_reports_opponent_decisions(tmp_path):
+    # The uniform opponent model never consults the blueprint, so its
+    # unseen-infoset count stays zero while the decision count is positive.
+    rep = _evaluator(_strategy(tmp_path, iters=20),
+                     uniform_opponents=True).run(4, 1)
+    assert rep["opp_unseen"] == 0
+    assert rep["opp_decisions"] > 0
 
 
 def test_run_exploits_uniform_opponents(tmp_path):
@@ -620,3 +683,4 @@ def test_run_zero_decks_is_finite(tmp_path):
     assert rep["seat_bb100"] == [0.0, 0.0]
     assert rep["seat_stderr"] == [0.0, 0.0]
     assert rep["bb100"] == 0.0 and rep["stderr"] == 0.0
+    assert rep["opp_unseen"] == 0 and rep["opp_decisions"] == 0
