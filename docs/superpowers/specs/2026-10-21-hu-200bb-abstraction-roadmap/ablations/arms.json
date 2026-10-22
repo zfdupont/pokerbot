@@ -1,0 +1,321 @@
+{
+ "description": "HU 200 BB abstraction ablations: one record per arm. Numbers copied from results.md; LBR curves are in lbr_sweep.jsonl (per-deck values in sixmax/checkpoints/lbr_per_deck/, regenerable).",
+ "units": {
+  "mean_bb100": "BB/100",
+  "se": "BB/100 standard error",
+  "it_s": "training iterations per second, cumulative",
+  "cost_usd": "Hetzner estimate",
+  "evaluator": "old = pre-2026-10-22 hand evaluator (4.5x slower training)"
+ },
+ "c0_plateau_for_caps": 20000000,
+ "cap_rule": "round(c0_plateau * arm_infosets / c0_infosets_at_25M), clamped 20M-150M",
+ "arms": [
+  {
+   "id": "c0",
+   "label": "C0 control",
+   "axis": "control",
+   "config": "sixmax/configs/hu200.toml",
+   "pot_mode": "bb",
+   "pot_edges": [
+    7.0,
+    15.0,
+    40.0
+   ],
+   "pot_buckets": 4,
+   "bucket_map": "map_pct_50_50_20.bin",
+   "map_method": "percentile",
+   "card_buckets": [
+    50,
+    50,
+    20
+   ],
+   "infosets": {
+    "at_25M": 33572,
+    "at_29.3M": 33848
+   },
+   "cap": 60000000,
+   "plateau_iters": 20000000,
+   "plateau_note": "first converged 15M (borderline t=1.71); 20M used for caps",
+   "trained_iters": 29300000,
+   "snapshots_to": 25000000,
+   "cloud": "ccx33",
+   "evaluator": "old",
+   "it_s": 3542,
+   "wall_hours": 2.35,
+   "cost_usd": 0.49,
+   "plateau_checks": [
+    {
+     "method": "h2h",
+     "newer_iters": 15000000,
+     "older_iters": 5000000,
+     "mean_bb100": 6.86,
+     "se": null,
+     "t": 1.71,
+     "verdict": "converged"
+    },
+    {
+     "method": "h2h",
+     "newer_iters": 20000000,
+     "older_iters": 10000000,
+     "mean_bb100": -2.03,
+     "se": null,
+     "t": -1.04,
+     "verdict": "converged"
+    },
+    {
+     "method": "paired_lbr",
+     "newer_iters": 25000000,
+     "older_iters": 15000000,
+     "mean_bb100": -8.68,
+     "se": 8.01,
+     "t": -1.08,
+     "verdict": "converged",
+     "decks": 40000
+    }
+   ],
+   "stack_bb": 200.0,
+   "vocab": "default.toml [actions.blueprint]",
+   "trainer_seed": 7,
+   "snapshot_interval": 5000000,
+   "gate_vs_c0": null,
+   "slumbot": null
+  },
+  {
+   "id": "p0",
+   "label": "P0 potential-aware card map",
+   "axis": "leak D (card map)",
+   "config": "sixmax/configs/hu200.toml",
+   "pot_mode": "bb",
+   "pot_edges": [
+    7.0,
+    15.0,
+    40.0
+   ],
+   "pot_buckets": 4,
+   "bucket_map": "map_pot_50_50_20.bin",
+   "map_method": "potential",
+   "card_buckets": [
+    50,
+    50,
+    20
+   ],
+   "infosets": {
+    "at_25M": 33850
+   },
+   "cap": null,
+   "plateau_iters": 15000000,
+   "trained_iters": 25000000,
+   "snapshots_to": 25000000,
+   "cloud": "ccx33",
+   "evaluator": "old",
+   "it_s": 3515,
+   "wall_hours": 2.0,
+   "cost_usd": 0.42,
+   "plateau_checks": [
+    {
+     "method": "h2h",
+     "newer_iters": 25000000,
+     "older_iters": 15000000,
+     "mean_bb100": -7.21,
+     "se": 3.1,
+     "t": -2.31,
+     "verdict": "converged"
+    },
+    {
+     "method": "paired_lbr",
+     "newer_iters": 25000000,
+     "older_iters": 15000000,
+     "mean_bb100": 3.41,
+     "se": 8.57,
+     "t": 0.4,
+     "verdict": "converged",
+     "decks": 40000
+    }
+   ],
+   "gate_vs_c0": {
+    "method": "h2h",
+    "arm_iters": 25000000,
+    "c0_iters": 25000000,
+    "hands": 20000,
+    "seeds": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8
+    ],
+    "mean_bb100": 2.68,
+    "se": 3.0,
+    "t": 0.91,
+    "per_seed": [
+     16.63,
+     2.9,
+     -5.71,
+     5.15,
+     -0.3,
+     10.94,
+     0.9,
+     -9.09
+    ],
+    "verdict": "keep C0"
+   },
+   "stack_bb": 200.0,
+   "vocab": "default.toml [actions.blueprint]",
+   "trainer_seed": 7,
+   "snapshot_interval": 5000000,
+   "slumbot": null
+  },
+  {
+   "id": "c1",
+   "label": "C1 finer bb pot edges",
+   "axis": "leak C (pot layout)",
+   "config": "sixmax/configs/hu200_c1.toml",
+   "pot_mode": "bb",
+   "pot_edges": [
+    4.0,
+    8.0,
+    16.0,
+    40.0,
+    100.0
+   ],
+   "pot_buckets": 6,
+   "bucket_map": "map_pct_50_50_20.bin",
+   "map_method": "percentile",
+   "card_buckets": [
+    50,
+    50,
+    20
+   ],
+   "infosets": {
+    "probe_2M": 46507,
+    "at_cap": 46795
+   },
+   "cap": 27705826,
+   "plateau_iters": 20000000,
+   "trained_iters": 27705826,
+   "snapshots_to": 27705826,
+   "cloud": "ccx33",
+   "evaluator": "new",
+   "it_s": 12827,
+   "wall_hours": 0.64,
+   "cost_usd": 0.13,
+   "plateau_checks": [
+    {
+     "method": "paired_lbr",
+     "newer_iters": 20000000,
+     "older_iters": 10000000,
+     "mean_bb100": -1.05,
+     "se": 5.61,
+     "t": -0.19,
+     "verdict": "converged",
+     "decks": 100000
+    }
+   ],
+   "stack_bb": 200.0,
+   "vocab": "default.toml [actions.blueprint]",
+   "trainer_seed": 7,
+   "snapshot_interval": 5000000,
+   "gate_vs_c0": null,
+   "slumbot": null
+  },
+  {
+   "id": "c2",
+   "label": "C2 finest bb pot edges",
+   "axis": "leak C (pot layout)",
+   "config": "sixmax/configs/hu200_c2.toml",
+   "pot_mode": "bb",
+   "pot_edges": [
+    3.0,
+    6.0,
+    12.0,
+    24.0,
+    48.0,
+    96.0,
+    192.0
+   ],
+   "pot_buckets": 8,
+   "bucket_map": "map_pct_50_50_20.bin",
+   "map_method": "percentile",
+   "card_buckets": [
+    50,
+    50,
+    20
+   ],
+   "infosets": {
+    "probe_2M": 64589,
+    "at_cap": 65016
+   },
+   "cap": 38477898,
+   "plateau_iters": 15000000,
+   "trained_iters": 38477898,
+   "snapshots_to": 38477898,
+   "cloud": "ccx33",
+   "evaluator": "new",
+   "it_s": 10584,
+   "wall_hours": 1.05,
+   "cost_usd": 0.22,
+   "plateau_checks": [
+    {
+     "method": "paired_lbr",
+     "newer_iters": 15000000,
+     "older_iters": 5000000,
+     "mean_bb100": -4.24,
+     "se": 6.25,
+     "t": -0.68,
+     "verdict": "converged",
+     "decks": 100000
+    }
+   ],
+   "stack_bb": 200.0,
+   "vocab": "default.toml [actions.blueprint]",
+   "trainer_seed": 7,
+   "snapshot_interval": 5000000,
+   "gate_vs_c0": null,
+   "slumbot": null
+  },
+  {
+   "id": "c3",
+   "label": "C3 stack-to-pot ratio buckets",
+   "axis": "leak C (pot layout)",
+   "config": "sixmax/configs/hu200_c3.toml",
+   "pot_mode": "spr",
+   "pot_edges": [
+    0.5,
+    1.0,
+    2.0,
+    4.0,
+    8.0
+   ],
+   "pot_buckets": 6,
+   "bucket_map": "map_pct_50_50_20.bin",
+   "map_method": "percentile",
+   "card_buckets": [
+    50,
+    50,
+    20
+   ],
+   "infosets": {
+    "probe_2M": 71342
+   },
+   "cap": 42500894,
+   "plateau_iters": null,
+   "trained_iters": null,
+   "cloud": "ccx33",
+   "evaluator": "new",
+   "it_s": null,
+   "wall_hours": null,
+   "cost_usd": null,
+   "plateau_checks": [],
+   "status": "training",
+   "stack_bb": 200.0,
+   "vocab": "default.toml [actions.blueprint]",
+   "trainer_seed": 7,
+   "snapshot_interval": 5000000,
+   "gate_vs_c0": null,
+   "slumbot": null
+  }
+ ]
+}
