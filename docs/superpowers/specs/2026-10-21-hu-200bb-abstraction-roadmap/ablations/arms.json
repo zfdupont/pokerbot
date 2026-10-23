@@ -5,7 +5,8 @@
   "se": "BB/100 standard error",
   "it_s": "training iterations per second, cumulative",
   "cost_usd": "Hetzner estimate",
-  "evaluator": "old = pre-2026-10-22 hand evaluator (4.5x slower training)"
+  "evaluator": "old = pre-2026-10-22 hand evaluator (4.5x slower training)",
+  "slumbot": "raw/baseline +/- are one standard error; size bins are [n, summed baseline BB]"
  },
  "c0_plateau_for_caps": 20000000,
  "cap_rule": "round(c0_plateau * arm_infosets / c0_infosets_at_25M), clamped 20M-150M",
@@ -360,7 +361,54 @@
     ],
     "verdict": "pass"
    },
-   "slumbot": null,
+   "slumbot": {
+    "hands": 13000,
+    "date": "2026-10-23",
+    "raw_bb100": -50.5,
+    "raw_se": 21.2,
+    "baseline_bb100": -40.0,
+    "baseline_se": 21.9,
+    "baseline_by_seat": {
+     "bb": -44.5,
+     "sb": -35.4
+    },
+    "size_bins_baseline_bb": {
+     "<10": [
+      11227,
+      4244.6
+     ],
+     "10-40": [
+      1366,
+      -105.1
+     ],
+     "40-100": [
+      236,
+      -1470.5
+     ],
+     "100+": [
+      171,
+      -7863.4
+     ]
+    },
+    "showdown_baseline_bb": [
+     1711,
+     -10893.4
+    ],
+    "fold_baseline_bb": [
+     11289,
+     5698.8
+    ],
+    "threebet_pots_baseline_bb": [
+     4614,
+     -1155.0
+    ],
+    "log": "slumbot_c2_38m_13000.jsonl",
+    "vs_previous": {
+     "previous": -118.3,
+     "previous_se": 42,
+     "verdict": "pass"
+    }
+   },
    "lbr_vs_c0": {
     "arm_iters": 38477898,
     "c0_iters": 25000000,

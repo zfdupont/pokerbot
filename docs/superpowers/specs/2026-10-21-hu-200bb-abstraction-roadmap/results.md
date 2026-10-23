@@ -138,3 +138,12 @@ Each arm at its cap (P0 at 25M) vs C0@25M, eval_blueprint_h2h, 8 seeds x 20k dup
 - Gate 2's ranking does not depend on this: C2 is converged by either rule, and C0 at 25M sits on its flat stretch (15-25M within 7 BB/100).
 
 Ruling (2026-10-23): C0 and P0 are treated as converged at 25M without a second trend window. C2 (about 2x their infosets) passed the trend rule by 35M, so about 18M is expected for them; their 10-25M windows are flat (t=+1.35, +1.59) and C0's 15-25M LBR spans 7 BB/100; and no extra training could plausibly close C2's +23.7 (t=8.4) head-to-head lead. Cost if wrong: none for the Phase 2 decision; verify with a 5M `--resume` (about $0.03 each) if either becomes a finalist.
+
+## Slumbot: C2 (Phase 2 winner), 2026-10-23
+
+`scripts/eval_slumbot.py --checkpoint hu200_c2_38477898.bin --config hu200_c2.toml --hands 13000`, guest, sequential (about 3.24 requests per hand, 1-4 per second, no added delay). Log: `slumbot_c2_38m_13000.jsonl`. The evaluator's +/- is one standard error.
+
+- raw **-50.5 +/- 21.2** BB/100 (95%: -92 to -9); baseline -40.0 +/- 21.9. Seats 6,500/6,500; baseline by seat BB -44.5, SB -35.4.
+- Regression check vs the previous confirmed score (-118.3 +/- 42): +67.8 better, so PASS (blocks only if worse by > 2 combined SE).
+- Phase 2 extra stop ("improved by at least 2 SE over -118"): 3.2 SE on C2's own SE (pass, my reading); 1.44 combined SE. Recorded as passing; the spec's wording is ambiguous.
+- Breakdown (baseline BB summed): pots < 10 BB +4,245 (n 11,227); 10-40 -105 (n 1,366); 40-100 -1,471 (n 236); 100+ -7,863 (n 171). Showdown -10,893 (n 1,711); folds +5,699 (n 11,289); 3-bet pots -1,155 (n 4,614). Small pots and fold equity win; about 400 big pots, mostly at showdown, lose more than all of it. Points at deep big-pot decisions (bet-size history, leak B / Phase 4; later-street card buckets, Phase 3).
