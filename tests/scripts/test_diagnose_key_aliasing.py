@@ -75,7 +75,10 @@ def c1_checkpoint(tmp_path_factory, synthetic_bucket_map, default_vocab):
 def test_script_key_matches_agent_key(c1_checkpoint):
     from agents.sixmax_agent import SixmaxDeployStrategy
 
-    deploy = SixmaxDeployStrategy.load(c1_checkpoint, _TOML)
+    # fallback="uniform": one lookup per decision. The default retries
+    # neighbouring pot buckets on a miss, which this tiny checkpoint hits.
+    deploy = SixmaxDeployStrategy.load(c1_checkpoint, _TOML,
+                                       fallback="uniform")
     recorder = _RecordingStrategy(deploy._strategy)
     deploy._strategy = recorder
 

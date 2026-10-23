@@ -118,16 +118,64 @@ def _is_legacy_pot_layout(layout):
     return mode == "bb" and [float(e) for e in edges] == _LEGACY_POT_EDGES
 
 
+# What a deployed agent does when its infoset is not in the table (an
+# opponent's off-tree size can land a pot bucket training never reached).
+# Play and evaluation only: the trainer never calls this class, so training
+# exploration is unchanged.
+#   "nearest": retry the key with pot buckets up to _NEAREST_RADIUS away,
+#              nearest first; if none is in the table, play _safe_action.
+#   "uniform": the original behaviour, a uniform draw over the legal actions.
+FALLBACKS = ("nearest", "uniform")
+_NEAREST_RADIUS = 2
+_SAFE_CALL_POT_FRACTION = 0.5
+
+
+def _pot_index(layout, pot_bb, eff_stack_bb):
+    """Mirror of the C++ pot_bucket: the first edge the value is <= to, where
+    the value is the pot in BB, or eff_stack / pot in SPR mode."""
+    mode, edges = layout
+    if mode == "bb":
+        value = pot_bb
+    else:
+        value = eff_stack_bb / pot_bb if pot_bb > 0 else float("inf")
+    for i, edge in enumerate(float(e) for e in edges):
+        if value <= edge:
+            return i
+    return len(edges)
+
+
+def _pot_for_index(layout, index, eff_stack_bb):
+    """A pot_bb that files in pot bucket `index` (its midpoint, clear of the
+    inclusive edges), or None when SPR mode has no stack to divide."""
+    mode, edges = layout
+    edges = [float(e) for e in edges]
+    if index == 0:
+        value = edges[0] / 2.0
+    elif index < len(edges):
+        value = (edges[index - 1] + edges[index]) / 2.0
+    else:
+        value = edges[-1] * 2.0
+    if mode == "bb":
+        return value
+    return eff_stack_bb / value if eff_stack_bb > 0 else None
+
+
 class SixmaxDeployStrategy:
-    def __init__(self, strategy, vocab):
+    def __init__(self, strategy, vocab, fallback="nearest"):
+        if fallback not in FALLBACKS:
+            raise ValueError(f"fallback must be one of {FALLBACKS}, "
+                             f"got {fallback!r}")
         self._strategy = strategy
         self._vocab = vocab
+        self._fallback = fallback
+        # Lookup outcomes since load: "hit", "nearest", "safe", "uniform".
+        self.lookups = {"hit": 0, "nearest": 0, "safe": 0, "uniform": 0}
 
     @classmethod
-    def load(cls, path, config_toml, section="blueprint"):
+    def load(cls, path, config_toml, section="blueprint", fallback="nearest"):
         vocab = _load_vocab(config_toml, section)
         strategy = sixmax.BlueprintStrategy.load(path, vocab)
-        return cls(strategy, vocab)
+        return cls(strategy, vocab, fallback=fallback)
 
     @property
     def num_players(self):
@@ -153,14 +201,25 @@ class SixmaxDeployStrategy:
                     "eff_stack_bb is required for non-legacy pot layouts")
             eff_stack_bb = stack_bb
         card = self._card_bucket(hole, board, street)
-        key = abstraction.pack_key(card, street, list(raises_per_street),
-                                   pot_bb, eff_stack_bb, live, after)
-        probs = self._strategy.probs(key)  # [] if unseen
-
         legal_idx = [i for i, m in enumerate(legal) if m]
-        weights = [probs[i] if i < len(probs) else 0.0 for i in legal_idx]
-        total = sum(weights)
-        if total <= 0.0:
+
+        def weights_at(pot):
+            key = abstraction.pack_key(card, street, list(raises_per_street),
+                                       pot, eff_stack_bb, live, after)
+            probs = self._strategy.probs(key)  # [] if unseen
+            return [probs[i] if i < len(probs) else 0.0 for i in legal_idx]
+
+        weights = weights_at(pot_bb)
+        outcome = "hit" if sum(weights) > 0.0 else self._fallback
+        if outcome == "nearest":
+            weights = self._nearest_weights(weights_at, pot_bb, eff_stack_bb)
+            outcome = "nearest" if weights is not None else "safe"
+        self.lookups[outcome] += 1
+
+        total = sum(weights) if outcome in ("hit", "nearest") else 0.0
+        if outcome == "safe":
+            idx = self._safe_action(legal_idx, pot_bb, to_call_bb)
+        elif total <= 0.0:
             idx = rng.choice(legal_idx)
         else:
             r = rng.random() * total
@@ -172,6 +231,43 @@ class SixmaxDeployStrategy:
                     idx = i
                     break
 
+        return self._finish(idx, pot_bb, current_bet_bb, to_call_bb, stack_bb)
+
+    def _nearest_weights(self, weights_at, pot_bb, eff_stack_bb):
+        """Legal-action weights from the nearest pot bucket present in the
+        table (index distance 1, then 2; lower bucket first), or None."""
+        layout = self._strategy.abstraction().pot_layout()
+        here = _pot_index(layout, pot_bb, eff_stack_bb)
+        last = len(layout[1])
+        for dist in range(1, _NEAREST_RADIUS + 1):
+            for j in (here - dist, here + dist):
+                if not 0 <= j <= last:
+                    continue
+                pot = _pot_for_index(layout, j, eff_stack_bb)
+                if pot is None:
+                    continue
+                weights = weights_at(pot)
+                if sum(weights) > 0.0:
+                    return weights
+        return None
+
+    def _safe_action(self, legal_idx, pot_bb, to_call_bb):
+        """Never bet or jam blind: check when free, call when the price is at
+        most _SAFE_CALL_POT_FRACTION of the pot, otherwise fold."""
+        by_type = {}
+        for i in legal_idx:
+            by_type.setdefault(self._vocab.at(i).type, i)
+        t = sixmax.ActionType
+        if t.Check in by_type:
+            return by_type[t.Check]
+        if t.Call in by_type and to_call_bb <= _SAFE_CALL_POT_FRACTION * pot_bb:
+            return by_type[t.Call]
+        for choice in (t.Fold, t.Call):
+            if choice in by_type:
+                return by_type[choice]
+        return legal_idx[0]
+
+    def _finish(self, idx, pot_bb, current_bet_bb, to_call_bb, stack_bb):
         action = self._vocab.at(idx)
         if action.type in (sixmax.ActionType.Bet, sixmax.ActionType.AllIn):
             ctx = sixmax.BetContext(pot=pot_bb, current_bet=current_bet_bb,
@@ -401,8 +497,10 @@ class SixmaxAgent(PokerAgent):
     so we clamp it to the abstraction's cap (3) here at consumption — the same
     pattern neural_cfr uses (it clamps to 2). No observer plumbing needed."""
 
-    def __init__(self, checkpoint_path, config_toml=_DEFAULT_TOML, search_toml=None):
-        self._deploy = SixmaxDeployStrategy.load(checkpoint_path, config_toml)
+    def __init__(self, checkpoint_path, config_toml=_DEFAULT_TOML, search_toml=None,
+                 fallback="nearest"):
+        self._deploy = SixmaxDeployStrategy.load(checkpoint_path, config_toml,
+                                                 fallback=fallback)
         self._rng = random.Random()
         self._search = (SearchStrategy(checkpoint_path, search_toml)
                         if search_toml is not None else None)

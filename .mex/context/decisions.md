@@ -97,3 +97,7 @@ The fixed 6-action vocabulary is scoped to the heads-up pipelines. `sixmax/` tre
 ## Boundary rescale rule corrected to big-blind division (2026-07-18)
 
 The documented `their_stack/100` rescale was only correct at exactly 100BB and misplayed at other buy-ins; the rule is: divide every chip input by the table's big blind (training frame has bb=1). Fixed in `scripts/openpoker_bot.py`; scaffold references corrected in conventions.md, neural-cfr.md, patterns/eval-checkpoint.md.
+
+## Missing-infoset fallback is play-time only: nearest pot bucket, then safe (2026-10-23)
+
+A deployed blueprint misses its table when an opponent's off-tree bet size lands a pot bucket training never reached (C2 vs Slumbot: 41% of preflop decisions, the BB facing a 2 BB min-open; fine pot edges sit below our smallest trained pots). The miss used to play uniformly over the legal mask, CFR's own default for an unvisited infoset, which at 200 BB means a 1-in-6 jam: 1,177 of C2's 1,262 Slumbot all-ins. `SixmaxDeployStrategy(fallback="nearest")` (default) now retries the key with pot buckets up to 2 away (lower first) and, failing that, checks / calls at most half the pot / folds, never bets; `fallback="uniform"` keeps the old behaviour; `deploy.lookups` counts hit/nearest/safe/uniform. Only the deploy/eval bridge changed: the trainer never uses this class (training exploration is unchanged), and the C++ `exploit/policy` fallback that LBR's opponent model uses is left uniform (LBR plays our own sizes, 0% misses).
