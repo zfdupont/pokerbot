@@ -136,3 +136,5 @@ Each arm at its cap (P0 at 25M) vs C0@25M, eval_blueprint_h2h, 8 seeds x 20k dup
 
 - C0 and P0 read "training" only because their last snapshot is 25M (the saved final checkpoints are also 25M), so the early-rise window is still one of the two. One more 5M snapshot each (`--resume`, about $0.03 each) would settle it.
 - Gate 2's ranking does not depend on this: C2 is converged by either rule, and C0 at 25M sits on its flat stretch (15-25M within 7 BB/100).
+
+Ruling (2026-10-23): C0 and P0 are treated as converged at 25M without a second trend window. C2 (about 2x their infosets) passed the trend rule by 35M, so about 18M is expected for them; their 10-25M windows are flat (t=+1.35, +1.59) and C0's 15-25M LBR spans 7 BB/100; and no extra training could plausibly close C2's +23.7 (t=8.4) head-to-head lead. Cost if wrong: none for the Phase 2 decision; verify with a 5M `--resume` (about $0.03 each) if either becomes a finalist.

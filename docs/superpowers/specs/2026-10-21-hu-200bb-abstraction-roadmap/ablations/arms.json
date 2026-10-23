@@ -34,7 +34,7 @@
     "at_29.3M": 33848
    },
    "cap": 60000000,
-   "plateau_iters": 20000000,
+   "plateau_iters": 25000000,
    "plateau_note": "first converged 15M (borderline t=1.71); 20M used for caps",
    "trained_iters": 29300000,
    "snapshots_to": 25000000,
@@ -80,7 +80,8 @@
    "trainer_seed": 7,
    "snapshot_interval": 5000000,
    "gate_vs_c0": null,
-   "slumbot": null
+   "slumbot": null,
+   "plateau_ruling": "converged by ruling (2026-10-23), not verified by the trend rule: only one full window (10-25M, |t|<2); snapshots end at 25M. Basis: C2 with ~2x the infosets passed the trend rule by 35M, so ~half the iterations (~18M) is expected here; 15-25M LBR within 7 BB/100; C2 beats C0 by +23.7 (t 8.4) h2h. A 5M --resume (~$0.03) would verify it if this arm becomes a finalist."
   },
   {
    "id": "p0",
@@ -105,7 +106,7 @@
     "at_25M": 33850
    },
    "cap": null,
-   "plateau_iters": 15000000,
+   "plateau_iters": 25000000,
    "trained_iters": 25000000,
    "snapshots_to": 25000000,
    "cloud": "ccx33",
@@ -180,7 +181,8 @@
     "se": 6.48,
     "t": -0.11,
     "note": "paired per-deck, negative = less exploitable than C0"
-   }
+   },
+   "plateau_ruling": "converged by ruling (2026-10-23), not verified by the trend rule: only one full window (10-25M, |t|<2); snapshots end at 25M. Basis: C2 with ~2x the infosets passed the trend rule by 35M, so ~half the iterations (~18M) is expected here; 15-25M LBR within 7 BB/100; C2 beats C0 by +23.7 (t 8.4) h2h. A 5M --resume (~$0.03) would verify it if this arm becomes a finalist."
   },
   {
    "id": "c1",
