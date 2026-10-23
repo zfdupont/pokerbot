@@ -95,9 +95,7 @@ def test_raises_per_street_is_faithful_past_two():
     """After the uncap, raises_per_street counts the true number of raises on a
     street *while that street is live* (old code capped at 2). Consumers read
     the count mid-street (that is the only value they ever see), so the contract
-    is tested by what an agent observes at decision time — not the end-of-hand
-    value, which the engine's per-street reset (_reset_street_bets zeroes the
-    just-finished street when advancing) always wipes to 0.
+    is tested by what an agent observes at decision time.
 
     Both players min-raise preflop while the live count is below 3, so exactly 3
     preflop raises go in and then the action closes with a call. A later actor
@@ -126,3 +124,36 @@ def test_raises_per_street_is_faithful_past_two():
     game.play_hand()
     assert max(observed_preflop) == 3   # count passes 2 while the street is live
     assert p0.stack + p1.stack == 400   # chips conserved
+
+
+def test_raises_per_street_keeps_earlier_streets():
+    """Postflop agents see every earlier street's raise count, as the trainers'
+    infoset keys do. The engine used to zero the just-finished street when it
+    advanced (_reset_street_bets ran before betting_round moved on), so every
+    postflop key read 0 raises for preflop and flop and missed or aliased the
+    blueprint's infosets.
+
+    One open preflop and one bet on the flop, each called: the flop actor must
+    see [1, 0, 0, 0] and the turn actor [1, 1, 0, 0]."""
+    from models.enums import Action
+    from models.player import Player
+    from game.poker import PokerGame
+
+    seen = {}
+
+    class Scripted:
+        def get_action(self, player, game_state):
+            st = game_state.betting_round
+            seen.setdefault(st, list(game_state.raises_per_street))
+            to_call = game_state.current_bet - player.current_bet
+            if st in (0, 1) and game_state.raises_per_street[st] == 0:
+                return (Action.BET,
+                        game_state.current_bet + 2 * game_state.big_blind)
+            return (Action.CALL, None) if to_call > 0 else (Action.CHECK, None)
+
+    p0, p1 = Player("a", 200, Scripted()), Player("b", 200, Scripted())
+    PokerGame([p0, p1], small_blind=1).play_hand()
+    assert seen[1] == [1, 0, 0, 0]
+    assert seen[2] == [1, 1, 0, 0]
+    assert seen[3] == [1, 1, 0, 0]
+    assert p0.stack + p1.stack == 400

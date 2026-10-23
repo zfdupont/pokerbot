@@ -64,7 +64,10 @@ class PokerGame:
         for p in self.state.players:
             p.current_bet = 0
         self.state.current_bet = 0
-        self.state.raises_per_street[self.state.betting_round] = 0
+        # raises_per_street is NOT reset here: this runs before betting_round
+        # advances, so a reset would wipe the street that just ended, and every
+        # consumer's infoset key carries all earlier streets' counts. Counts
+        # start at 0 per hand in _reset_for_hand.
 
     def _first_to_act(self, street: int) -> int:
         num = len(self.state.players)
