@@ -169,3 +169,20 @@ Every logged decision of ours (29,096) was replayed through the deploy agent's k
 - Head-to-head (fixed engine, nearest fallback, each checkpoint with its own config): C4 vs C2 **-7.40** (se 3.05, t=-2.43; 7 of 8 seeds negative); C4 vs C0 **+19.13** (se 2.97, t=+6.44).
 - Menu-mismatch confound: in C4 vs C2, C2 falls back to the nearest bucket on 9.3% of decisions (C4's 2 BB open lands C2's 3.0 BB hole) and C4 on 0.1%; but C4 files C2's 2.5 BB open (pot 3.5) with its own 3.5/5 BB opens, an alias the counter does not see. Same-menu reference C2 vs C0: 0.3% / 0.2%. So head-to-head between different menus measures cross-menu translation as well as strength.
 - Evidence splits: LBR (own-menu) favours C4 by about 14; head-to-head favours C2 by 7.4 (confounded); both beat C0. C4 was built for Slumbot's 2 BB open, so Slumbot is the direct test. By the letter of the gate policy C2 stays the Phase 2 winner.
+
+### C2 vs C4 head-to-head split by preflop spot, 2026-10-23
+
+`ablations/h2h_split_c2_c4.py` replays the gate's exact match (same seeds, agents' RNGs reseeded per hand; reproduces +7.40) and attributes C2's result to the opening sequence. Contributions to C2's +7.40 BB/100:
+
+| Spot | C2 net BB/100 | Note |
+|---|---:|---|
+| C2 opens 2.5 BB (off-menu for C4) | +4.35 | C4 folds 58% |
+| C4 opens 2 BB (off-menu for C2) | -2.99 | C2 folds 52% (nearest-bucket fallback) |
+| C2 opens 5 BB | +6.72 | |
+| C4 opens 5 BB | -4.88 | |
+| C2 opens 3.5 BB | -0.39 | |
+| C4 opens 3.5 BB | +4.36 | C2 3-bets: +7.01 |
+| SB folds and limps | +0.22 | |
+
+- Off-menu translation of the min-size opens nets only +1.36 for C2. The rest is in larger-pot spots: whoever opens 5 BB wins about 1.3-1.5 BB per open, and C2 opens 5 BB slightly more and earns slightly more per open.
+- Open-size aliasing: facing an open, the pots after 2.5/3.5/5 BB opens (3.5/4.5/6.0 BB) all file in pot bucket (3, 6] with the same raise count, so C2 answers all three opens with one strategy; C4 the same for 3.5/5 (its 2 BB open has bucket (0, 3]). C4's fold rates vs 2.5/3.5/5 BB opens: 58/56/56%. This is leak B (bet-size history in the key) at the first preflop decision.
