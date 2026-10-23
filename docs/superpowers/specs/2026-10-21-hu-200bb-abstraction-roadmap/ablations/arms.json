@@ -166,7 +166,17 @@
    "vocab": "default.toml [actions.blueprint]",
    "trainer_seed": 7,
    "snapshot_interval": 5000000,
-   "slumbot": null
+   "slumbot": null,
+   "lbr_vs_c0": {
+    "arm_iters": 25000000,
+    "c0_iters": 25000000,
+    "decks": 100000,
+    "seed": 1,
+    "mean_bb100": -0.7,
+    "se": 6.48,
+    "t": -0.11,
+    "note": "paired per-deck, negative = less exploitable than C0"
+   }
   },
   {
    "id": "c1",
@@ -219,7 +229,17 @@
    "trainer_seed": 7,
    "snapshot_interval": 5000000,
    "gate_vs_c0": null,
-   "slumbot": null
+   "slumbot": null,
+   "lbr_vs_c0": {
+    "arm_iters": 27705826,
+    "c0_iters": 25000000,
+    "decks": 100000,
+    "seed": 1,
+    "mean_bb100": -17.11,
+    "se": 6.25,
+    "t": -2.74,
+    "note": "paired per-deck, negative = less exploitable than C0"
+   }
   },
   {
    "id": "c2",
@@ -274,7 +294,17 @@
    "trainer_seed": 7,
    "snapshot_interval": 5000000,
    "gate_vs_c0": null,
-   "slumbot": null
+   "slumbot": null,
+   "lbr_vs_c0": {
+    "arm_iters": 38477898,
+    "c0_iters": 25000000,
+    "decks": 100000,
+    "seed": 1,
+    "mean_bb100": -29.28,
+    "se": 6.34,
+    "t": -4.62,
+    "note": "paired per-deck, negative = less exploitable than C0"
+   }
   },
   {
    "id": "c3",
@@ -298,24 +328,100 @@
     20
    ],
    "infosets": {
-    "probe_2M": 71342
+    "probe_2M": 71342,
+    "at_cap": 71916
    },
    "cap": 42500894,
    "plateau_iters": null,
-   "trained_iters": null,
+   "trained_iters": 42500894,
    "cloud": "ccx33",
    "evaluator": "new",
-   "it_s": null,
-   "wall_hours": null,
-   "cost_usd": null,
-   "plateau_checks": [],
-   "status": "training",
+   "it_s": 12557,
+   "wall_hours": 0.97,
+   "cost_usd": 0.2,
+   "plateau_checks": [
+    {
+     "method": "paired_lbr",
+     "newer_iters": 15000000,
+     "older_iters": 5000000,
+     "mean_bb100": 22.19,
+     "se": 5.78,
+     "t": 3.84,
+     "decks": 100000
+    },
+    {
+     "method": "paired_lbr",
+     "newer_iters": 20000000,
+     "older_iters": 10000000,
+     "mean_bb100": 10.91,
+     "se": 5.51,
+     "t": 1.98,
+     "decks": 100000
+    },
+    {
+     "method": "paired_lbr",
+     "newer_iters": 25000000,
+     "older_iters": 15000000,
+     "mean_bb100": -13.6,
+     "se": 5.06,
+     "t": -2.69,
+     "decks": 100000
+    },
+    {
+     "method": "paired_lbr",
+     "newer_iters": 30000000,
+     "older_iters": 20000000,
+     "mean_bb100": -7.26,
+     "se": 4.92,
+     "t": -1.47,
+     "decks": 100000
+    },
+    {
+     "method": "paired_lbr",
+     "newer_iters": 35000000,
+     "older_iters": 25000000,
+     "mean_bb100": 17.83,
+     "se": 4.67,
+     "t": 3.82,
+     "decks": 100000
+    },
+    {
+     "method": "paired_lbr",
+     "newer_iters": 40000000,
+     "older_iters": 30000000,
+     "mean_bb100": 9.6,
+     "se": 4.58,
+     "t": 2.1,
+     "decks": 100000
+    },
+    {
+     "method": "paired_lbr",
+     "newer_iters": 42500894,
+     "older_iters": 30000000,
+     "mean_bb100": 8.24,
+     "se": 4.69,
+     "t": 1.76,
+     "decks": 100000
+    }
+   ],
+   "status": "trained; single-pair plateau inconclusive (see results.md); gate pending",
    "stack_bb": 200.0,
    "vocab": "default.toml [actions.blueprint]",
    "trainer_seed": 7,
    "snapshot_interval": 5000000,
    "gate_vs_c0": null,
-   "slumbot": null
+   "slumbot": null,
+   "snapshots_to": 42500894,
+   "lbr_vs_c0": {
+    "arm_iters": 42500894,
+    "c0_iters": 25000000,
+    "decks": 100000,
+    "seed": 1,
+    "mean_bb100": -18.14,
+    "se": 6.22,
+    "t": -2.91,
+    "note": "paired per-deck, negative = less exploitable than C0"
+   }
   }
  ]
 }

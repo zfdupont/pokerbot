@@ -78,3 +78,22 @@ Pairing helps less than hoped. The per-deck sd of the difference (1,602 and 1,71
 - Cloud: ccx33, 38,477,898 iterations at 10,584 it/s average (the larger table is slower than C1's 12,827), 63 min, about $0.22. 65,016 infosets at the cap.
 - Plateau (paired LBR, 100k decks, seed 1): 15M vs 5M, -4.24 BB/100, se 6.25, t=-0.68, converged at the first check. C2_plateau = 15M. LBR(15M) +363.2, LBR(5M) +367.5 BB/100.
 - LBR at plateau falls as pot buckets get finer: C0 (4) about +414-422, C1 (6) +391.6, C2 (8) +363.2. These are separate runs, not paired; Gate 2's head-to-head decides strength.
+
+## LBR learning curves (sweep), 2026-10-22
+
+`scripts/lbr_sweep.py`: LBR (turn+river) on every snapshot of every arm, 100k decks, seed 1, so every point is played on the same cards and any two can be compared paired. Rows: `ablations/lbr_sweep.jsonl`; per-deck values: `sixmax/checkpoints/lbr_per_deck/` (gitignored, regenerable). Per-arm facts: `ablations/arms.json`.
+
+| Snapshot | C0 | P0 | C1 | C2 | C3 |
+|---|---:|---:|---:|---:|---:|
+| 5M | 389.2 | 381.1 | 376.7 | 367.5 | 365.6 |
+| 10M | 400.7 | 396.8 | 392.6 | 369.2 | 379.4 |
+| 15M | 416.8 | 405.2 | 395.0 | 363.2 | 387.8 |
+| 20M | 415.5 | 400.5 | 391.6 | 384.4 | 390.3 |
+| 25M | 409.4 | 408.7 | 398.1 | 381.7 | 374.2 |
+| cap / later | - | - | 392.3 (27.7M) | 380.1 (38.5M) | 391.2 (42.5M) |
+
+(BB/100, each ±about 10 at 95%; paired differences have se about 5-6.)
+
+- Every arm gets more exploitable early in training: 15-20M minus 5M is +18 to +28 (t 3-5) for C0, C1, C3; P0 +16 by 10M; C2 is flat to 15M and rises after (+17 at 20M). CFR converges in the abstract game, which need not lower real-game exploitability (or LBR, a local lower bound, may punish a sharper strategy more); either way more iterations is not monotonically better by LBR.
+- Snapshot-to-snapshot LBR moves by 10-18 BB/100 beyond deck noise (C3: 25M vs 15M -13.6, t=-2.69; 35M vs 25M +17.8, t=+3.82). A single-pair plateau test is fragile at this level: the one-sided rule called C3 converged at 15M despite a significant rise (+22, t=+3.84), and a two-sided rule flips between converged and moving from snapshot to snapshot. A trend test over the last 3-4 snapshots would be sounder (proposal, not adopted).
+- Cross-arm, paired, each arm at its cap vs C0@25M: C2 -29.3 (se 6.3, t=-4.62), C3 -18.1 (t=-2.91), C1 -17.1 (t=-2.74), P0 -0.7 (t=-0.11). C3 vs C2 at caps: +11.1 (t=+1.83). Finer pot layouts are significantly less exploitable; SPR (C3) matches C1 with 54% more infosets; the potential card map does not move LBR.
