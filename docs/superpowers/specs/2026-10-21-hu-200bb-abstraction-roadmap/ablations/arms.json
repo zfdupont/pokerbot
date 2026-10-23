@@ -51,7 +51,8 @@
      "mean_bb100": 6.86,
      "se": null,
      "t": 1.71,
-     "verdict": "converged"
+     "verdict": "converged",
+     "invalid": "raise-count reset bug (pre d8097b7)"
     },
     {
      "method": "h2h",
@@ -60,7 +61,8 @@
      "mean_bb100": -2.03,
      "se": null,
      "t": -1.04,
-     "verdict": "converged"
+     "verdict": "converged",
+     "invalid": "raise-count reset bug (pre d8097b7)"
     },
     {
      "method": "paired_lbr",
@@ -119,7 +121,8 @@
      "mean_bb100": -7.21,
      "se": 3.1,
      "t": -2.31,
-     "verdict": "converged"
+     "verdict": "converged",
+     "invalid": "raise-count reset bug (pre d8097b7)"
     },
     {
      "method": "paired_lbr",
@@ -134,8 +137,9 @@
    ],
    "gate_vs_c0": {
     "method": "h2h",
-    "arm_iters": 25000000,
-    "c0_iters": 25000000,
+    "engine": "fixed (d8097b7)",
+    "arm_ckpt": "hu200_p0_25000000.bin",
+    "c0_ckpt": "hu200_c0_25000000.bin",
     "hands": 20000,
     "seeds": [
      1,
@@ -147,20 +151,20 @@
      7,
      8
     ],
-    "mean_bb100": 2.68,
-    "se": 3.0,
-    "t": 0.91,
+    "mean_bb100": 6.76359375,
+    "se": 3.5277768194440697,
+    "t": 1.9172396940535064,
     "per_seed": [
-     16.63,
-     2.9,
-     -5.71,
-     5.15,
-     -0.3,
-     10.94,
-     0.9,
-     -9.09
+     -8.18,
+     -7.6475,
+     18.68125,
+     4.4225,
+     9.22125,
+     13.5025,
+     9.71,
+     14.39875
     ],
-    "verdict": "keep C0"
+    "verdict": "fail"
    },
    "stack_bb": 200.0,
    "vocab": "default.toml [actions.blueprint]",
@@ -228,7 +232,37 @@
    "vocab": "default.toml [actions.blueprint]",
    "trainer_seed": 7,
    "snapshot_interval": 5000000,
-   "gate_vs_c0": null,
+   "gate_vs_c0": {
+    "method": "h2h",
+    "engine": "fixed (d8097b7)",
+    "arm_ckpt": "hu200_c1_27705826.bin",
+    "c0_ckpt": "hu200_c0_25000000.bin",
+    "hands": 20000,
+    "seeds": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8
+    ],
+    "mean_bb100": 14.03875,
+    "se": 3.5264840151244936,
+    "t": 3.9809481454588127,
+    "per_seed": [
+     17.585,
+     23.98875,
+     3.64875,
+     30.7625,
+     10.56625,
+     2.0325,
+     7.8925,
+     15.83375
+    ],
+    "verdict": "pass"
+   },
    "slumbot": null,
    "lbr_vs_c0": {
     "arm_iters": 27705826,
@@ -293,7 +327,37 @@
    "vocab": "default.toml [actions.blueprint]",
    "trainer_seed": 7,
    "snapshot_interval": 5000000,
-   "gate_vs_c0": null,
+   "gate_vs_c0": {
+    "method": "h2h",
+    "engine": "fixed (d8097b7)",
+    "arm_ckpt": "hu200_c2_38477898.bin",
+    "c0_ckpt": "hu200_c0_25000000.bin",
+    "hands": 20000,
+    "seeds": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8
+    ],
+    "mean_bb100": 23.65859375,
+    "se": 2.808072143845144,
+    "t": 8.425208662055192,
+    "per_seed": [
+     35.46,
+     19.17875,
+     23.35375,
+     31.09875,
+     12.4475,
+     14.715,
+     28.06875,
+     24.94625
+    ],
+    "verdict": "pass"
+   },
    "slumbot": null,
    "lbr_vs_c0": {
     "arm_iters": 38477898,
@@ -409,7 +473,37 @@
    "vocab": "default.toml [actions.blueprint]",
    "trainer_seed": 7,
    "snapshot_interval": 5000000,
-   "gate_vs_c0": null,
+   "gate_vs_c0": {
+    "method": "h2h",
+    "engine": "fixed (d8097b7)",
+    "arm_ckpt": "hu200_c3_42500894.bin",
+    "c0_ckpt": "hu200_c0_25000000.bin",
+    "hands": 20000,
+    "seeds": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8
+    ],
+    "mean_bb100": 15.51,
+    "se": 2.5507072504853574,
+    "t": 6.080666449295074,
+    "per_seed": [
+     19.03875,
+     15.46,
+     15.17375,
+     30.2625,
+     8.37125,
+     6.98625,
+     12.39,
+     16.3975
+    ],
+    "verdict": "pass"
+   },
    "slumbot": null,
    "snapshots_to": 42500894,
    "lbr_vs_c0": {
@@ -423,5 +517,6 @@
     "note": "paired per-deck, negative = less exploitable than C0"
    }
   }
- ]
+ ],
+ "invalid_note": "All live-engine h2h before commit d8097b7 are invalid (raise-count reset bug); LBR and Slumbot are unaffected."
 }

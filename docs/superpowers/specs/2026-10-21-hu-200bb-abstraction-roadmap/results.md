@@ -97,3 +97,26 @@ Pairing helps less than hoped. The per-deck sd of the difference (1,602 and 1,71
 - Every arm gets more exploitable early in training: 15-20M minus 5M is +18 to +28 (t 3-5) for C0, C1, C3; P0 +16 by 10M; C2 is flat to 15M and rises after (+17 at 20M). CFR converges in the abstract game, which need not lower real-game exploitability (or LBR, a local lower bound, may punish a sharper strategy more); either way more iterations is not monotonically better by LBR.
 - Snapshot-to-snapshot LBR moves by 10-18 BB/100 beyond deck noise (C3: 25M vs 15M -13.6, t=-2.69; 35M vs 25M +17.8, t=+3.82). A single-pair plateau test is fragile at this level: the one-sided rule called C3 converged at 15M despite a significant rise (+22, t=+3.84), and a two-sided rule flips between converged and moving from snapshot to snapshot. A trend test over the last 3-4 snapshots would be sounder (proposal, not adopted).
 - Cross-arm, paired, each arm at its cap vs C0@25M: C2 -29.3 (se 6.3, t=-4.62), C3 -18.1 (t=-2.91), C1 -17.1 (t=-2.74), P0 -0.7 (t=-0.11). C3 vs C2 at caps: +11.1 (t=+1.83). Finer pot layouts are significantly less exploitable; SPR (C3) matches C1 with 54% more infosets; the potential card map does not move LBR.
+
+## Engine bug: head-to-head results before 2026-10-22 evening are invalid
+
+`game/poker.py` `_reset_street_bets` ran before `betting_round` advanced, so it zeroed the raise count of the street that had just ended (since 2026-06-25, commit 5c0f15d). Every postflop decision in the live engine saw 0 raises for the earlier streets, unlike the trainer's keys. Measured on C1 vs C0: SixmaxAgent missed its own table on 24-43% of postflop decisions (uniform fallback), and some lookups silently aliased onto other infosets. After the fix (commit d8097b7): 0-4%.
+
+- Invalid: every live-engine head-to-head (eval_blueprint_h2h / arm_plateau --method h2h): the C0 plateau h2h checks, the P0 gate (+2.68), and the first Gate 2 run (kept as `ablations/gate2_h2h_INVALID_raise_reset_bug.jsonl`). Also cfr_agent / neural_agent play through the live engine, and the deployed web bot.
+- Unaffected: all LBR numbers (trainer key path, 0.00% opponent misses) and Slumbot (eval_slumbot builds its own state from Slumbot's action string).
+
+## Gate 2 (fixed engine), 2026-10-22
+
+Each arm at its cap (P0 at 25M) vs C0@25M, eval_blueprint_h2h, 8 seeds x 20k duplicate hands, 200 BB. Rows: `ablations/gate2_h2h.jsonl`.
+
+| Arm | H2H vs C0 BB/100 | se | t | Gate | LBR vs C0 (paired) | Infosets |
+|---|---:|---:|---:|---|---:|---:|
+| C2 (bb 3..192, 8 pot buckets) | +23.66 | 2.81 | +8.43 | pass | -29.3 (t -4.62) | 65,016 |
+| C3 (SPR, 6) | +15.51 | 2.55 | +6.08 | pass | -18.1 (t -2.91) | 71,916 |
+| C1 (bb 4..100, 6) | +14.04 | 3.53 | +3.98 | pass | -17.1 (t -2.74) | 46,795 |
+| P0 (potential card map) | +6.76 | 3.53 | +1.92 | fail (just) | -0.7 (t -0.11) | 33,850 |
+
+- Head-to-head and LBR now rank the arms the same way: C2 > C3 ~ C1 > P0 ~ C0.
+- Phase 2 winner on the local gate: C2. Next per spec: C2 to Slumbot at 13k hands.
+- C3's SPR layout costs 54% more infosets than C1 for the same result.
+- P0's corrected gate is borderline (+6.76, t=1.92; LBR no difference). Keep C0's map per the rule, but the card-map question stays open for Phase 3.
