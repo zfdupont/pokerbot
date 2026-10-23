@@ -77,9 +77,15 @@ public:
     // layout; non-legacy layouts are validated and hashed into hash().
     void set_pot_layout(PotLayout layout);
     const PotLayout& pot_layout() const { return pot_layout_; }
+    // Opt-in last-raise-class key field. Off (default) keeps keys and the
+    // hash byte-identical to the historical artifacts; LastRaise adds bits
+    // 30-41 and mixes a tag into hash().
+    void set_bet_history(BetHistory mode) { bet_history_ = mode; }
+    BetHistory bet_history() const { return bet_history_; }
     uint64_t pack_key(int card, int street,
                       const std::array<uint8_t, 4>& raises, double pot_bb,
-                      double eff_stack_bb, int live, int after) const;
+                      double eff_stack_bb, int live, int after,
+                      const std::array<uint8_t, 4>& last_raise = {}) const;
     // Config + edges (legacy) or kind tag + map content hash (map-backed);
     // part of the artifact contract.
     uint64_t hash() const;
@@ -89,6 +95,7 @@ private:
     AbstractionConfig cfg_;
     std::array<std::vector<double>, 3> edges_;  // [0]=flop [1]=turn [2]=river
     PotLayout pot_layout_;                      // legacy by default
+    BetHistory bet_history_ = BetHistory::Off;  // opt-in key field
 
     // Non-null for the map-backed kind; cfg_/edges_/bucket_cache_ unused then.
     std::shared_ptr<const BucketMap> map_;

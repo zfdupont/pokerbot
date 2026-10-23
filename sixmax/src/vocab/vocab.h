@@ -28,6 +28,11 @@ public:
     const AbstractAction& at(int i) const { return actions_[i]; }
     // Bet/raise-to total in BB for action idx in this context; capped by stack.
     double target_bb(int idx, const BetContext& ctx) const;
+    // Size class for the infoset key: 0 for fold/check/call, 4 for all-in,
+    // else 1 + the index's rank among Bet entries of the same SizeUnit (the
+    // vocab lists sizes ascending). Throws std::invalid_argument if that unit
+    // has more than 3 Bet entries (3 bits cannot encode the ranks).
+    int raise_class(int idx) const;
     // Map an observed bet (raise-to, BB) onto the grid with randomized
     // pseudo-harmonic weighting; u in [0,1) supplied by caller.
     int nearest(double bet_to_bb, const BetContext& ctx, double u) const;

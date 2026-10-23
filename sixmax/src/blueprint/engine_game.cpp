@@ -86,10 +86,16 @@ void EngineGameState::apply(int action) {
             break;
         case ActionType::Bet:
         case ActionType::AllIn: {
-            int st = (int)hand_.street();
+            const int st = (int)hand_.street();
+            const int seat = hand_.current_player();
             ++raises_[st];
             double target = vocab_->target_bb(action, bet_context());
             hand_.apply({EngineActionType::RaiseTo, target});
+            // Class 4 is decided by the resulting state, not the action index:
+            // a Bet the engine caps at the stack is an all-in too.
+            last_raise_[st] = hand_.player(seat).all_in
+                ? uint8_t(4)
+                : (uint8_t)vocab_->raise_class(action);
             break;
         }
     }
@@ -127,8 +133,12 @@ uint64_t EngineGameState::abstract_key(const Abstraction& abs) const {
         other_max = std::max(other_max, hand_.player(s).stack);
     }
     const double eff_stack_bb = std::min(hand_.player(p).stack, other_max);
+    const std::array<uint8_t, 4> last_raise =
+        abs.bet_history() == BetHistory::LastRaise
+            ? last_raise_
+            : std::array<uint8_t, 4>{};
     return abs.pack_key((int)card, street, capped_raises, hand_.pot(),
-                        eff_stack_bb, live, after);
+                        eff_stack_bb, live, after, last_raise);
 }
 
 std::unique_ptr<GameState> EngineGame::new_hand(std::mt19937_64& rng) {

@@ -43,6 +43,9 @@ public:
     double pot()       const { return hand_.pot(); }
     double to_call()   const { return hand_.to_call(); }
     std::array<uint8_t, 4> raises_per_street() const { return raises_; }
+    // Size class of the last bet/raise on each street (0 = none, 1-3 = rank in
+    // the vocab's same-unit sizes, 4 = all-in). Reset with the hand.
+    std::array<uint8_t, 4> last_raise_classes() const { return last_raise_; }
 
     // True-card / mutable access for the LBR exploiter (never exposed to Python).
     const HandState& hand() const { return hand_; }
@@ -58,6 +61,7 @@ private:
     const Abstraction* abstraction_ = nullptr;
     std::vector<int> history_;          // naive-keyer input (unchanged)
     std::array<uint8_t, 4> raises_{};   // per-street raise count, capped 3
+    std::array<uint8_t, 4> last_raise_{};  // per-street last-raise size class
 };
 
 class EngineGame : public Game {

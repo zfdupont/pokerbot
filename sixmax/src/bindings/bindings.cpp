@@ -108,6 +108,7 @@ PYBIND11_MODULE(sixmax, m) {
         .def("size", &sixmax::ActionVocab::size)
         .def("at", &sixmax::ActionVocab::at)
         .def("target_bb", &sixmax::ActionVocab::target_bb)
+        .def("raise_class", &sixmax::ActionVocab::raise_class)
         .def("nearest", &sixmax::ActionVocab::nearest)
         .def("hash", &sixmax::ActionVocab::hash);
     // --- MCCFR game interface (Task 1) ---
@@ -239,6 +240,10 @@ PYBIND11_MODULE(sixmax, m) {
              py::keep_alive<1, 7>())   // state holds Abstraction*
         .def("bet_context", &sixmax::EngineGameState::bet_context)
         .def("abstract_key", &sixmax::EngineGameState::abstract_key)
+        .def("last_raise_classes", [](const sixmax::EngineGameState& s) {
+            auto classes = s.last_raise_classes();
+            return std::vector<int>(classes.begin(), classes.end());
+        })
         .def("street", [](const sixmax::EngineGameState& s) { return (int)s.street(); })
         .def("board", &sixmax::EngineGameState::board)
         .def("hole_cards", [](const sixmax::EngineGameState& s, int p) {
@@ -594,22 +599,47 @@ PYBIND11_MODULE(sixmax, m) {
                      layout.mode == sixmax::PotMode::SPR ? "spr" : "bb";
                  return py::make_tuple(mode, layout.edges);
              })
+        .def("set_bet_history",
+             [](sixmax::Abstraction& a, const std::string& mode) {
+                 if (mode == "off")
+                     a.set_bet_history(sixmax::BetHistory::Off);
+                 else if (mode == "last_raise")
+                     a.set_bet_history(sixmax::BetHistory::LastRaise);
+                 else
+                     throw py::value_error(
+                         "bet_history must be 'off' or 'last_raise'");
+             },
+             py::arg("mode"))
+        .def("bet_history", [](const sixmax::Abstraction& a) {
+            return a.bet_history() == sixmax::BetHistory::LastRaise
+                       ? std::string("last_raise")
+                       : std::string("off");
+        })
         .def("pack_key",
              [](const sixmax::Abstraction& a, int card, int street,
                 const std::vector<int>& raises, double pot_bb,
-                double eff_stack_bb, int live, int after) {
+                double eff_stack_bb, int live, int after,
+                const py::object& last_raise) {
                  if (raises.size() != 4)
                      throw py::value_error("raises must have length 4");
                  std::array<uint8_t, 4> r{(uint8_t)raises[0],
                                           (uint8_t)raises[1],
                                           (uint8_t)raises[2],
                                           (uint8_t)raises[3]};
+                 std::array<uint8_t, 4> lr{};  // None = zeros
+                 if (!last_raise.is_none()) {
+                     auto v = last_raise.cast<std::vector<int>>();
+                     if (v.size() != 4)
+                         throw py::value_error(
+                             "last_raise must have length 4");
+                     for (int i = 0; i < 4; ++i) lr[i] = (uint8_t)v[i];
+                 }
                  return a.pack_key(card, street, r, pot_bb, eff_stack_bb,
-                                   live, after);
+                                   live, after, lr);
              },
              py::arg("card"), py::arg("street"), py::arg("raises"),
              py::arg("pot_bb"), py::arg("eff_stack_bb"), py::arg("live"),
-             py::arg("after"));
+             py::arg("after"), py::arg("last_raise") = py::none());
     m.def("blueprint_probs",
           [](const sixmax::BlueprintStrategy& st,
              const sixmax::EngineGameState& s) {

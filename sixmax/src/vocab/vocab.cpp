@@ -1,6 +1,7 @@
 #include "vocab/vocab.h"
 #include <algorithm>
 #include <cmath>
+#include <stdexcept>
 
 namespace sixmax {
 
@@ -33,6 +34,31 @@ double ActionVocab::target_bb(int idx, const BetContext& ctx) const {
             return std::min(target, ctx.stack);
         default: return 0.0;  // fold/check/call carry no size
     }
+}
+
+int ActionVocab::raise_class(int idx) const {
+    const AbstractAction& a = actions_[idx];
+    switch (a.type) {
+        case ActionType::Fold:
+        case ActionType::Check:
+        case ActionType::Call:
+            return 0;
+        case ActionType::AllIn:
+            return 4;
+        case ActionType::Bet:
+            break;
+    }
+    int count = 0, rank = 0;
+    for (int i = 0; i < size(); ++i) {
+        const AbstractAction& b = actions_[i];
+        if (b.type != ActionType::Bet || b.unit != a.unit) continue;
+        ++count;
+        if (i < idx) ++rank;
+    }
+    if (count > 3)
+        throw std::invalid_argument(
+            "raise_class: at most 3 Bet sizes per unit are supported");
+    return 1 + rank;
 }
 
 int ActionVocab::nearest(double bet_to_bb, const BetContext& ctx, double u) const {

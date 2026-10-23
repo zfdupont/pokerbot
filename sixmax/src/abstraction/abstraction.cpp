@@ -20,6 +20,7 @@ int preflop_class(const std::array<int, 2>& hole) {
 namespace {
 
 constexpr uint64_t kPotLayoutTag = 0x706f7431ull;  // "pot1"
+constexpr uint64_t kBetHistoryTag = 0x62687431ull;  // "bht1"
 
 uint64_t fnv_mix(uint64_t h, uint64_t v) {
     h ^= v;
@@ -126,7 +127,8 @@ Abstraction::Abstraction(std::shared_ptr<const BucketMap> map)
 // value it would recompute.
 Abstraction::Abstraction(Abstraction&& other) noexcept
     : cfg_(std::move(other.cfg_)), edges_(std::move(other.edges_)),
-      pot_layout_(std::move(other.pot_layout_)), map_(std::move(other.map_)),
+      pot_layout_(std::move(other.pot_layout_)),
+      bet_history_(other.bet_history_), map_(std::move(other.map_)),
       bucket_cache_(std::move(other.bucket_cache_)) {}
 
 Abstraction& Abstraction::operator=(Abstraction&& other) noexcept {
@@ -134,6 +136,7 @@ Abstraction& Abstraction::operator=(Abstraction&& other) noexcept {
         cfg_ = std::move(other.cfg_);
         edges_ = std::move(other.edges_);
         pot_layout_ = std::move(other.pot_layout_);
+        bet_history_ = other.bet_history_;
         map_ = std::move(other.map_);
         bucket_cache_ = std::move(other.bucket_cache_);
     }
@@ -203,10 +206,16 @@ void Abstraction::set_pot_layout(PotLayout layout) {
 uint64_t Abstraction::pack_key(int card, int street,
                                const std::array<uint8_t, 4>& raises,
                                double pot_bb, double eff_stack_bb, int live,
-                               int after) const {
+                               int after,
+                               const std::array<uint8_t, 4>& last_raise) const {
     const int pot_idx = pot_bucket(pot_layout_, pot_bb, eff_stack_bb);
+    // Off mode ignores whatever the caller sent: the field must not change
+    // a single key bit of existing artifacts.
+    const std::array<uint8_t, 4> lr =
+        bet_history_ == BetHistory::LastRaise ? last_raise
+                                              : std::array<uint8_t, 4>{};
     return pack_abstract_key(card, street, raises, pot_idx,
-                             pot_layout_.is_legacy(), live, after);
+                             pot_layout_.is_legacy(), live, after, lr);
 }
 
 uint64_t Abstraction::hash() const {
@@ -243,6 +252,10 @@ uint64_t Abstraction::hash() const {
             __builtin_memcpy(&b, &v, sizeof b);
             h = fnv_mix(h, b);
         }
+    }
+    if (bet_history_ != BetHistory::Off) {
+        h = fnv_mix(h, kBetHistoryTag);
+        h = fnv_mix(h, (uint64_t)bet_history_);
     }
     return h;
 }

@@ -28,6 +28,10 @@ void validate_pot_layout(const PotLayout& layout);
 
 int pot_bucket(const PotLayout& layout, double pot_bb, double eff_stack_bb);
 
+// Opt-in infoset-key field: the size class of the last bet or raise on each
+// street (bits 30-41, 3 bits per street). Off keeps the historical key.
+enum class BetHistory : int32_t { Off = 0, LastRaise = 1 };
+
 // The single source of truth for the abstraction infoset-key bit layout.
 // Both EngineGameState::abstract_key (trainer) and the deployment bridge
 // (Python, via bindings) route through this so they can never diverge.
@@ -35,10 +39,12 @@ int pot_bucket(const PotLayout& layout, double pot_bb, double eff_stack_bb);
 //   live   bits 20-22 after      bits 23-25
 //   legacy layout: pot bits 18-19
 //   other layouts: pot bits 26-29 (bits 18-19 stay zero)
+//   last_raise[st] bits 30-41 (3 each; zeros unless bet history is on)
 uint64_t pack_abstract_key(int card, int street,
                            const std::array<uint8_t, 4>& raises,
                            int pot_idx, bool legacy_layout, int live,
-                           int after);
+                           int after,
+                           const std::array<uint8_t, 4>& last_raise = {});
 
 // Legacy wrapper: pots 7/15/40 at bits 18-19.
 uint64_t pack_abstract_key(int card, int street,
