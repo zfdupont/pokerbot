@@ -215,6 +215,18 @@ Build the maps locally from `equity_v1.bin` (percentile about 30 s, potential-aw
 - One arm against the Phase 3 winner, under the gate policy below.
 - The field's bucketing is left to the plan, informed by the R²=0.32 measurement method from the leak-2 analysis.
 
+#### Phase 4a: C5, last raise size per street (owner-approved 2026-10-23, run ahead of Phase 3)
+
+Why now: the C2/C4 head-to-head split showed the key cannot tell open sizes apart. After a 2.5/3.5/5 BB open the pot is 3.5/4.5/6.0 BB, all one pot bucket with the same raise count, so the big blind answers every open with one strategy (C4 folds 58/56/56%). The published bots key on the full action sequence (Pluribus: 664,845,654 sequences, 1-14 raise sizes; supplementary p. 12-13); this is the cheap partial version.
+
+- **Field:** the size class of the last bet or raise on each of the 4 streets, 3 bits per street in key bits 30-41. Class 0 = no raise on that street, 1-3 = the raise's rank (smallest first) among the vocabulary's sizes of the same unit (the BB-unit opens or the pot-fraction sizes), 4 = all-in. A vocabulary with more than 3 sizes in one unit is refused while the field is on. (Owner: every street, not only the current one, so the preflop open size stays visible postflop.)
+- **Opt-in:** `[abstraction] bet_history = "off" | "last_raise"` (default `"off"`). Off keeps every key, hash and checkpoint byte unchanged. On mixes a tag into the abstraction hash and writes a new magic, `SIXBP004` = SIXBP003 plus an int32 bet-history mode after the pot layout; it requires a bucket map, like SIXBP003. A resume or load with a different setting is refused.
+- **One source of truth:** the trainer reads the class from the vocab index it applies. The deployed agent replays the live hand into an `EngineGameState` (the search path's replay, mapping each live bet to the nearest menu action) and reads the same classes from it, then packs the key through the same `Abstraction.pack_key`. The nearest-bucket fallback keeps working (it only varies the pot field).
+- **Evaluators:** the Slumbot stand-in state must carry the action history the replay needs. The openpoker bridge, which calls `decide` without a hand history, refuses bet-history checkpoints. Search already refuses non-legacy layouts.
+- **Arm C5:** C4 (`hu200_c4.toml`: pot edges 3..192, opens 2/3.5/5 BB, map pct 50/50/20) plus `bet_history = "last_raise"`. One change against C4. Infosets are measured by a 2M-iteration local probe before any cloud spend; the cap follows the usual formula.
+- **Gates:** the LBR trend rule; head-to-head against C4 (same menu, so no translation confound); Slumbot 13k hands.
+- **Out of scope here:** pseudo-harmonic translation (it slots into the replay's bet mapping later) and full action sequences.
+
 ### Gate policy (applies to Phases 2-4; my call)
 
 - **Local head-to-head picks the winner.** The challenger must beat the phase's control (C0, D0, or the Phase 3 winner for B) at `|t| >= 2`, each at its plateau or cap. If none does, the control wins. That is a legitimate result, recorded, and the roadmap moves on.
