@@ -315,3 +315,48 @@ def test_report_prints_seat_balance():
         row.update(action="", board=[])
     out = format_report(summarize(rows), breakdown(rows))
     assert "seat balance: BB=1 SB=1" in out
+
+
+class _CountingAgent(StubAgent):
+    """StubAgent with deploy lookup counters, like SixmaxAgent._deploy."""
+
+    def __init__(self, action, outcome):
+        super().__init__(action)
+        self._outcome = outcome
+        self._deploy = type("D", (), {})()
+        self._deploy.lookups = {"hit": 0, "nearest": 0, "safe": 0, "uniform": 0}
+
+    def get_action(self, player, game_state):
+        self._deploy.lookups[self._outcome] += 1
+        return super().get_action(player, game_state)
+
+
+def test_run_hands_records_lookups_per_hand(tmp_path):
+    log = tmp_path / "log.jsonl"
+    fake = FakePost([_preflop_open(), _terminal(100, token="t3"),
+                     _preflop_open(token="t4"), _terminal(-50, token="t5")])
+    agent = _CountingAgent((Action.CALL, None), "nearest")
+    run_hands(fake, agent, None, str(log), target=2)
+    rows = [json.loads(line) for line in log.read_text().splitlines()]
+    # One decision per hand, counted per hand, not cumulatively.
+    assert [r["lookups"]["nearest"] for r in rows] == [1, 1]
+    assert summarize(rows)["lookups"] == {"hit": 0, "nearest": 2, "safe": 0,
+                                         "uniform": 0}
+
+
+def test_run_hands_without_counters_writes_no_lookups(tmp_path):
+    log = tmp_path / "log.jsonl"
+    fake = FakePost([_terminal(100, action="f")])
+    run_hands(fake, StubAgent(), None, str(log), target=1)
+    row = json.loads(log.read_text())
+    assert "lookups" not in row
+    assert summarize([row])["lookups"] is None
+
+
+def test_report_prints_lookups():
+    from scripts.eval_slumbot import format_report
+
+    rows = [{"pos": 0, "winnings": 100, "baseline": 200, "action": "", "board": [],
+             "lookups": {"hit": 3, "nearest": 1, "safe": 0, "uniform": 0}}]
+    out = format_report(summarize(rows), breakdown(rows))
+    assert "lookups: hit=3 (75.0%)  nearest=1 (25.0%)  safe=0 (0.0%)" in out

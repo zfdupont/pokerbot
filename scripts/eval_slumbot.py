@@ -205,6 +205,13 @@ def play_hand(fetch, agent, token):
     return token, None, actions
 
 
+def _lookup_counts(agent):
+    """The deploy strategy's lookup counters (hit/nearest/safe/uniform), or
+    None for agents without them."""
+    counts = getattr(getattr(agent, "_deploy", None), "lookups", None)
+    return dict(counts) if isinstance(counts, dict) else None
+
+
 def run_hands(fetch, agent, token, log_path, target, existing_rows=()):
     """Play until the log holds `target` rows, appending one JSONL row per
     finished hand. `existing_rows` are the rows already logged, so a resumed run
@@ -217,6 +224,7 @@ def run_hands(fetch, agent, token, log_path, target, existing_rows=()):
     aborts = 0
     with open(log_path, "a") as f:
         while written < target:
+            before = _lookup_counts(agent)
             token, resp, acts = play_hand(fetch, agent, token)
             if resp is None:
                 aborts += 1
@@ -230,12 +238,17 @@ def run_hands(fetch, agent, token, log_path, target, existing_rows=()):
             written += 1
             won += resp["winnings"]
             base += resp.get("baseline_winnings") or 0
-            f.write(json.dumps({"hand": written, "pos": resp["client_pos"],
-                                "action": resp["action"], "ours": acts,
-                                "hole": resp["hole_cards"], "board": resp.get("board"),
-                                "bot_hole": resp.get("bot_hole_cards"),
-                                "winnings": resp["winnings"],
-                                "baseline": resp.get("baseline_winnings")}) + "\n")
+            row = {"hand": written, "pos": resp["client_pos"],
+                   "action": resp["action"], "ours": acts,
+                   "hole": resp["hole_cards"], "board": resp.get("board"),
+                   "bot_hole": resp.get("bot_hole_cards"),
+                   "winnings": resp["winnings"],
+                   "baseline": resp.get("baseline_winnings")}
+            after = _lookup_counts(agent)
+            if before is not None and after is not None:
+                # How this hand's decisions found their strategy.
+                row["lookups"] = {k: after[k] - before.get(k, 0) for k in after}
+            f.write(json.dumps(row) + "\n")
             f.flush()
             if written % 50 == 0 or written == target:
                 print(f"hands={written} raw={won / BB / written * 100:+.1f} bb/100 "
@@ -279,7 +292,17 @@ def summarize(rows):
         "baseline_se": baseline_se,
         "sb_baseline_bb100": _bb100(sb)[0],
         "bb_baseline_bb100": _bb100(bb)[0],
+        "lookups": _sum_lookups(rows),
     }
+
+
+def _sum_lookups(rows):
+    """Total lookup outcomes over the rows that recorded them, or None."""
+    total = {}
+    for row in rows:
+        for k, v in (row.get("lookups") or {}).items():
+            total[k] = total.get(k, 0) + v
+    return total or None
 
 
 def size_bin(winnings):
@@ -332,6 +355,13 @@ def format_report(summary, parts):
         f"  bb={summary['bb_baseline_bb100']:+.1f} bb/100  "
         f"sb={summary['sb_baseline_bb100']:+.1f} bb/100 (baseline by seat)",
         f"seat balance: BB={summary['hands_bb']} SB={summary['hands_sb']}",
+    ]
+    lookups = summary.get("lookups")
+    if lookups:
+        n = sum(lookups.values())
+        lines.append("lookups: " + "  ".join(
+            f"{k}={v} ({100 * v / n:.1f}%)" for k, v in lookups.items()))
+    lines += [
         "size bins (BB won or lost):",
     ]
     for name in SIZE_BINS:

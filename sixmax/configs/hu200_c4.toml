@@ -1,0 +1,64 @@
+# Heads-up (2-player) 200 BB map-backed blueprint training config, arm C4.
+#   uv run python scripts/train_sixmax.py --config sixmax/configs/hu200_c4.toml
+# C2 (bb pot edges 3/6/12/24/48/96/192) with the 2.5 BB open moved to 2 BB:
+# Slumbot opens 2 BB in 89.8% of its small-blind hands and never 2.5 BB, and
+# the off-tree 2 BB open put C2 off its table in 41% of preflop decisions.
+# This deliberately diverges from default.toml's vocabulary (different vocab
+# hash): load C4 checkpoints with this config (--config / config_toml).
+
+[actions.blueprint]
+preflop_opens = [ { size = 2.0, unit = "bb" },
+                  { size = 3.5, unit = "bb" },
+                  { size = 5.0, unit = "bb" } ]
+# Every raise after the open (3-bet+, and ALL postflop bets and raises)
+# shares one pot-fraction grid. Raise-to = current_bet + size * (pot + 2*to_call).
+bet_sizes     = [ { size = 0.33, unit = "pot" },
+                  { size = 0.75, unit = "pot" },
+                  { size = 1.5,  unit = "pot" } ]   # includes overbet
+include_allin = true   # legal jam always in the action set, incl. preflop
+
+[actions.search]       # may differ from blueprint; v1 is byte-identical so the
+                       # checkpoint's vocab hash matches and masks align.
+preflop_opens = [ { size = 2.0, unit = "bb" },
+                  { size = 3.5, unit = "bb" },
+                  { size = 5.0, unit = "bb" } ]
+bet_sizes     = [ { size = 0.33, unit = "pot" },
+                  { size = 0.75, unit = "pot" },
+                  { size = 1.5,  unit = "pot" } ]
+include_allin = true
+
+[search]
+enabled      = false      # off by default; the A/B gate decides deployment
+budget_ms    = 5000.0
+max_nodes    = 20000
+max_iters    = 2000
+leaf_samples = 256
+seed         = 1
+leaf_threads = 0           # leaf-matrix worker threads; 0 = all cores
+narrow_preflop  = true     # feed the preflop line into the opponent range
+prune_keep_mass = 0.99     # keep the top-99% mass band; 1.0 disables pruning
+
+[abstraction]
+bucket_map = "sixmax/tables/map_pct_50_50_20.bin"
+pot_edges = [3.0, 6.0, 12.0, 24.0, 48.0, 96.0, 192.0]
+# Ignored when bucket_map is set (the map header defines the buckets); kept so
+# this file documents the legacy path it replaces.
+flop_buckets = 50
+turn_buckets = 50
+river_buckets = 20
+equity_rollouts = 100
+quantile_samples = 10000
+seed = 20260719
+
+[train.blueprint]
+num_players = 2
+starting_stack = 200.0   # this is what 200 BB training means (leak-C frame)
+iterations = 60000000
+num_threads = 0          # 0 = hardware_concurrency
+checkpoint_interval = 5000000   # snapshot every 5M iters (plateau curve)
+checkpoint = "sixmax/checkpoints/hu200_c4.bin"
+seed = 7
+selection_enabled = false
+selection_hands = 2000
+report_interval = 60
+snapshots = true         # keep a distinct <base>_<iters>.bin per save

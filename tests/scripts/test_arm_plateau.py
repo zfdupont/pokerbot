@@ -391,3 +391,38 @@ def test_plateau_cli_trend_rejects_bad_args(monkeypatch, capsys, tiny_ckpt,
         arm_plateau.main()
     assert match in capsys.readouterr().err
 
+
+
+@pytest.fixture(scope="module")
+def c4_vocab_ckpt(tmp_path_factory, synthetic_bucket_map):
+    """A tiny checkpoint on hu200_c4.toml's vocabulary (2 BB open), which
+    differs from default.toml's."""
+    from agents.sixmax_agent import _load_vocab
+
+    tmp = tmp_path_factory.mktemp("c4_vocab")
+    shutil.copyfile(synthetic_bucket_map,
+                    tmp / os.path.basename(synthetic_bucket_map))
+    abs_ = sixmax.Abstraction.from_bucket_map(
+        str(tmp / os.path.basename(synthetic_bucket_map)))
+    vocab = _load_vocab(_C4_CONFIG, "blueprint")
+    cfg = sixmax.EngineConfig(num_players=2, starting_stack=200.0)
+    t = sixmax.BlueprintTrainer(cfg, vocab, abs_, num_threads=1, seed=5)
+    t.train(60)
+    path = str(tmp / "c4.bin")
+    t.save(path, vocab, cfg, abs_)
+    return path
+
+
+_C4_CONFIG = os.path.join(_ROOT, "sixmax", "configs", "hu200_c4.toml")
+
+
+def test_run_h2h_uses_each_checkpoints_config(c4_vocab_ckpt):
+    stats = run_h2h(c4_vocab_ckpt, c4_vocab_ckpt, hands=4, seeds=[1], bb=2,
+                    stack=400, config_a=_C4_CONFIG, config_b=_C4_CONFIG)
+    assert stats["mean"] == 0.0
+
+
+def test_run_h2h_default_config_refuses_other_vocab(c4_vocab_ckpt):
+    with pytest.raises(Exception, match="(?i)vocab|hash"):
+        run_h2h(c4_vocab_ckpt, c4_vocab_ckpt, hands=4, seeds=[1], bb=2,
+                stack=400)

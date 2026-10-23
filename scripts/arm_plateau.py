@@ -209,7 +209,7 @@ def main():
         print(f"{seed:>4} {bb100:>+10.2f}", flush=True)
 
     stats = run_h2h(newest, older, args.hands, seeds, args.bb, args.stack,
-                    on_seed=show)
+                    on_seed=show, config_a=args.config, config_b=args.config)
     print(f"\nn={len(stats['per_seed'])} seeds x {args.hands} duplicate deals")
     print(f"A - B: {stats['mean']:+.2f} BB/100  sd {stats['sd']:.1f}  "
           f"se {stats['se']:.1f}  t={stats['t']:.2f}")
