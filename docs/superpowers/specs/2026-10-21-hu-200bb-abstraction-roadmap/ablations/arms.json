@@ -566,6 +566,90 @@
     "t": -2.91,
     "note": "paired per-deck, negative = less exploitable than C0"
    }
+  },
+  {
+   "id": "c4",
+   "label": "C4: C2 with 2.5 BB open -> 2 BB",
+   "axis": "bet menu (preflop open size)",
+   "config": "sixmax/configs/hu200_c4.toml",
+   "pot_mode": "bb",
+   "pot_edges": [
+    3.0,
+    6.0,
+    12.0,
+    24.0,
+    48.0,
+    96.0,
+    192.0
+   ],
+   "pot_buckets": 8,
+   "bucket_map": "map_pct_50_50_20.bin",
+   "map_method": "percentile",
+   "card_buckets": [
+    50,
+    50,
+    20
+   ],
+   "preflop_opens_bb": [
+    2.0,
+    3.5,
+    5.0
+   ],
+   "infosets": {
+    "at_cap": 69812
+   },
+   "cap": 38477898,
+   "cap_note": "C2's cap reused (same tree size); formula cap ~41.6M",
+   "plateau_iters": 38477898,
+   "trained_iters": 38477898,
+   "snapshots_to": 38477898,
+   "cloud": "ccx33",
+   "evaluator": "new",
+   "it_s": 10892,
+   "wall_hours": 1.02,
+   "cost_usd": 0.21,
+   "stack_bb": 200.0,
+   "trainer_seed": 7,
+   "snapshot_interval": 5000000,
+   "plateau_checks": [
+    {
+     "method": "lbr_trend",
+     "window": [
+      20000000,
+      35000000
+     ],
+     "slope_per_10M": 3.82,
+     "se": 3.48,
+     "t": 1.1
+    },
+    {
+     "method": "lbr_trend",
+     "window": [
+      25000000,
+      38477898
+     ],
+     "slope_per_10M": 0.01,
+     "se": 3.79,
+     "t": 0.0,
+     "verdict": "converged"
+    }
+   ],
+   "gate_vs_c0": {
+    "method": "h2h",
+    "mean_bb100": 19.13,
+    "se": 2.97,
+    "t": 6.44,
+    "verdict": "pass"
+   },
+   "h2h_vs_c2": {
+    "method": "h2h",
+    "mean_bb100": -7.4,
+    "se": 3.05,
+    "t": -2.43,
+    "confound": "different bet menus; C2 nearest-bucket 9.3%, C4 0.1% plus aliasing of 2.5 BB opens"
+   },
+   "lbr_cap_bb100": 365.92,
+   "slumbot": null
   }
  ],
  "invalid_note": "All live-engine h2h before commit d8097b7 are invalid (raise-count reset bug); LBR and Slumbot are unaffected."

@@ -158,3 +158,14 @@ Every logged decision of ours (29,096) was replayed through the deploy agent's k
 - Same decisions through other tables: C0 (edges 7/15/40) 0.0% preflop, 0.0/1.8/2.5% postflop; C1 (edges 4/8/16/...) 0.0% preflop but 23.1% on the flop (pot 4.0 BB after a called 2 BB open), 14.5/10.5% turn/river.
 - So finer pot edges open holes at off-tree sizes below the smallest trained pots. Self-play head-to-head and LBR use only our own bet sizes and cannot see this; only an outside opponent's sizes do.
 - Proposed fix (no retraining): in the deploy bridge, on a miss fall back to the nearest pot bucket present in the table before uniform, and make the final fallback safer than uniform (uniform includes the 200 BB jam). Then re-run C2 on Slumbot. The C2 Slumbot number above is a lower bound on the abstraction's quality.
+
+## C4: C2 with the 2.5 BB open moved to 2 BB, 2026-10-23
+
+`sixmax/configs/hu200_c4.toml` (opens 2/3.5/5 BB; C2's pot edges; its own vocab hash). Slumbot opens 2 BB in 89.8% of its small-blind hands and never 2.5 BB.
+
+- Training: ccx33, 38,477,898 iterations (C2's cap reused, my call; formula cap with C4's infosets would be about 41.6M), 10,892 it/s, 61 min, about $0.21. 69,812 infosets (C2: 65,016).
+- LBR (100k decks, seed 1): 5M 351.6, 10M 358.5, 15M 359.5, 20M 365.6, 25M 367.0, 30M 369.4, 35M 371.1, cap 365.9. About 10-19 BB/100 below C2 at every snapshot (cap: 365.9 vs 380.1).
+- Trend rule: windows 20-35M slope +3.82/10M (t=+1.10) and 25-38.5M +0.01 (t=0.00): converged.
+- Head-to-head (fixed engine, nearest fallback, each checkpoint with its own config): C4 vs C2 **-7.40** (se 3.05, t=-2.43; 7 of 8 seeds negative); C4 vs C0 **+19.13** (se 2.97, t=+6.44).
+- Menu-mismatch confound: in C4 vs C2, C2 falls back to the nearest bucket on 9.3% of decisions (C4's 2 BB open lands C2's 3.0 BB hole) and C4 on 0.1%; but C4 files C2's 2.5 BB open (pot 3.5) with its own 3.5/5 BB opens, an alias the counter does not see. Same-menu reference C2 vs C0: 0.3% / 0.2%. So head-to-head between different menus measures cross-menu translation as well as strength.
+- Evidence splits: LBR (own-menu) favours C4 by about 14; head-to-head favours C2 by 7.4 (confounded); both beat C0. C4 was built for Slumbot's 2 BB open, so Slumbot is the direct test. By the letter of the gate policy C2 stays the Phase 2 winner.

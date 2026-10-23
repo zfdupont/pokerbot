@@ -1,0 +1,1000 @@
+{"hand": 1, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["As", "3h"], "board": [], "bot_hole": ["Qc", "4c"], "winnings": -100, "baseline": 300}
+{"hand": 2, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Jh", "3c"], "board": [], "bot_hole": ["6s", "3d"], "winnings": 100, "baseline": 500}
+{"hand": 3, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Kh", "4s"], "board": [], "bot_hole": ["5s", "5h"], "winnings": -100, "baseline": -300}
+{"hand": 4, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Ah", "2d"], "board": [], "bot_hole": ["8c", "3s"], "winnings": 100, "baseline": 0}
+{"hand": 5, "pos": 0, "action": "b200b575c/b380c/b2865c/kk", "ours": ["b575", "b380", "b2865", "k"], "hole": ["9c", "4c"], "board": ["Kd", "9d", "2d", "2h", "7h"], "bot_hole": ["8s", "8d"], "winnings": 3820, "baseline": 3420}
+{"hand": 6, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Qd", "Jh"], "board": [], "bot_hole": ["Ks", "3d"], "winnings": 100, "baseline": 300}
+{"hand": 7, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jc", "4h"], "board": [], "bot_hole": ["Qd", "2s"], "winnings": -100, "baseline": -500}
+{"hand": 8, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["As", "9c"], "board": [], "bot_hole": ["7d", "3c"], "winnings": 100, "baseline": 0}
+{"hand": 9, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Kh", "2s"], "board": [], "bot_hole": ["Kd", "Qh"], "winnings": -100, "baseline": 100}
+{"hand": 10, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Kh", "Qc"], "board": [], "bot_hole": ["Ks", "3d"], "winnings": 100, "baseline": -100}
+{"hand": 11, "pos": 0, "action": "b200c/kk/b132c/kk", "ours": ["c", "k", "b132", "k"], "hole": ["Jc", "9h"], "board": ["Jd", "Tc", "6h", "2s", "Qd"], "bot_hole": ["9s", "6s"], "winnings": 332, "baseline": -2068}
+{"hand": 12, "pos": 1, "action": "b350c/b250b728c/kb711c/kb5367b18211c", "ours": ["b350", "b728", "b711", "b5367", "c"], "hole": ["Ad", "5s"], "board": ["8c", "6d", "3c", "2d", "4h"], "bot_hole": ["Kc", "8d"], "winnings": 20000, "baseline": 20400}
+{"hand": 13, "pos": 0, "action": "f", "ours": [], "hole": ["Qs", "3d"], "board": [], "bot_hole": ["8c", "2s"], "winnings": 50, "baseline": 0}
+{"hand": 14, "pos": 1, "action": "b350c/kk/kb231c/kk", "ours": ["b350", "k", "b231", "k"], "hole": ["Ac", "5h"], "board": ["Kd", "Js", "6d", "8s", "9c"], "bot_hole": ["6c", "3c"], "winnings": -581, "baseline": -181}
+{"hand": 15, "pos": 0, "action": "b200b575c/kb1225c/b1188b5400f", "ours": ["b575", "k", "c", "b1188", "f"], "hole": ["Js", "Jd"], "board": ["Kc", "4h", "3c", "9c"], "bot_hole": ["Ks", "4c"], "winnings": -2988, "baseline": -1188}
+{"hand": 16, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["7d", "5s"], "board": [], "bot_hole": ["Ac", "Qc"], "winnings": -100, "baseline": 100}
+{"hand": 17, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Th", "2d"], "board": [], "bot_hole": ["5c", "3c"], "winnings": -100, "baseline": 100}
+{"hand": 18, "pos": 1, "action": "f", "ours": ["f"], "hole": ["8c", "2d"], "board": [], "bot_hole": ["Ts", "8d"], "winnings": -50, "baseline": 0}
+{"hand": 19, "pos": 0, "action": "f", "ours": [], "hole": ["Kc", "3h"], "board": [], "bot_hole": ["9d", "2s"], "winnings": 50, "baseline": 0}
+{"hand": 20, "pos": 1, "action": "b250b750b2250c/kb1485c/b3065f", "ours": ["b250", "b2250", "b1485", "f"], "hole": ["Ah", "Kh"], "board": ["Th", "9d", "8h", "7d"], "bot_hole": ["Ac", "Qh"], "winnings": -3735, "baseline": -10935}
+{"hand": 21, "pos": 0, "action": "b200c/kb200c/b264b800c/b1800b6000c", "ours": ["c", "k", "c", "b264", "c", "b1800", "c"], "hole": ["Ad", "Js"], "board": ["Kd", "9h", "6d", "9d", "2d"], "bot_hole": ["Kc", "9c"], "winnings": -7200, "baseline": -5400}
+{"hand": 22, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Qh", "2c"], "board": [], "bot_hole": ["Ks", "5d"], "winnings": 100, "baseline": -1100}
+{"hand": 23, "pos": 0, "action": "b200c/kk/b132c/kb268c", "ours": ["c", "k", "b132", "k", "c"], "hole": ["Kc", "7c"], "board": ["Qs", "9h", "4s", "8c", "8s"], "bot_hole": ["7s", "3s"], "winnings": -600, "baseline": -400}
+{"hand": 24, "pos": 1, "action": "cb300b564b1800f", "ours": ["c", "b564", "f"], "hole": ["7d", "4c"], "board": [], "bot_hole": ["Ac", "Qs"], "winnings": -564, "baseline": -514}
+{"hand": 25, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Ts", "4c"], "board": [], "bot_hole": ["8c", "4h"], "winnings": -100, "baseline": -500}
+{"hand": 26, "pos": 1, "action": "f", "ours": ["f"], "hole": ["9c", "3s"], "board": [], "bot_hole": ["9h", "7s"], "winnings": -50, "baseline": 0}
+{"hand": 27, "pos": 0, "action": "b200c/kb200b530f", "ours": ["c", "k", "b530"], "hole": ["Qc", "9c"], "board": ["Jh", "Ts", "4h"], "bot_hole": ["As", "3h"], "winnings": 400, "baseline": -200}
+{"hand": 28, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Js", "6h"], "board": [], "bot_hole": ["As", "Kc"], "winnings": -100, "baseline": 100}
+{"hand": 29, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8s", "5c"], "board": [], "bot_hole": ["As", "Ah"], "winnings": -100, "baseline": 300}
+{"hand": 30, "pos": 1, "action": "ck/kk/b100c/kb132f", "ours": ["c", "k", "c", "b132"], "hole": ["Qh", "8h"], "board": ["Kh", "8c", "2s", "9s", "9h"], "bot_hole": ["Ts", "4d"], "winnings": 200, "baseline": 0}
+{"hand": 31, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Th", "7d"], "board": [], "bot_hole": ["Qc", "9c"], "winnings": -100, "baseline": 100}
+{"hand": 32, "pos": 1, "action": "cb300c/b300c/b600f", "ours": ["c", "c", "c", "f"], "hole": ["Qs", "Jd"], "board": ["Ah", "8d", "2s", "2c"], "bot_hole": ["Ad", "2d"], "winnings": -600, "baseline": 0}
+{"hand": 33, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8h", "4s"], "board": [], "bot_hole": ["5c", "3c"], "winnings": -100, "baseline": 300}
+{"hand": 34, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Jd", "2h"], "board": [], "bot_hole": ["5d", "3d"], "winnings": -100, "baseline": 100}
+{"hand": 35, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Kh", "7d"], "board": [], "bot_hole": ["5s", "4d"], "winnings": -100, "baseline": 100}
+{"hand": 36, "pos": 1, "action": "cb300c/b300c/b1200b2784c/kk", "ours": ["c", "c", "c", "b2784", "k"], "hole": ["Kc", "5c"], "board": ["Kd", "Td", "3s", "6h", "4s"], "bot_hole": ["Kh", "Jd"], "winnings": -3384, "baseline": -1784}
+{"hand": 37, "pos": 0, "action": "b200b575c/b862c/b948c/b7155f", "ours": ["b575", "b862", "b948", "b7155"], "hole": ["Ah", "Ad"], "board": ["Jc", "7s", "4c", "As", "Kd"], "bot_hole": ["Jh", "9c"], "winnings": 2385, "baseline": 1185}
+{"hand": 38, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Ad", "7d"], "board": [], "bot_hole": ["As", "3c"], "winnings": 100, "baseline": 300}
+{"hand": 39, "pos": 0, "action": "b200c/kb200c/kk/kk", "ours": ["c", "k", "c", "k", "k"], "hole": ["5c", "3c"], "board": ["Qd", "Jd", "5h", "7d", "9c"], "bot_hole": ["6s", "3h"], "winnings": 400, "baseline": 200}
+{"hand": 40, "pos": 1, "action": "b250b750c/kb1125c/kb2812f", "ours": ["b250", "c", "b1125", "b2812"], "hole": ["Ac", "4c"], "board": ["As", "5h", "3d", "Th"], "bot_hole": ["9s", "9d"], "winnings": 1875, "baseline": 675}
+{"hand": 41, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6d", "3c"], "board": [], "bot_hole": ["Qs", "9d"], "winnings": -100, "baseline": 100}
+{"hand": 42, "pos": 1, "action": "ck/kk/kk/kk", "ours": ["c", "k", "k", "k"], "hole": ["8d", "8c"], "board": ["Kc", "Tc", "5d", "2c", "4d"], "bot_hole": ["8h", "4s"], "winnings": 100, "baseline": -100}
+{"hand": 43, "pos": 0, "action": "b200b950f", "ours": ["b950"], "hole": ["Ks", "Qc"], "board": [], "bot_hole": ["8d", "6c"], "winnings": 200, "baseline": 0}
+{"hand": 44, "pos": 1, "action": "b250b750c/kk/b750b1988b8250c/kk", "ours": ["b250", "c", "k", "b1988", "c", "k"], "hole": ["Js", "8s"], "board": ["Qh", "Jd", "4d", "4s", "As"], "bot_hole": ["9c", "8c"], "winnings": 9000, "baseline": 8400}
+{"hand": 45, "pos": 0, "action": "b200c/kk/b132c/kb268c", "ours": ["c", "k", "b132", "k", "c"], "hole": ["9s", "4s"], "board": ["7c", "6d", "4c", "Qc", "Th"], "bot_hole": ["2s", "2c"], "winnings": 600, "baseline": 400}
+{"hand": 46, "pos": 1, "action": "b250c/kk/kb165c/kb1245f", "ours": ["b250", "k", "b165", "b1245"], "hole": ["Kd", "9d"], "board": ["Qs", "Th", "8s", "4d", "Js"], "bot_hole": ["Ad", "7c"], "winnings": 415, "baseline": 215}
+{"hand": 47, "pos": 0, "action": "b200c/kk/b300c/b330c", "ours": ["c", "k", "b300", "b330"], "hole": ["Ah", "5d"], "board": ["As", "Kd", "Qs", "3c", "3h"], "bot_hole": ["Kh", "4c"], "winnings": 830, "baseline": 430}
+{"hand": 48, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Kh", "2c"], "board": [], "bot_hole": ["9c", "6c"], "winnings": -100, "baseline": 100}
+{"hand": 49, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jd", "8c"], "board": [], "bot_hole": ["Kh", "Th"], "winnings": -100, "baseline": -300}
+{"hand": 50, "pos": 1, "action": "cb300c/kk/kb198c/kk", "ours": ["c", "c", "k", "b198", "k"], "hole": ["Jh", "9d"], "board": ["Qs", "Ts", "7s", "Js", "4h"], "bot_hole": ["9h", "9c"], "winnings": 498, "baseline": -102}
+{"hand": 51, "pos": 0, "action": "b200c/kk/b600f", "ours": ["c", "k", "b600"], "hole": ["9h", "8h"], "board": ["Ad", "5s", "3h", "5h"], "bot_hole": ["Th", "7c"], "winnings": 200, "baseline": 0}
+{"hand": 52, "pos": 1, "action": "b350c/kb231c/kk/kb19419f", "ours": ["b350", "b231", "k", "b19419"], "hole": ["9d", "6h"], "board": ["Qd", "8d", "3h", "Kc", "8s"], "bot_hole": ["Jh", "8h"], "winnings": 581, "baseline": 781}
+{"hand": 53, "pos": 0, "action": "f", "ours": [], "hole": ["6c", "4c"], "board": [], "bot_hole": ["7c", "2d"], "winnings": 50, "baseline": 0}
+{"hand": 54, "pos": 1, "action": "f", "ours": ["f"], "hole": ["7h", "3s"], "board": [], "bot_hole": ["6c", "3c"], "winnings": -50, "baseline": 0}
+{"hand": 55, "pos": 0, "action": "b200c/kk/b132c/kk", "ours": ["c", "k", "b132", "k"], "hole": ["3s", "3c"], "board": ["9s", "8h", "6c", "Ad", "Ac"], "bot_hole": ["5s", "5h"], "winnings": -332, "baseline": 268}
+{"hand": 56, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Ah", "6c"], "board": [], "bot_hole": ["5c", "2c"], "winnings": 100, "baseline": -100}
+{"hand": 57, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8c", "2d"], "board": [], "bot_hole": ["Tc", "9h"], "winnings": -100, "baseline": 0}
+{"hand": 58, "pos": 1, "action": "b350b900f", "ours": ["b350", "f"], "hole": ["Kh", "7s"], "board": [], "bot_hole": ["Th", "9s"], "winnings": -350, "baseline": 250}
+{"hand": 59, "pos": 0, "action": "b200b575c/kb625f", "ours": ["b575", "k", "f"], "hole": ["9h", "2h"], "board": ["Ks", "Th", "7d"], "bot_hole": ["Js", "6s"], "winnings": -575, "baseline": -375}
+{"hand": 60, "pos": 1, "action": "ck/kk/kk/kk", "ours": ["c", "k", "k", "k"], "hole": ["Kc", "3d"], "board": ["Ad", "Ts", "6d", "5h", "Th"], "bot_hole": ["7d", "2s"], "winnings": 100, "baseline": 0}
+{"hand": 61, "pos": 0, "action": "b200c/kk/b600c/b528c", "ours": ["c", "k", "b600", "b528"], "hole": ["5c", "4c"], "board": ["8c", "7s", "7d", "3s", "4d"], "bot_hole": ["8h", "6c"], "winnings": -1328, "baseline": -1528}
+{"hand": 62, "pos": 1, "action": "cb300c/b300c/kk/b600c", "ours": ["c", "c", "c", "k", "c"], "hole": ["Qd", "Jd"], "board": ["Ad", "Kh", "8c", "As", "4s"], "bot_hole": ["Kc", "6s"], "winnings": -1200, "baseline": -400}
+{"hand": 63, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Qc", "8h"], "board": [], "bot_hole": ["Ad", "6d"], "winnings": -100, "baseline": -500}
+{"hand": 64, "pos": 1, "action": "b250c/kb165f", "ours": ["b250", "b165"], "hole": ["8c", "4c"], "board": ["Qs", "6h", "4s"], "bot_hole": ["Jc", "9c"], "winnings": 250, "baseline": 450}
+{"hand": 65, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9h", "4s"], "board": [], "bot_hole": ["6d", "6c"], "winnings": -100, "baseline": -900}
+{"hand": 66, "pos": 1, "action": "b350c/kb231c/kb872c/kb959c", "ours": ["b350", "b231", "b872", "b959"], "hole": ["Qc", "3d"], "board": ["Jd", "4s", "4h", "9d", "2h"], "bot_hole": ["Jh", "6h"], "winnings": -2412, "baseline": -1612}
+{"hand": 67, "pos": 0, "action": "f", "ours": [], "hole": ["8d", "5s"], "board": [], "bot_hole": ["5d", "2h"], "winnings": 50, "baseline": 0}
+{"hand": 68, "pos": 1, "action": "ck/kb150c/kb165c/kk", "ours": ["c", "b150", "b165", "k"], "hole": ["Qs", "Td"], "board": ["Qh", "8h", "4d", "5d", "7c"], "bot_hole": ["8d", "2c"], "winnings": 415, "baseline": 315}
+{"hand": 69, "pos": 0, "action": "b200c/b132f", "ours": ["c", "b132"], "hole": ["Ad", "5d"], "board": ["Ks", "Jc", "Td"], "bot_hole": ["Th", "4c"], "winnings": 200, "baseline": 0}
+{"hand": 70, "pos": 1, "action": "f", "ours": ["f"], "hole": ["8s", "3c"], "board": [], "bot_hole": ["7d", "4h"], "winnings": -50, "baseline": 0}
+{"hand": 71, "pos": 0, "action": "b200c/b132f", "ours": ["c", "b132"], "hole": ["Kh", "9s"], "board": ["Ts", "7d", "3s"], "bot_hole": ["Js", "4h"], "winnings": 200, "baseline": 1000}
+{"hand": 72, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Td", "7h"], "board": [], "bot_hole": ["Kd", "5c"], "winnings": 100, "baseline": -100}
+{"hand": 73, "pos": 0, "action": "b200b575f", "ours": ["b575"], "hole": ["Qc", "5c"], "board": [], "bot_hole": ["9c", "5d"], "winnings": 200, "baseline": 0}
+{"hand": 74, "pos": 1, "action": "ck/kk/kb150c/kb375c", "ours": ["c", "k", "b150", "b375"], "hole": ["Tc", "5d"], "board": ["Th", "9h", "9d", "3s", "2d"], "bot_hole": ["8s", "3d"], "winnings": 625, "baseline": 525}
+{"hand": 75, "pos": 0, "action": "b200c/b132f", "ours": ["c", "b132"], "hole": ["As", "3s"], "board": ["Kd", "Jd", "5c"], "bot_hole": ["8h", "4h"], "winnings": 200, "baseline": -200}
+{"hand": 76, "pos": 1, "action": "f", "ours": ["f"], "hole": ["7s", "3d"], "board": [], "bot_hole": ["9c", "8s"], "winnings": -50, "baseline": 0}
+{"hand": 77, "pos": 0, "action": "b200c/kk/kb200c/b1200c", "ours": ["c", "k", "k", "c", "b1200"], "hole": ["8d", "6d"], "board": ["Qc", "7s", "5d", "8c", "9c"], "bot_hole": ["9h", "6s"], "winnings": 0, "baseline": 0}
+{"hand": 78, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Ad", "Qs"], "board": [], "bot_hole": ["Kh", "7s"], "winnings": 100, "baseline": 500}
+{"hand": 79, "pos": 0, "action": "f", "ours": [], "hole": ["Th", "2c"], "board": [], "bot_hole": ["8s", "3d"], "winnings": 50, "baseline": 0}
+{"hand": 80, "pos": 1, "action": "f", "ours": ["f"], "hole": ["7s", "2d"], "board": [], "bot_hole": ["Qc", "Tc"], "winnings": -50, "baseline": 0}
+{"hand": 81, "pos": 0, "action": "b200c/kb200f", "ours": ["c", "k", "f"], "hole": ["Td", "3d"], "board": ["As", "9c", "2d"], "bot_hole": ["6d", "5d"], "winnings": -200, "baseline": 600}
+{"hand": 82, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Jh", "7d"], "board": [], "bot_hole": ["6c", "4d"], "winnings": 100, "baseline": 1700}
+{"hand": 83, "pos": 0, "action": "b200b950f", "ours": ["b950"], "hole": ["Ac", "Qd"], "board": [], "bot_hole": ["9s", "4s"], "winnings": 200, "baseline": 0}
+{"hand": 84, "pos": 1, "action": "cb300c/b300b2550f", "ours": ["c", "c", "b2550"], "hole": ["Ks", "Th"], "board": ["Qd", "3c", "2d"], "bot_hole": ["Qs", "9s"], "winnings": 600, "baseline": 1200}
+{"hand": 85, "pos": 0, "action": "b200b365c/kb835c/b792f", "ours": ["b365", "k", "c", "b792"], "hole": ["Kd", "Qd"], "board": ["9c", "7d", "2d", "Th"], "bot_hole": ["Ks", "3d"], "winnings": 1200, "baseline": -9600}
+{"hand": 86, "pos": 1, "action": "b250c/kb750f", "ours": ["b250", "b750"], "hole": ["4c", "3c"], "board": ["Ad", "Ts", "4s"], "bot_hole": ["Jh", "3d"], "winnings": 250, "baseline": -150}
+{"hand": 87, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["7c", "5d"], "board": [], "bot_hole": ["Qs", "9h"], "winnings": -100, "baseline": -300}
+{"hand": 88, "pos": 1, "action": "b250c/kb750f", "ours": ["b250", "b750"], "hole": ["Td", "3d"], "board": ["Js", "8h", "6c"], "bot_hole": ["As", "Th"], "winnings": 250, "baseline": -150}
+{"hand": 89, "pos": 0, "action": "b200b950c/b627c/kk/kb3223f", "ours": ["b950", "b627", "k", "k", "f"], "hole": ["Ks", "9d"], "board": ["Ad", "Qc", "5d", "5s", "6h"], "bot_hole": ["Ac", "7c"], "winnings": -1577, "baseline": -1177}
+{"hand": 90, "pos": 1, "action": "ck/kb150c/kk/b350b2675c", "ours": ["c", "b150", "k", "b2675"], "hole": ["Jd", "Ts"], "board": ["Td", "9d", "7d", "6h", "8h"], "bot_hole": ["Js", "5d"], "winnings": 0, "baseline": 0}
+{"hand": 91, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9d", "6c"], "board": [], "bot_hole": ["Th", "4h"], "winnings": -100, "baseline": 100}
+{"hand": 92, "pos": 1, "action": "b250c/b250b2125f", "ours": ["b250", "b2125"], "hole": ["6h", "3c"], "board": ["Kh", "5s", "4c"], "bot_hole": ["Tc", "4d"], "winnings": 500, "baseline": -300}
+{"hand": 93, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Qh", "3s"], "board": [], "bot_hole": ["7s", "2s"], "winnings": -100, "baseline": 700}
+{"hand": 94, "pos": 1, "action": "ck/kb300f", "ours": ["c", "b300"], "hole": ["Kc", "3s"], "board": ["Qd", "5s", "2d"], "bot_hole": ["9s", "3h"], "winnings": 100, "baseline": -100}
+{"hand": 95, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Qh", "2c"], "board": [], "bot_hole": ["Qc", "6d"], "winnings": -100, "baseline": -300}
+{"hand": 96, "pos": 1, "action": "ck/kk/kb150c/kb165f", "ours": ["c", "k", "b150", "b165"], "hole": ["6d", "4d"], "board": ["Jd", "Jc", "9c", "7h", "2c"], "bot_hole": ["As", "3c"], "winnings": 250, "baseline": 650}
+{"hand": 97, "pos": 0, "action": "b200c/kb200f", "ours": ["c", "k", "f"], "hole": ["Jd", "5d"], "board": ["8s", "6s", "3h"], "bot_hole": ["Jh", "6h"], "winnings": -200, "baseline": 0}
+{"hand": 98, "pos": 1, "action": "b350b1500f", "ours": ["b350", "f"], "hole": ["Ad", "8c"], "board": [], "bot_hole": ["Qs", "7s"], "winnings": -350, "baseline": 850}
+{"hand": 99, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["7c", "2c"], "board": [], "bot_hole": ["6s", "3s"], "winnings": -100, "baseline": -1300}
+{"hand": 100, "pos": 1, "action": "b250c/kk/b250f", "ours": ["b250", "k", "f"], "hole": ["Jh", "Ts"], "board": ["Ah", "9s", "6h", "6c"], "bot_hole": ["6d", "5s"], "winnings": -250, "baseline": 950}
+{"hand": 101, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["4s", "3h"], "board": [], "bot_hole": ["Jh", "7s"], "winnings": -100, "baseline": 300}
+{"hand": 102, "pos": 1, "action": "b250c/kk/kk/b250f", "ours": ["b250", "k", "k", "f"], "hole": ["6c", "5h"], "board": ["Kc", "Ts", "4c", "As", "Jc"], "bot_hole": ["Qc", "5s"], "winnings": -250, "baseline": 150}
+{"hand": 103, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Kc", "2d"], "board": [], "bot_hole": ["Qd", "4h"], "winnings": -100, "baseline": 300}
+{"hand": 104, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Qd", "7c"], "board": [], "bot_hole": ["7s", "5s"], "winnings": -100, "baseline": 100}
+{"hand": 105, "pos": 0, "action": "b200b575c/kb1225f", "ours": ["b575", "k", "f"], "hole": ["Th", "5h"], "board": ["Ad", "8d", "2d"], "bot_hole": ["Kd", "3h"], "winnings": -575, "baseline": -375}
+{"hand": 106, "pos": 1, "action": "b250c/kk/kk/b250c", "ours": ["b250", "k", "k", "c"], "hole": ["Jh", "9h"], "board": ["Ah", "Ks", "9c", "3s", "7c"], "bot_hole": ["Jc", "9d"], "winnings": 0, "baseline": 0}
+{"hand": 107, "pos": 0, "action": "b200b20000c///", "ours": ["b20000"], "hole": ["9h", "8d"], "board": ["Kd", "6h", "2s", "Qs", "Jh"], "bot_hole": ["As", "Ac"], "winnings": -20000, "baseline": -19800}
+{"hand": 108, "pos": 1, "action": "f", "ours": ["f"], "hole": ["3s", "2c"], "board": [], "bot_hole": ["9h", "6c"], "winnings": -50, "baseline": 0}
+{"hand": 109, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9s", "2d"], "board": [], "bot_hole": ["6h", "6d"], "winnings": -100, "baseline": 0}
+{"hand": 110, "pos": 1, "action": "b250b750c/b750f", "ours": ["b250", "c", "f"], "hole": ["8h", "4h"], "board": ["Ks", "Jc", "3s"], "bot_hole": ["Kc", "Jd"], "winnings": -750, "baseline": -550}
+{"hand": 111, "pos": 0, "action": "f", "ours": [], "hole": ["Kd", "8c"], "board": [], "bot_hole": ["9c", "2d"], "winnings": 50, "baseline": 0}
+{"hand": 112, "pos": 1, "action": "b350b900f", "ours": ["b350", "f"], "hole": ["As", "8d"], "board": [], "bot_hole": ["Qd", "Qc"], "winnings": -350, "baseline": 250}
+{"hand": 113, "pos": 0, "action": "b200b575c/kb625c/kk/b1800c", "ours": ["b575", "k", "c", "k", "b1800"], "hole": ["Jc", "4c"], "board": ["Qd", "Jd", "3s", "2s", "9d"], "bot_hole": ["Qc", "Th"], "winnings": -3000, "baseline": -1800}
+{"hand": 114, "pos": 1, "action": "b350c/kk/b1150c/b1500c", "ours": ["b350", "k", "c", "c"], "hole": ["Jh", "6h"], "board": ["Ad", "9d", "6c", "5c", "Ac"], "bot_hole": ["Ah", "4h"], "winnings": -3000, "baseline": -1800}
+{"hand": 115, "pos": 0, "action": "f", "ours": [], "hole": ["9h", "7c"], "board": [], "bot_hole": ["5c", "2h"], "winnings": 50, "baseline": 0}
+{"hand": 116, "pos": 1, "action": "cb300c/b300c/kk/kk", "ours": ["c", "c", "c", "k", "k"], "hole": ["9c", "8h"], "board": ["Kd", "Jc", "9s", "Ts", "Js"], "bot_hole": ["6s", "5h"], "winnings": 600, "baseline": 400}
+{"hand": 117, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9s", "2s"], "board": [], "bot_hole": ["Ks", "3d"], "winnings": -100, "baseline": 100}
+{"hand": 118, "pos": 1, "action": "b250b750f", "ours": ["b250", "f"], "hole": ["5c", "2s"], "board": [], "bot_hole": ["Kd", "Td"], "winnings": -250, "baseline": -200}
+{"hand": 119, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6d", "2s"], "board": [], "bot_hole": ["As", "2h"], "winnings": -100, "baseline": 0}
+{"hand": 120, "pos": 1, "action": "cb300c/b300b795f", "ours": ["c", "c", "b795"], "hole": ["4h", "4c"], "board": ["Qs", "4s", "2c"], "bot_hole": ["Kc", "6h"], "winnings": 600, "baseline": 400}
+{"hand": 121, "pos": 0, "action": "b200c/kb200b1700c/kk/b2850b18100f", "ours": ["c", "k", "b1700", "k", "b2850", "f"], "hole": ["Jh", "Ts"], "board": ["Qs", "8d", "7s", "6s", "Ks"], "bot_hole": ["Js", "9c"], "winnings": -4750, "baseline": -8350}
+{"hand": 122, "pos": 1, "action": "b250b750b1410c/kk/b5340f", "ours": ["b250", "b1410", "k", "f"], "hole": ["Kc", "Td"], "board": ["Qc", "Js", "2h", "7d"], "bot_hole": ["Ah", "Jh"], "winnings": -1410, "baseline": -8610}
+{"hand": 123, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Ks", "6c"], "board": [], "bot_hole": ["3h", "2h"], "winnings": -100, "baseline": 100}
+{"hand": 124, "pos": 1, "action": "b250f", "ours": ["b250"], "hole": ["9c", "2c"], "board": [], "bot_hole": ["7d", "3c"], "winnings": 100, "baseline": 0}
+{"hand": 125, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["5s", "3c"], "board": [], "bot_hole": ["Kd", "7s"], "winnings": -100, "baseline": 100}
+{"hand": 126, "pos": 1, "action": "ck/kk/b100c/b200c", "ours": ["c", "k", "c", "c"], "hole": ["9d", "8s"], "board": ["9h", "6c", "4h", "4s", "Td"], "bot_hole": ["7s", "3d"], "winnings": 400, "baseline": 300}
+{"hand": 127, "pos": 0, "action": "f", "ours": [], "hole": ["Td", "2s"], "board": [], "bot_hole": ["7s", "4c"], "winnings": 50, "baseline": 0}
+{"hand": 128, "pos": 1, "action": "b350c/kk/kk/kk", "ours": ["b350", "k", "k", "k"], "hole": ["Ks", "8h"], "board": ["9d", "8s", "6c", "2h", "Qh"], "bot_hole": ["7c", "6s"], "winnings": 350, "baseline": -50}
+{"hand": 129, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8h", "3s"], "board": [], "bot_hole": ["Tc", "8c"], "winnings": -100, "baseline": 0}
+{"hand": 130, "pos": 1, "action": "b250b750c/kk/kk/b1500b3480b12750f", "ours": ["b250", "c", "k", "k", "b3480", "f"], "hole": ["Ah", "5h"], "board": ["Kc", "Th", "2h", "6c", "Ks"], "bot_hole": ["6s", "6h"], "winnings": -4230, "baseline": 2970}
+{"hand": 131, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Td", "4h"], "board": [], "bot_hole": ["As", "3h"], "winnings": -100, "baseline": -300}
+{"hand": 132, "pos": 1, "action": "ck/kk/kb300f", "ours": ["c", "k", "b300"], "hole": ["9h", "2h"], "board": ["Js", "5s", "5h", "Qc"], "bot_hole": ["6h", "4c"], "winnings": 100, "baseline": -100}
+{"hand": 133, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["5c", "2d"], "board": [], "bot_hole": ["9h", "8s"], "winnings": -100, "baseline": 100}
+{"hand": 134, "pos": 1, "action": "b350c/kk/kk/kk", "ours": ["b350", "k", "k", "k"], "hole": ["Qd", "8s"], "board": ["Ad", "Kh", "6s", "Kd", "2s"], "bot_hole": ["Jd", "8c"], "winnings": 350, "baseline": 150}
+{"hand": 135, "pos": 0, "action": "b200c/b600c/kk/b528f", "ours": ["c", "b600", "k", "b528"], "hole": ["Ad", "7s"], "board": ["Ah", "Qd", "4d", "2h", "5c"], "bot_hole": ["Kc", "Js"], "winnings": 800, "baseline": 0}
+{"hand": 136, "pos": 1, "action": "b250c/b250b662b2750f", "ours": ["b250", "b662", "f"], "hole": ["Tc", "7c"], "board": ["Kc", "4s", "2s"], "bot_hole": ["3c", "2c"], "winnings": -912, "baseline": -712}
+{"hand": 137, "pos": 0, "action": "b200b950f", "ours": ["b950"], "hole": ["Ks", "Kd"], "board": [], "bot_hole": ["7d", "4d"], "winnings": 200, "baseline": -1000}
+{"hand": 138, "pos": 1, "action": "ck/kk/kb150c/b350f", "ours": ["c", "k", "b150", "f"], "hole": ["Td", "6h"], "board": ["Jh", "9c", "7s", "5s", "9h"], "bot_hole": ["Js", "4s"], "winnings": -250, "baseline": -50}
+{"hand": 139, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Ts", "2c"], "board": [], "bot_hole": ["Ks", "Kc"], "winnings": -100, "baseline": 300}
+{"hand": 140, "pos": 1, "action": "b350b900f", "ours": ["b350", "f"], "hole": ["9c", "2c"], "board": [], "bot_hole": ["Ah", "Ac"], "winnings": -350, "baseline": -150}
+{"hand": 141, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6h", "3s"], "board": [], "bot_hole": ["Kh", "Jd"], "winnings": -100, "baseline": 100}
+{"hand": 142, "pos": 1, "action": "f", "ours": ["f"], "hole": ["8s", "2c"], "board": [], "bot_hole": ["Qd", "7d"], "winnings": -50, "baseline": 0}
+{"hand": 143, "pos": 0, "action": "b200b950f", "ours": ["b950"], "hole": ["Kc", "Jh"], "board": [], "bot_hole": ["Ks", "2h"], "winnings": 200, "baseline": -200}
+{"hand": 144, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Ad", "Jh"], "board": [], "bot_hole": ["Td", "4d"], "winnings": 100, "baseline": 900}
+{"hand": 145, "pos": 0, "action": "b200c/b300f", "ours": ["c", "b300"], "hole": ["As", "Jc"], "board": ["Ah", "Kh", "6s"], "bot_hole": ["Qh", "2d"], "winnings": 200, "baseline": 0}
+{"hand": 146, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Ac", "9h"], "board": [], "bot_hole": ["8d", "6s"], "winnings": 100, "baseline": 500}
+{"hand": 147, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9c", "5s"], "board": [], "bot_hole": ["Ks", "4h"], "winnings": -100, "baseline": -300}
+{"hand": 148, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["7c", "6c"], "board": [], "bot_hole": ["Kh", "9d"], "winnings": 100, "baseline": 500}
+{"hand": 149, "pos": 0, "action": "b200c/kb200b530c/b482b1670f", "ours": ["c", "k", "b530", "b482", "f"], "hole": ["Ad", "Tc"], "board": ["Jc", "5h", "4s", "9h"], "bot_hole": ["Qh", "Jh"], "winnings": -1212, "baseline": -812}
+{"hand": 150, "pos": 1, "action": "f", "ours": ["f"], "hole": ["6s", "2c"], "board": [], "bot_hole": ["Qs", "8d"], "winnings": -50, "baseline": 0}
+{"hand": 151, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jh", "4c"], "board": [], "bot_hole": ["9d", "8d"], "winnings": -100, "baseline": -500}
+{"hand": 152, "pos": 1, "action": "b250c/kk/kb750f", "ours": ["b250", "k", "b750"], "hole": ["5c", "2d"], "board": ["Qd", "Tc", "3d", "Ac"], "bot_hole": ["9s", "2s"], "winnings": 250, "baseline": 300}
+{"hand": 153, "pos": 0, "action": "b200c/b132c/b219c/b364c", "ours": ["c", "b132", "b219", "b364"], "hole": ["5h", "3h"], "board": ["Qd", "7h", "6h", "Kc", "2d"], "bot_hole": ["6d", "4s"], "winnings": -915, "baseline": -1115}
+{"hand": 154, "pos": 1, "action": "ck/kb300f", "ours": ["c", "b300"], "hole": ["Kd", "2s"], "board": ["8s", "6d", "6c"], "bot_hole": ["Qd", "4c"], "winnings": 100, "baseline": -100}
+{"hand": 155, "pos": 0, "action": "b200b575f", "ours": ["b575"], "hole": ["Qh", "9d"], "board": [], "bot_hole": ["3d", "2d"], "winnings": 200, "baseline": 1000}
+{"hand": 156, "pos": 1, "action": "b350b900f", "ours": ["b350", "f"], "hole": ["Kd", "4c"], "board": [], "bot_hole": ["Ah", "Jh"], "winnings": -350, "baseline": 250}
+{"hand": 157, "pos": 0, "action": "f", "ours": [], "hole": ["Td", "4s"], "board": [], "bot_hole": ["7c", "3s"], "winnings": 50, "baseline": 0}
+{"hand": 158, "pos": 1, "action": "f", "ours": ["f"], "hole": ["7h", "4d"], "board": [], "bot_hole": ["Ks", "3c"], "winnings": -50, "baseline": 0}
+{"hand": 159, "pos": 0, "action": "b200c/b132b600f", "ours": ["c", "b132", "f"], "hole": ["Kd", "5d"], "board": ["Td", "4s", "3c"], "bot_hole": ["Tc", "3d"], "winnings": -332, "baseline": 68}
+{"hand": 160, "pos": 1, "action": "b250b750b1410c/kb18590c//", "ours": ["b250", "b1410", "b18590"], "hole": ["As", "Ac"], "board": ["6d", "6c", "4c", "7h", "Th"], "bot_hole": ["5s", "5d"], "winnings": 20000, "baseline": 19600}
+{"hand": 161, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8c", "4d"], "board": [], "bot_hole": ["Kh", "Ts"], "winnings": -100, "baseline": -500}
+{"hand": 162, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Ac", "2s"], "board": [], "bot_hole": ["Qh", "6d"], "winnings": 100, "baseline": -100}
+{"hand": 163, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Kc", "4s"], "board": [], "bot_hole": ["Ah", "Tc"], "winnings": -100, "baseline": -500}
+{"hand": 164, "pos": 1, "action": "b250c/kk/b250f", "ours": ["b250", "k", "f"], "hole": ["6s", "2s"], "board": ["Jh", "Jd", "4h", "Qs"], "bot_hole": ["Ad", "Th"], "winnings": -250, "baseline": 150}
+{"hand": 165, "pos": 0, "action": "f", "ours": [], "hole": ["Tc", "7c"], "board": [], "bot_hole": ["9h", "2s"], "winnings": 50, "baseline": 0}
+{"hand": 166, "pos": 1, "action": "f", "ours": ["f"], "hole": ["4h", "3c"], "board": [], "bot_hole": ["Ks", "5d"], "winnings": -50, "baseline": -850}
+{"hand": 167, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jh", "2c"], "board": [], "bot_hole": ["Ah", "Ac"], "winnings": -100, "baseline": 700}
+{"hand": 168, "pos": 1, "action": "b350b900f", "ours": ["b350", "f"], "hole": ["Kc", "6d"], "board": [], "bot_hole": ["As", "Ac"], "winnings": -350, "baseline": 250}
+{"hand": 169, "pos": 0, "action": "f", "ours": [], "hole": ["Kh", "4c"], "board": [], "bot_hole": ["9c", "3d"], "winnings": 50, "baseline": 0}
+{"hand": 170, "pos": 1, "action": "cb300c/kb198f", "ours": ["c", "c", "b198"], "hole": ["Jd", "Td"], "board": ["9c", "6d", "5d"], "bot_hole": ["Ks", "Js"], "winnings": 300, "baseline": -300}
+{"hand": 171, "pos": 0, "action": "b200c/kb200c/b600f", "ours": ["c", "k", "c", "b600"], "hole": ["Qc", "2c"], "board": ["Kd", "Qd", "Tc", "4h"], "bot_hole": ["8c", "7h"], "winnings": 400, "baseline": -800}
+{"hand": 172, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["As", "Kh"], "board": [], "bot_hole": ["4s", "2s"], "winnings": 100, "baseline": 500}
+{"hand": 173, "pos": 0, "action": "b200c/kk/kk/b600b1600f", "ours": ["c", "k", "k", "b600", "f"], "hole": ["Js", "7s"], "board": ["Kh", "6h", "5d", "8h", "Tc"], "bot_hole": ["Ts", "6c"], "winnings": -800, "baseline": -1000}
+{"hand": 174, "pos": 1, "action": "cb300c/b300b2550c/kk/kb8550f", "ours": ["c", "c", "b2550", "k", "b8550"], "hole": ["Td", "9c"], "board": ["Qh", "Qc", "5d", "Kd", "4h"], "bot_hole": ["8d", "8c"], "winnings": 2850, "baseline": 3450}
+{"hand": 175, "pos": 0, "action": "f", "ours": [], "hole": ["8h", "4s"], "board": [], "bot_hole": ["4c", "2h"], "winnings": 50, "baseline": 0}
+{"hand": 176, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Qc", "7d"], "board": [], "bot_hole": ["Jc", "5d"], "winnings": 100, "baseline": 1300}
+{"hand": 177, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9h", "5s"], "board": [], "bot_hole": ["8c", "4c"], "winnings": -100, "baseline": -300}
+{"hand": 178, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Qh", "3s"], "board": [], "bot_hole": ["Th", "4s"], "winnings": 100, "baseline": 300}
+{"hand": 179, "pos": 0, "action": "f", "ours": [], "hole": ["As", "8h"], "board": [], "bot_hole": ["6s", "2h"], "winnings": 50, "baseline": 0}
+{"hand": 180, "pos": 1, "action": "ck/kk/kb150f", "ours": ["c", "k", "b150"], "hole": ["7c", "6s"], "board": ["Ac", "Ks", "3h", "Jd"], "bot_hole": ["Qd", "9s"], "winnings": 100, "baseline": 500}
+{"hand": 181, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jc", "5s"], "board": [], "bot_hole": ["Ac", "Qc"], "winnings": -100, "baseline": 1100}
+{"hand": 182, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Th", "3d"], "board": [], "bot_hole": ["Jd", "Jc"], "winnings": -100, "baseline": 100}
+{"hand": 183, "pos": 0, "action": "b200b575c/b1725f", "ours": ["b575", "b1725"], "hole": ["Qs", "Qc"], "board": ["Jd", "6c", "4h"], "bot_hole": ["5c", "4s"], "winnings": 575, "baseline": -1825}
+{"hand": 184, "pos": 1, "action": "b250c/kk/b250c/b500f", "ours": ["b250", "k", "c", "f"], "hole": ["4d", "3h"], "board": ["Qs", "8s", "4s", "Ad", "Td"], "bot_hole": ["Ah", "5s"], "winnings": -500, "baseline": -2100}
+{"hand": 185, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Tc", "6d"], "board": [], "bot_hole": ["Qs", "3s"], "winnings": -100, "baseline": 100}
+{"hand": 186, "pos": 1, "action": "b250b750c/b750c/kk/kb2250c", "ours": ["b250", "c", "c", "k", "b2250"], "hole": ["Kd", "Qd"], "board": ["5d", "3h", "3d", "9h", "6d"], "bot_hole": ["Ac", "4c"], "winnings": 3750, "baseline": -16250}
+{"hand": 187, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Ks", "7c"], "board": [], "bot_hole": ["Kh", "Th"], "winnings": -100, "baseline": 1100}
+{"hand": 188, "pos": 1, "action": "b250c/kk/kb750f", "ours": ["b250", "k", "b750"], "hole": ["3c", "2d"], "board": ["Kh", "Qh", "8d", "Ts"], "bot_hole": ["8c", "7h"], "winnings": 250, "baseline": 300}
+{"hand": 189, "pos": 0, "action": "b200c/kb200f", "ours": ["c", "k", "f"], "hole": ["9c", "7c"], "board": ["Js", "Th", "3h"], "bot_hole": ["9d", "7s"], "winnings": -200, "baseline": -400}
+{"hand": 190, "pos": 1, "action": "b250b750c/b750b1988c/kb1807c/kb15455c", "ours": ["b250", "c", "b1988", "b1807", "b15455"], "hole": ["Td", "3d"], "board": ["Kc", "Qc", "6d", "Jh", "6s"], "bot_hole": ["Ac", "Kh"], "winnings": -20000, "baseline": -19800}
+{"hand": 191, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Ts", "7h"], "board": [], "bot_hole": ["8h", "5s"], "winnings": -100, "baseline": -500}
+{"hand": 192, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Kh", "Js"], "board": [], "bot_hole": ["Ts", "6h"], "winnings": 100, "baseline": -300}
+{"hand": 193, "pos": 0, "action": "f", "ours": [], "hole": ["Kc", "4d"], "board": [], "bot_hole": ["7d", "2s"], "winnings": 50, "baseline": 0}
+{"hand": 194, "pos": 1, "action": "ck/kk/kb150c/kb375c", "ours": ["c", "k", "b150", "b375"], "hole": ["Jh", "5h"], "board": ["Qh", "Jd", "8c", "8h", "Qc"], "bot_hole": ["Kc", "4c"], "winnings": 625, "baseline": -575}
+{"hand": 195, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Td", "4h"], "board": [], "bot_hole": ["Kh", "Jc"], "winnings": -100, "baseline": -500}
+{"hand": 196, "pos": 1, "action": "cb300c/kk/b300f", "ours": ["c", "c", "k", "f"], "hole": ["Jc", "Td"], "board": ["6c", "4s", "2s", "3h"], "bot_hole": ["5d", "4h"], "winnings": -300, "baseline": 100}
+{"hand": 197, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Js", "5d"], "board": [], "bot_hole": ["Kh", "Th"], "winnings": -100, "baseline": 100}
+{"hand": 198, "pos": 1, "action": "ck/kk/kb150b500f", "ours": ["c", "k", "b150", "f"], "hole": ["Qh", "6h"], "board": ["Tc", "3s", "3c", "7d"], "bot_hole": ["Kc", "3h"], "winnings": -250, "baseline": 550}
+{"hand": 199, "pos": 0, "action": "b200c/b132c/kk/kb268c", "ours": ["c", "b132", "k", "k", "c"], "hole": ["Ad", "6c"], "board": ["9h", "5s", "4c", "Kc", "Kh"], "bot_hole": ["8s", "8d"], "winnings": -600, "baseline": -400}
+{"hand": 200, "pos": 1, "action": "f", "ours": ["f"], "hole": ["8h", "5s"], "board": [], "bot_hole": ["7h", "2d"], "winnings": -50, "baseline": -150}
+{"hand": 201, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Td", "5h"], "board": [], "bot_hole": ["Ah", "4d"], "winnings": -100, "baseline": 100}
+{"hand": 202, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["7h", "5d"], "board": [], "bot_hole": ["7s", "4s"], "winnings": -100, "baseline": 300}
+{"hand": 203, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Qd", "4c"], "board": [], "bot_hole": ["Jc", "5c"], "winnings": -100, "baseline": 100}
+{"hand": 204, "pos": 1, "action": "f", "ours": ["f"], "hole": ["9c", "5h"], "board": [], "bot_hole": ["Kc", "5d"], "winnings": -50, "baseline": -450}
+{"hand": 205, "pos": 0, "action": "f", "ours": [], "hole": ["8s", "6c"], "board": [], "bot_hole": ["3d", "2s"], "winnings": 50, "baseline": 0}
+{"hand": 206, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Kd", "6h"], "board": [], "bot_hole": ["Th", "6c"], "winnings": 100, "baseline": 1700}
+{"hand": 207, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Qc", "3s"], "board": [], "bot_hole": ["8c", "7c"], "winnings": -100, "baseline": 100}
+{"hand": 208, "pos": 1, "action": "ck/kk/kb300c/kb600c", "ours": ["c", "k", "b300", "b600"], "hole": ["Jh", "4h"], "board": ["Ks", "7c", "6s", "Ac", "6d"], "bot_hole": ["7d", "2d"], "winnings": -1000, "baseline": -800}
+{"hand": 209, "pos": 0, "action": "b200c/kk/kk/b300f", "ours": ["c", "k", "k", "b300"], "hole": ["Js", "9d"], "board": ["Ah", "Jc", "6d", "Qs", "9c"], "bot_hole": ["Jd", "7d"], "winnings": 200, "baseline": 800}
+{"hand": 210, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["As", "5d"], "board": [], "bot_hole": ["Ts", "4d"], "winnings": 100, "baseline": -700}
+{"hand": 211, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jh", "8s"], "board": [], "bot_hole": ["9s", "3s"], "winnings": -100, "baseline": 100}
+{"hand": 212, "pos": 1, "action": "b350c/kb231f", "ours": ["b350", "b231"], "hole": ["As", "5h"], "board": ["Jh", "4s", "2h"], "bot_hole": ["Ks", "7h"], "winnings": 350, "baseline": -50}
+{"hand": 213, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Ks", "2d"], "board": [], "bot_hole": ["6s", "2s"], "winnings": -100, "baseline": -500}
+{"hand": 214, "pos": 1, "action": "b250c/kk/kk/kb375f", "ours": ["b250", "k", "k", "b375"], "hole": ["Ad", "4h"], "board": ["Jh", "Td", "4s", "2d", "Tc"], "bot_hole": ["9c", "6s"], "winnings": 250, "baseline": 50}
+{"hand": 215, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["7d", "2d"], "board": [], "bot_hole": ["Jc", "6s"], "winnings": -100, "baseline": -500}
+{"hand": 216, "pos": 1, "action": "b250c/kb750f", "ours": ["b250", "b750"], "hole": ["Th", "8h"], "board": ["Ah", "Ac", "3s"], "bot_hole": ["Tc", "8d"], "winnings": 250, "baseline": -950}
+{"hand": 217, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Ah", "2d"], "board": [], "bot_hole": ["7d", "5h"], "winnings": -100, "baseline": -500}
+{"hand": 218, "pos": 1, "action": "ck/kk/b100b265c/b100f", "ours": ["c", "k", "b265", "f"], "hole": ["Jc", "3c"], "board": ["Kh", "Kc", "6c", "7d", "8h"], "bot_hole": ["8c", "4d"], "winnings": -365, "baseline": -765}
+{"hand": 219, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["4s", "3c"], "board": [], "bot_hole": ["Jh", "3s"], "winnings": -100, "baseline": 100}
+{"hand": 220, "pos": 1, "action": "b500b1500c/kk/b1500c/b3000c", "ours": ["b500", "c", "k", "c", "c"], "hole": ["Th", "Td"], "board": ["Ad", "9d", "9c", "3h", "Qc"], "bot_hole": ["Ac", "Jc"], "winnings": -6000, "baseline": -4800}
+{"hand": 221, "pos": 0, "action": "b200c/kk/kb200c/b1200f", "ours": ["c", "k", "k", "c", "b1200"], "hole": ["Kd", "8s"], "board": ["Ah", "Js", "9s", "As", "2s"], "bot_hole": ["9h", "8h"], "winnings": 400, "baseline": 0}
+{"hand": 222, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Th", "7c"], "board": [], "bot_hole": ["Ah", "6c"], "winnings": 100, "baseline": -100}
+{"hand": 223, "pos": 0, "action": "b200b575c/b862f", "ours": ["b575", "b862"], "hole": ["9h", "5h"], "board": ["Tc", "9d", "5d"], "bot_hole": ["4c", "3c"], "winnings": 575, "baseline": -625}
+{"hand": 224, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["2s", "2c"], "board": [], "bot_hole": ["Qs", "4c"], "winnings": 100, "baseline": -100}
+{"hand": 225, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jc", "6h"], "board": [], "bot_hole": ["Js", "4c"], "winnings": -100, "baseline": -100}
+{"hand": 226, "pos": 1, "action": "b350c/kb231c/kb872c/b2147f", "ours": ["b350", "b231", "b872", "f"], "hole": ["As", "3h"], "board": ["Qs", "6c", "4h", "8s", "6s"], "bot_hole": ["Kc", "6h"], "winnings": -1453, "baseline": -1253}
+{"hand": 227, "pos": 0, "action": "b200c/kb200c/b264b1400f", "ours": ["c", "k", "c", "b264", "f"], "hole": ["Jh", "9d"], "board": ["Ts", "7s", "4d", "2d"], "bot_hole": ["8d", "6h"], "winnings": -664, "baseline": -864}
+{"hand": 228, "pos": 1, "action": "ck/kk/kb150f", "ours": ["c", "k", "b150"], "hole": ["Ts", "6h"], "board": ["Ac", "Js", "4h", "5d"], "bot_hole": ["8s", "2h"], "winnings": 100, "baseline": 0}
+{"hand": 229, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["4d", "2s"], "board": [], "bot_hole": ["Td", "8d"], "winnings": -100, "baseline": 100}
+{"hand": 230, "pos": 1, "action": "b350c/b250b728c/kb711c/kk", "ours": ["b350", "b728", "b711", "k"], "hole": ["Ts", "3s"], "board": ["Th", "9d", "7h", "Kc", "2s"], "bot_hole": ["9c", "7d"], "winnings": -1789, "baseline": -589}
+{"hand": 231, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["7d", "2s"], "board": [], "bot_hole": ["Qd", "Jh"], "winnings": -100, "baseline": 0}
+{"hand": 232, "pos": 1, "action": "b250f", "ours": ["b250"], "hole": ["9d", "2d"], "board": [], "bot_hole": ["8d", "3s"], "winnings": 100, "baseline": 0}
+{"hand": 233, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jd", "3h"], "board": [], "bot_hole": ["Th", "6s"], "winnings": -100, "baseline": 100}
+{"hand": 234, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Th", "3s"], "board": [], "bot_hole": ["As", "Kh"], "winnings": -100, "baseline": 100}
+{"hand": 235, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Kd", "2s"], "board": [], "bot_hole": ["4h", "4d"], "winnings": -100, "baseline": 100}
+{"hand": 236, "pos": 1, "action": "b250f", "ours": ["b250"], "hole": ["Qh", "Qd"], "board": [], "bot_hole": ["8c", "3h"], "winnings": 100, "baseline": 0}
+{"hand": 237, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Ad", "2s"], "board": [], "bot_hole": ["Ac", "6h"], "winnings": -100, "baseline": 100}
+{"hand": 238, "pos": 1, "action": "ck/kk/b100f", "ours": ["c", "k", "f"], "hole": ["Kh", "5s"], "board": ["Ts", "8d", "7s", "3s"], "bot_hole": ["Qs", "4h"], "winnings": -100, "baseline": -300}
+{"hand": 239, "pos": 0, "action": "f", "ours": [], "hole": ["Ks", "4c"], "board": [], "bot_hole": ["9s", "2h"], "winnings": 50, "baseline": 0}
+{"hand": 240, "pos": 1, "action": "f", "ours": ["f"], "hole": ["8d", "2h"], "board": [], "bot_hole": ["Kc", "Qc"], "winnings": -50, "baseline": 0}
+{"hand": 241, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["5s", "3h"], "board": [], "bot_hole": ["Qd", "6c"], "winnings": -100, "baseline": 100}
+{"hand": 242, "pos": 1, "action": "b250c/kk/kk/kk", "ours": ["b250", "k", "k", "k"], "hole": ["Tc", "6c"], "board": ["9h", "6d", "5h", "Ks", "8s"], "bot_hole": ["7h", "5s"], "winnings": -250, "baseline": 150}
+{"hand": 243, "pos": 0, "action": "b200c/b132c/kb268b2470f", "ours": ["c", "b132", "k", "b2470"], "hole": ["As", "4h"], "board": ["Jh", "6d", "2h", "Kc"], "bot_hole": ["Jd", "5d"], "winnings": 600, "baseline": 1000}
+{"hand": 244, "pos": 1, "action": "ck/kb300f", "ours": ["c", "b300"], "hole": ["9c", "5s"], "board": ["Qd", "Th", "6d"], "bot_hole": ["3s", "2h"], "winnings": 100, "baseline": -100}
+{"hand": 245, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["7h", "3s"], "board": [], "bot_hole": ["Kc", "7d"], "winnings": -100, "baseline": 0}
+{"hand": 246, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Kc", "7h"], "board": [], "bot_hole": ["7s", "3d"], "winnings": 100, "baseline": 0}
+{"hand": 247, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Qh", "3s"], "board": [], "bot_hole": ["6s", "4s"], "winnings": -100, "baseline": -1300}
+{"hand": 248, "pos": 1, "action": "cb300c/kk/b300c/kk", "ours": ["c", "c", "k", "c", "k"], "hole": ["Js", "8s"], "board": ["Qs", "Qc", "3s", "Qh", "5h"], "bot_hole": ["Kd", "6d"], "winnings": -600, "baseline": -1200}
+{"hand": 249, "pos": 0, "action": "b200c/kk/b600f", "ours": ["c", "k", "b600"], "hole": ["Jc", "Ts"], "board": ["Tc", "7s", "6d", "Js"], "bot_hole": ["Ks", "5c"], "winnings": 200, "baseline": -400}
+{"hand": 250, "pos": 1, "action": "b250b750c/kk/b750c/kk", "ours": ["b250", "c", "k", "c", "k"], "hole": ["4c", "3c"], "board": ["Qh", "Qc", "4d", "3s", "7d"], "bot_hole": ["5h", "4h"], "winnings": 0, "baseline": 0}
+{"hand": 251, "pos": 0, "action": "b200c/kk/b600f", "ours": ["c", "k", "b600"], "hole": ["5d", "3d"], "board": ["9c", "8d", "2h", "Kd"], "bot_hole": ["Jh", "6h"], "winnings": 200, "baseline": -400}
+{"hand": 252, "pos": 1, "action": "cb300c/kb900f", "ours": ["c", "c", "b900"], "hole": ["8c", "7c"], "board": ["Kc", "Qc", "4h"], "bot_hole": ["Qd", "Th"], "winnings": 300, "baseline": -100}
+{"hand": 253, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6c", "5d"], "board": [], "bot_hole": ["Ah", "Th"], "winnings": -100, "baseline": -500}
+{"hand": 254, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Td", "7c"], "board": [], "bot_hole": ["8s", "2d"], "winnings": 100, "baseline": 0}
+{"hand": 255, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jh", "6s"], "board": [], "bot_hole": ["Td", "8c"], "winnings": -100, "baseline": -900}
+{"hand": 256, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["9d", "6h"], "board": [], "bot_hole": ["Kh", "7c"], "winnings": -100, "baseline": 300}
+{"hand": 257, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6d", "4d"], "board": [], "bot_hole": ["9h", "8h"], "winnings": -100, "baseline": 500}
+{"hand": 258, "pos": 1, "action": "b250c/kb750f", "ours": ["b250", "b750"], "hole": ["5h", "3c"], "board": ["8s", "7h", "6s"], "bot_hole": ["Qh", "Ts"], "winnings": 250, "baseline": -150}
+{"hand": 259, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["As", "2c"], "board": [], "bot_hole": ["2s", "2h"], "winnings": -100, "baseline": 300}
+{"hand": 260, "pos": 1, "action": "cb300c/b300c/kb396f", "ours": ["c", "c", "c", "b396"], "hole": ["Th", "7h"], "board": ["6h", "4h", "3s", "2d"], "bot_hole": ["Qc", "Js"], "winnings": 600, "baseline": 400}
+{"hand": 261, "pos": 0, "action": "b200c/kk/kb200c/kk", "ours": ["c", "k", "k", "c", "k"], "hole": ["Ad", "5d"], "board": ["Qd", "6h", "5c", "Qc", "8c"], "bot_hole": ["Ac", "Td"], "winnings": 400, "baseline": -200}
+{"hand": 262, "pos": 1, "action": "b350c/kb231c/kb1743f", "ours": ["b350", "b231", "b1743"], "hole": ["Js", "4s"], "board": ["Qs", "Jh", "2s", "4c"], "bot_hole": ["Kh", "9s"], "winnings": 581, "baseline": 181}
+{"hand": 263, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jd", "2c"], "board": [], "bot_hole": ["Qc", "9d"], "winnings": -100, "baseline": 300}
+{"hand": 264, "pos": 1, "action": "ck/kb150f", "ours": ["c", "b150"], "hole": ["Jh", "4c"], "board": ["Qc", "6d", "2h"], "bot_hole": ["9h", "7d"], "winnings": 100, "baseline": -100}
+{"hand": 265, "pos": 0, "action": "f", "ours": [], "hole": ["Ah", "4h"], "board": [], "bot_hole": ["7c", "2d"], "winnings": 50, "baseline": 0}
+{"hand": 266, "pos": 1, "action": "b250c/kk/kk/b250f", "ours": ["b250", "k", "k", "f"], "hole": ["6c", "3c"], "board": ["Ad", "Ks", "5s", "8d", "2d"], "bot_hole": ["8h", "6d"], "winnings": -250, "baseline": -50}
+{"hand": 267, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jc", "7s"], "board": [], "bot_hole": ["Qs", "3h"], "winnings": -100, "baseline": -2500}
+{"hand": 268, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Kh", "5d"], "board": [], "bot_hole": ["Kd", "6c"], "winnings": -100, "baseline": 300}
+{"hand": 269, "pos": 0, "action": "f", "ours": [], "hole": ["Qc", "7s"], "board": [], "bot_hole": ["5d", "2h"], "winnings": 50, "baseline": 0}
+{"hand": 270, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["9h", "6s"], "board": [], "bot_hole": ["8d", "6c"], "winnings": -100, "baseline": -1300}
+{"hand": 271, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Td", "3c"], "board": [], "bot_hole": ["Kc", "3d"], "winnings": -100, "baseline": -300}
+{"hand": 272, "pos": 1, "action": "f", "ours": ["f"], "hole": ["Tc", "3s"], "board": [], "bot_hole": ["Jc", "2c"], "winnings": -50, "baseline": -850}
+{"hand": 273, "pos": 0, "action": "b200c/kk/b132c/kb268c", "ours": ["c", "k", "b132", "k", "c"], "hole": ["Ah", "Jc"], "board": ["Qc", "Td", "3h", "4s", "6c"], "bot_hole": ["Th", "7d"], "winnings": -600, "baseline": -800}
+{"hand": 274, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["8h", "6d"], "board": [], "bot_hole": ["4s", "2d"], "winnings": -100, "baseline": -300}
+{"hand": 275, "pos": 0, "action": "b200b575f", "ours": ["b575"], "hole": ["Ah", "Kh"], "board": [], "bot_hole": ["8d", "6c"], "winnings": 200, "baseline": 0}
+{"hand": 276, "pos": 1, "action": "b350b900f", "ours": ["b350", "f"], "hole": ["6s", "4h"], "board": [], "bot_hole": ["Th", "Td"], "winnings": -350, "baseline": -150}
+{"hand": 277, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["7s", "3d"], "board": [], "bot_hole": ["Qh", "Tc"], "winnings": -100, "baseline": 0}
+{"hand": 278, "pos": 1, "action": "f", "ours": ["f"], "hole": ["4s", "2c"], "board": [], "bot_hole": ["7c", "3s"], "winnings": -50, "baseline": 0}
+{"hand": 279, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Th", "7c"], "board": [], "bot_hole": ["9s", "5c"], "winnings": -100, "baseline": 700}
+{"hand": 280, "pos": 1, "action": "b250c/kk/b250c/kk", "ours": ["b250", "k", "c", "k"], "hole": ["Ac", "Td"], "board": ["Qd", "9c", "3s", "2s", "Jh"], "bot_hole": ["As", "3d"], "winnings": -500, "baseline": -100}
+{"hand": 281, "pos": 0, "action": "b200b575f", "ours": ["b575"], "hole": ["Ah", "9c"], "board": [], "bot_hole": ["7s", "3s"], "winnings": 200, "baseline": 600}
+{"hand": 282, "pos": 1, "action": "ck/kb300f", "ours": ["c", "b300"], "hole": ["Jd", "4c"], "board": ["Tc", "8h", "6c"], "bot_hole": ["Js", "2c"], "winnings": 100, "baseline": -100}
+{"hand": 283, "pos": 0, "action": "b200c/b132b400f", "ours": ["c", "b132", "f"], "hole": ["As", "4h"], "board": ["8c", "7h", "5s"], "bot_hole": ["Ah", "Td"], "winnings": -332, "baseline": -1132}
+{"hand": 284, "pos": 1, "action": "b350c/b650c/b1000c/b4000f", "ours": ["b350", "c", "c", "f"], "hole": ["As", "9h"], "board": ["Kd", "9c", "3c", "8c", "Th"], "bot_hole": ["Qc", "Jh"], "winnings": -2000, "baseline": -400}
+{"hand": 285, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["4d", "3d"], "board": [], "bot_hole": ["8d", "5h"], "winnings": -100, "baseline": -300}
+{"hand": 286, "pos": 1, "action": "b350b900f", "ours": ["b350", "f"], "hole": ["6d", "4h"], "board": [], "bot_hole": ["As", "Ts"], "winnings": -350, "baseline": -150}
+{"hand": 287, "pos": 0, "action": "b200b575c/kk/kk/b862b4825f", "ours": ["b575", "k", "k", "b862", "f"], "hole": ["9c", "4c"], "board": ["As", "Ac", "3d", "5h", "8s"], "bot_hole": ["Ad", "4h"], "winnings": -1437, "baseline": 3363}
+{"hand": 288, "pos": 1, "action": "ck/kk/kk/kk", "ours": ["c", "k", "k", "k"], "hole": ["Jc", "9s"], "board": ["Ac", "8d", "7d", "Qd", "9d"], "bot_hole": ["Ts", "3s"], "winnings": 100, "baseline": -100}
+{"hand": 289, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Ks", "5h"], "board": [], "bot_hole": ["Qh", "4h"], "winnings": -100, "baseline": 300}
+{"hand": 290, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Qd", "4h"], "board": [], "bot_hole": ["9d", "6d"], "winnings": -100, "baseline": 100}
+{"hand": 291, "pos": 0, "action": "b200c/b600c/kb1200f", "ours": ["c", "b600", "k", "f"], "hole": ["Ad", "Th"], "board": ["Jd", "8c", "2c", "5h"], "bot_hole": ["As", "2h"], "winnings": -800, "baseline": -400}
+{"hand": 292, "pos": 1, "action": "cb300b900f", "ours": ["c", "b900"], "hole": ["Ah", "Ac"], "board": [], "bot_hole": ["Qs", "8d"], "winnings": 300, "baseline": 100}
+{"hand": 293, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6s", "2c"], "board": [], "bot_hole": ["Th", "3h"], "winnings": -100, "baseline": 0}
+{"hand": 294, "pos": 1, "action": "ck/kk/b100f", "ours": ["c", "k", "f"], "hole": ["8d", "7d"], "board": ["Td", "6h", "6c", "Ks"], "bot_hole": ["5s", "2h"], "winnings": -100, "baseline": -300}
+{"hand": 295, "pos": 0, "action": "b200c/kb200c/kk/b600b2000b11300f", "ours": ["c", "k", "c", "k", "b600", "b11300"], "hole": ["Kc", "9c"], "board": ["Ah", "Ts", "8c", "4c", "3c"], "bot_hole": ["8h", "6c"], "winnings": 2400, "baseline": 2600}
+{"hand": 296, "pos": 1, "action": "ck/kk/kb150f", "ours": ["c", "k", "b150"], "hole": ["Qs", "Qh"], "board": ["Ah", "Kd", "8c", "Kc"], "bot_hole": ["6h", "3d"], "winnings": 100, "baseline": 500}
+{"hand": 297, "pos": 0, "action": "b200c/b132c/b219c/b1653c", "ours": ["c", "b132", "b219", "b1653"], "hole": ["Qc", "Td"], "board": ["Kd", "Jc", "6c", "Ac", "6d"], "bot_hole": ["As", "Jh"], "winnings": 2204, "baseline": 604}
+{"hand": 298, "pos": 1, "action": "b500b1500c/b3000f", "ours": ["b500", "c", "f"], "hole": ["As", "Td"], "board": ["7c", "3d", "2s"], "bot_hole": ["Kd", "9d"], "winnings": -1500, "baseline": -2300}
+{"hand": 299, "pos": 0, "action": "b200c/kk/b300c/b1500c", "ours": ["c", "k", "b300", "b1500"], "hole": ["Ah", "9h"], "board": ["As", "Jd", "5s", "3d", "8c"], "bot_hole": ["Jc", "3c"], "winnings": -2000, "baseline": 3400}
+{"hand": 300, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Ad", "Js"], "board": [], "bot_hole": ["Qs", "2s"], "winnings": 100, "baseline": -300}
+{"hand": 301, "pos": 0, "action": "b200b575f", "ours": ["b575"], "hole": ["8c", "6c"], "board": [], "bot_hole": ["8d", "2d"], "winnings": 200, "baseline": -200}
+{"hand": 302, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Ah", "3c"], "board": [], "bot_hole": ["Kc", "9d"], "winnings": 100, "baseline": -100}
+{"hand": 303, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Td", "5h"], "board": [], "bot_hole": ["As", "3h"], "winnings": -100, "baseline": 300}
+{"hand": 304, "pos": 1, "action": "b350c/kk/kk/kk", "ours": ["b350", "k", "k", "k"], "hole": ["As", "7d"], "board": ["Kd", "6h", "4s", "6s", "6d"], "bot_hole": ["Ac", "8h"], "winnings": 0, "baseline": 0}
+{"hand": 305, "pos": 0, "action": "b200c/b600f", "ours": ["c", "b600"], "hole": ["As", "5h"], "board": ["7h", "5s", "5d"], "bot_hole": ["Ac", "2h"], "winnings": 200, "baseline": -1000}
+{"hand": 306, "pos": 1, "action": "b250c/kb165c/kk/kk", "ours": ["b250", "b165", "k", "k"], "hole": ["7c", "3c"], "board": ["Qd", "6s", "2c", "3h", "2s"], "bot_hole": ["As", "9h"], "winnings": 415, "baseline": 15}
+{"hand": 307, "pos": 0, "action": "b200b365c/kb835c/kb1200c/b7200c", "ours": ["b365", "k", "c", "k", "c", "b7200"], "hole": ["Th", "8d"], "board": ["Ts", "9c", "7s", "3h", "Jc"], "bot_hole": ["Ah", "Td"], "winnings": 9600, "baseline": 7200}
+{"hand": 308, "pos": 1, "action": "cb300c/kb900f", "ours": ["c", "c", "b900"], "hole": ["9d", "7d"], "board": ["Kd", "6c", "2h"], "bot_hole": ["As", "7h"], "winnings": 300, "baseline": -100}
+{"hand": 309, "pos": 0, "action": "f", "ours": [], "hole": ["Jc", "8h"], "board": [], "bot_hole": ["7s", "3h"], "winnings": 50, "baseline": 0}
+{"hand": 310, "pos": 1, "action": "cb300c/kb198c/b402b2054c/kb1684b9598f", "ours": ["c", "c", "b198", "b2054", "b1684", "f"], "hole": ["Jh", "5h"], "board": ["Ac", "5s", "3c", "2c", "Qc"], "bot_hole": ["Kc", "8d"], "winnings": -4236, "baseline": -3836}
+{"hand": 311, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["7c", "4h"], "board": [], "bot_hole": ["Jd", "7h"], "winnings": -100, "baseline": 700}
+{"hand": 312, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["4c", "3d"], "board": [], "bot_hole": ["Kc", "7s"], "winnings": -100, "baseline": -300}
+{"hand": 313, "pos": 0, "action": "b200c/b132c/kk/b498f", "ours": ["c", "b132", "k", "b498"], "hole": ["Kd", "9d"], "board": ["Ks", "5d", "3h", "2c", "Js"], "bot_hole": ["7c", "6h"], "winnings": 332, "baseline": -68}
+{"hand": 314, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Ah", "2d"], "board": [], "bot_hole": ["6c", "5s"], "winnings": 100, "baseline": -100}
+{"hand": 315, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8h", "6s"], "board": [], "bot_hole": ["Ac", "2s"], "winnings": -100, "baseline": -500}
+{"hand": 316, "pos": 1, "action": "b250c/b250f", "ours": ["b250", "f"], "hole": ["5d", "2h"], "board": ["9s", "8h", "6h"], "bot_hole": ["Jh", "4d"], "winnings": -250, "baseline": -200}
+{"hand": 317, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["5h", "3s"], "board": [], "bot_hole": ["Ac", "4h"], "winnings": -100, "baseline": -2500}
+{"hand": 318, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Jc", "4h"], "board": [], "bot_hole": ["Js", "Jh"], "winnings": -100, "baseline": 100}
+{"hand": 319, "pos": 0, "action": "b200c/kb200c/kk/b600f", "ours": ["c", "k", "c", "k", "b600"], "hole": ["Th", "8c"], "board": ["As", "Ts", "8s", "9h", "6c"], "bot_hole": ["Kc", "3c"], "winnings": 400, "baseline": -200}
+{"hand": 320, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["9s", "6c"], "board": [], "bot_hole": ["8s", "6h"], "winnings": -100, "baseline": -100}
+{"hand": 321, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Tc", "4h"], "board": [], "bot_hole": ["Ah", "6c"], "winnings": -100, "baseline": -1300}
+{"hand": 322, "pos": 1, "action": "b250b750c/b750c/b3000c/b9000c", "ours": ["b250", "c", "c", "c", "c"], "hole": ["Th", "8h"], "board": ["As", "Ts", "9c", "5c", "4h"], "bot_hole": ["Ad", "Kh"], "winnings": -13500, "baseline": -12900}
+{"hand": 323, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Th", "2c"], "board": [], "bot_hole": ["Kd", "9d"], "winnings": -100, "baseline": -300}
+{"hand": 324, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Jh", "8s"], "board": [], "bot_hole": ["9c", "3s"], "winnings": 100, "baseline": -100}
+{"hand": 325, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Js", "5d"], "board": [], "bot_hole": ["Jh", "Th"], "winnings": -100, "baseline": 700}
+{"hand": 326, "pos": 1, "action": "ck/kk/kk/b100c", "ours": ["c", "k", "k", "c"], "hole": ["8s", "8h"], "board": ["Ks", "Jd", "6s", "Js", "4s"], "bot_hole": ["Jc", "2c"], "winnings": 200, "baseline": -2200}
+{"hand": 327, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["7d", "6s"], "board": [], "bot_hole": ["7s", "7c"], "winnings": -100, "baseline": -1700}
+{"hand": 328, "pos": 1, "action": "f", "ours": ["f"], "hole": ["4d", "2s"], "board": [], "bot_hole": ["Qc", "2c"], "winnings": -50, "baseline": 0}
+{"hand": 329, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["4h", "3h"], "board": [], "bot_hole": ["Qc", "7d"], "winnings": -100, "baseline": -300}
+{"hand": 330, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Kd", "2d"], "board": [], "bot_hole": ["Ad", "6h"], "winnings": 100, "baseline": -1100}
+{"hand": 331, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Ts", "3d"], "board": [], "bot_hole": ["Ah", "Qh"], "winnings": -100, "baseline": 300}
+{"hand": 332, "pos": 1, "action": "ck/kb300f", "ours": ["c", "b300"], "hole": ["4h", "4c"], "board": ["Ks", "Qc", "Ts"], "bot_hole": ["7c", "3h"], "winnings": 100, "baseline": 0}
+{"hand": 333, "pos": 0, "action": "f", "ours": [], "hole": ["Jh", "7d"], "board": [], "bot_hole": ["5h", "2s"], "winnings": 50, "baseline": 0}
+{"hand": 334, "pos": 1, "action": "b250c/kk/kk/b250b1188f", "ours": ["b250", "k", "k", "b1188"], "hole": ["As", "3s"], "board": ["Kh", "Kc", "3h", "Qh", "Ac"], "bot_hole": ["Ad", "9c"], "winnings": 500, "baseline": 500}
+{"hand": 335, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8d", "2s"], "board": [], "bot_hole": ["Jc", "6s"], "winnings": -100, "baseline": 0}
+{"hand": 336, "pos": 1, "action": "f", "ours": ["f"], "hole": ["7h", "2s"], "board": [], "bot_hole": ["Jd", "9s"], "winnings": -50, "baseline": 0}
+{"hand": 337, "pos": 0, "action": "b200c/kk/b132f", "ours": ["c", "k", "b132"], "hole": ["7s", "7c"], "board": ["Jh", "Td", "9s", "9c"], "bot_hole": ["7h", "2h"], "winnings": 200, "baseline": 0}
+{"hand": 338, "pos": 1, "action": "f", "ours": ["f"], "hole": ["7c", "2s"], "board": [], "bot_hole": ["Ah", "5s"], "winnings": -50, "baseline": 0}
+{"hand": 339, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6s", "2s"], "board": [], "bot_hole": ["Js", "9s"], "winnings": -100, "baseline": -1700}
+{"hand": 340, "pos": 1, "action": "f", "ours": ["f"], "hole": ["8s", "4d"], "board": [], "bot_hole": ["6c", "4c"], "winnings": -50, "baseline": 150}
+{"hand": 341, "pos": 0, "action": "b200b950c/kk/kb1050c/b3000b10000c", "ours": ["b950", "k", "k", "c", "b3000", "c"], "hole": ["Ac", "Ks"], "board": ["Ah", "9h", "7h", "8s", "3s"], "bot_hole": ["Kh", "Th"], "winnings": -12000, "baseline": -9600}
+{"hand": 342, "pos": 1, "action": "b250c/kb165c/kb274c/kb455c", "ours": ["b250", "b165", "b274", "b455"], "hole": ["Qh", "Th"], "board": ["Kh", "6d", "5s", "2h", "Ts"], "bot_hole": ["Kc", "7h"], "winnings": -1144, "baseline": -344}
+{"hand": 343, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["7d", "6s"], "board": [], "bot_hole": ["Js", "8h"], "winnings": -100, "baseline": 100}
+{"hand": 344, "pos": 1, "action": "b250b750c/b750c/kb990f", "ours": ["b250", "c", "c", "b990"], "hole": ["5d", "4d"], "board": ["8d", "3d", "3c", "As"], "bot_hole": ["Qh", "Js"], "winnings": 1500, "baseline": 1100}
+{"hand": 345, "pos": 0, "action": "b200c/kk/b132f", "ours": ["c", "k", "b132"], "hole": ["Ad", "8d"], "board": ["As", "8c", "7d", "6s"], "bot_hole": ["Qh", "2h"], "winnings": 200, "baseline": -400}
+{"hand": 346, "pos": 1, "action": "f", "ours": ["f"], "hole": ["5c", "2s"], "board": [], "bot_hole": ["Jd", "2h"], "winnings": -50, "baseline": 0}
+{"hand": 347, "pos": 0, "action": "b200c/kk/kb200c/kk", "ours": ["c", "k", "k", "c", "k"], "hole": ["Kd", "7d"], "board": ["Ad", "Qd", "Ts", "8h", "Jd"], "bot_hole": ["7h", "5h"], "winnings": 400, "baseline": 200}
+{"hand": 348, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Ah", "Kc"], "board": [], "bot_hole": ["Jc", "5h"], "winnings": 100, "baseline": 2500}
+{"hand": 349, "pos": 0, "action": "b200c/b300c/b750f", "ours": ["c", "b300", "b750"], "hole": ["Ac", "Td"], "board": ["Ad", "9c", "8s", "Jd"], "bot_hole": ["2s", "2c"], "winnings": 500, "baseline": 100}
+{"hand": 350, "pos": 1, "action": "f", "ours": ["f"], "hole": ["7s", "4h"], "board": [], "bot_hole": ["Jd", "3c"], "winnings": -50, "baseline": 0}
+{"hand": 351, "pos": 0, "action": "b200c/b132b700c/b594c/kb2106c", "ours": ["c", "b132", "c", "b594", "k", "c"], "hole": ["Kh", "9h"], "board": ["6h", "4c", "2h", "6s", "9c"], "bot_hole": ["6d", "4h"], "winnings": -3600, "baseline": -1200}
+{"hand": 352, "pos": 1, "action": "f", "ours": ["f"], "hole": ["Th", "4d"], "board": [], "bot_hole": ["Qh", "3c"], "winnings": -50, "baseline": -250}
+{"hand": 353, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8d", "7c"], "board": [], "bot_hole": ["Qd", "2h"], "winnings": -100, "baseline": -1300}
+{"hand": 354, "pos": 1, "action": "b350c/kb231b850b1846c/b1404c/kk", "ours": ["b350", "b231", "b1846", "c", "k"], "hole": ["Ks", "Jc"], "board": ["Tc", "8h", "7s", "Kh", "5h"], "bot_hole": ["Qs", "9d"], "winnings": 3600, "baseline": 3200}
+{"hand": 355, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6h", "4c"], "board": [], "bot_hole": ["3h", "2h"], "winnings": -100, "baseline": 100}
+{"hand": 356, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["8s", "3s"], "board": [], "bot_hole": ["9d", "6h"], "winnings": 100, "baseline": 300}
+{"hand": 357, "pos": 0, "action": "f", "ours": [], "hole": ["6c", "5d"], "board": [], "bot_hole": ["7h", "2d"], "winnings": 50, "baseline": 0}
+{"hand": 358, "pos": 1, "action": "b250c/kb750f", "ours": ["b250", "b750"], "hole": ["8s", "6d"], "board": ["Kc", "Jh", "Jd"], "bot_hole": ["8c", "6h"], "winnings": 250, "baseline": 50}
+{"hand": 359, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8h", "6d"], "board": [], "bot_hole": ["Jh", "Tc"], "winnings": -100, "baseline": 100}
+{"hand": 360, "pos": 1, "action": "b250c/kk/kb750f", "ours": ["b250", "k", "b750"], "hole": ["6s", "3h"], "board": ["Ah", "Ac", "Th", "Td"], "bot_hole": ["Jh", "4h"], "winnings": 250, "baseline": -150}
+{"hand": 361, "pos": 0, "action": "f", "ours": [], "hole": ["8c", "4d"], "board": [], "bot_hole": ["9h", "2d"], "winnings": 50, "baseline": 0}
+{"hand": 362, "pos": 1, "action": "b250c/kk/b250f", "ours": ["b250", "k", "f"], "hole": ["6c", "5h"], "board": ["Kc", "7d", "4d", "Ts"], "bot_hole": ["Kd", "4s"], "winnings": -250, "baseline": -5050}
+{"hand": 363, "pos": 0, "action": "b200c/b600c/kb400f", "ours": ["c", "b600", "k", "f"], "hole": ["Ad", "5d"], "board": ["6d", "6c", "2c", "9s"], "bot_hole": ["7d", "5h"], "winnings": -800, "baseline": -1000}
+{"hand": 364, "pos": 1, "action": "b350b900f", "ours": ["b350", "f"], "hole": ["Ac", "8d"], "board": [], "bot_hole": ["7d", "4d"], "winnings": -350, "baseline": -750}
+{"hand": 365, "pos": 0, "action": "b200c/kb200c/kk/kk", "ours": ["c", "k", "c", "k", "k"], "hole": ["8s", "5s"], "board": ["As", "Qc", "8c", "Td", "Jd"], "bot_hole": ["6d", "5c"], "winnings": 400, "baseline": 0}
+{"hand": 366, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Ks", "2c"], "board": [], "bot_hole": ["3d", "2d"], "winnings": -100, "baseline": -1300}
+{"hand": 367, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Ah", "4s"], "board": [], "bot_hole": ["4d", "3h"], "winnings": -100, "baseline": -1700}
+{"hand": 368, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["3s", "2s"], "board": [], "bot_hole": ["Ts", "2c"], "winnings": 100, "baseline": -100}
+{"hand": 369, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8s", "6c"], "board": [], "bot_hole": ["Jh", "7d"], "winnings": -100, "baseline": 100}
+{"hand": 370, "pos": 1, "action": "f", "ours": ["f"], "hole": ["6s", "2c"], "board": [], "bot_hole": ["Qd", "5h"], "winnings": -50, "baseline": 0}
+{"hand": 371, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Th", "5d"], "board": [], "bot_hole": ["Jd", "3s"], "winnings": -100, "baseline": 700}
+{"hand": 372, "pos": 1, "action": "b350c/b650c/kb660f", "ours": ["b350", "c", "b660"], "hole": ["7c", "6c"], "board": ["Kc", "5d", "4c", "3d"], "bot_hole": ["9c", "8h"], "winnings": 1000, "baseline": 800}
+{"hand": 373, "pos": 0, "action": "b200c/b600f", "ours": ["c", "b600"], "hole": ["Ac", "8h"], "board": ["Qh", "9s", "9c"], "bot_hole": ["Ah", "Tc"], "winnings": 200, "baseline": 600}
+{"hand": 374, "pos": 1, "action": "cb300c/b300c/kk/kk", "ours": ["c", "c", "c", "k", "k"], "hole": ["Jh", "Tc"], "board": ["Kc", "9s", "2c", "Ks", "8h"], "bot_hole": ["Qs", "Jd"], "winnings": -600, "baseline": -200}
+{"hand": 375, "pos": 0, "action": "b200b950f", "ours": ["b950"], "hole": ["Kh", "9c"], "board": [], "bot_hole": ["Qs", "5c"], "winnings": 200, "baseline": 600}
+{"hand": 376, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["As", "Jc"], "board": [], "bot_hole": ["5c", "4d"], "winnings": 100, "baseline": -700}
+{"hand": 377, "pos": 0, "action": "b200c/b132b400b1501f", "ours": ["c", "b132", "b1501"], "hole": ["Js", "Ts"], "board": ["9c", "7d", "5h"], "bot_hole": ["4s", "3c"], "winnings": 600, "baseline": 400}
+{"hand": 378, "pos": 1, "action": "b250c/kb165b550f", "ours": ["b250", "b165", "f"], "hole": ["5s", "4s"], "board": ["9s", "9d", "7d"], "bot_hole": ["9c", "8s"], "winnings": -415, "baseline": 385}
+{"hand": 379, "pos": 0, "action": "b200c/kk/kb200c/kk", "ours": ["c", "k", "k", "c", "k"], "hole": ["7s", "7c"], "board": ["Qd", "6c", "4s", "6s", "Ac"], "bot_hole": ["5s", "5d"], "winnings": 400, "baseline": -800}
+{"hand": 380, "pos": 1, "action": "ck/kk/b100c/b200c", "ours": ["c", "k", "c", "c"], "hole": ["9h", "6s"], "board": ["6h", "5h", "5c", "Kd", "Ac"], "bot_hole": ["Kc", "3h"], "winnings": -400, "baseline": -600}
+{"hand": 381, "pos": 0, "action": "f", "ours": [], "hole": ["7d", "3d"], "board": [], "bot_hole": ["8c", "2d"], "winnings": 50, "baseline": 0}
+{"hand": 382, "pos": 1, "action": "b250f", "ours": ["b250"], "hole": ["9s", "3c"], "board": [], "bot_hole": ["5h", "2c"], "winnings": 100, "baseline": 150}
+{"hand": 383, "pos": 0, "action": "b200c/kk/b300c/b1500f", "ours": ["c", "k", "b300", "b1500"], "hole": ["Ts", "Tc"], "board": ["Kh", "Kd", "2c", "9c", "Ac"], "bot_hole": ["As", "3c"], "winnings": 500, "baseline": -700}
+{"hand": 384, "pos": 1, "action": "b250c/kk/kk/kb165c", "ours": ["b250", "k", "k", "b165"], "hole": ["8c", "6d"], "board": ["Jc", "7h", "6c", "2s", "Kh"], "bot_hole": ["Ah", "4d"], "winnings": 415, "baseline": 215}
+{"hand": 385, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Td", "3c"], "board": [], "bot_hole": ["Kd", "6c"], "winnings": -100, "baseline": -300}
+{"hand": 386, "pos": 1, "action": "ck/kk/kk/kk", "ours": ["c", "k", "k", "k"], "hole": ["Ks", "4s"], "board": ["Js", "8h", "6c", "As", "Ad"], "bot_hole": ["Td", "7s"], "winnings": 100, "baseline": -300}
+{"hand": 387, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["7c", "3c"], "board": [], "bot_hole": ["9d", "4d"], "winnings": -100, "baseline": -300}
+{"hand": 388, "pos": 1, "action": "b500b1500c/kb4500f", "ours": ["b500", "c", "b4500"], "hole": ["Ac", "Td"], "board": ["9d", "8s", "4s"], "bot_hole": ["Kc", "6c"], "winnings": 1500, "baseline": -300}
+{"hand": 389, "pos": 0, "action": "b200b365b1800f", "ours": ["b365", "f"], "hole": ["Jc", "9s"], "board": [], "bot_hole": ["Qs", "8s"], "winnings": -365, "baseline": 235}
+{"hand": 390, "pos": 1, "action": "b500b1500c/b3000c/b4500f", "ours": ["b500", "c", "c", "f"], "hole": ["6s", "6c"], "board": ["9s", "8h", "4d", "5d"], "bot_hole": ["Ac", "Qc"], "winnings": -4500, "baseline": -5700}
+{"hand": 391, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Js", "5c"], "board": [], "bot_hole": ["9s", "7d"], "winnings": -100, "baseline": 100}
+{"hand": 392, "pos": 1, "action": "b250f", "ours": ["b250"], "hole": ["5c", "3c"], "board": [], "bot_hole": ["3h", "2s"], "winnings": 100, "baseline": -100}
+{"hand": 393, "pos": 0, "action": "b200c/kb200b1700c/kk/kb4100b16175f", "ours": ["c", "k", "b1700", "k", "k", "b16175"], "hole": ["Ad", "Jc"], "board": ["Ah", "Qs", "9h", "Qd", "As"], "bot_hole": ["Qh", "9s"], "winnings": 6000, "baseline": 2400}
+{"hand": 394, "pos": 1, "action": "f", "ours": ["f"], "hole": ["9c", "4d"], "board": [], "bot_hole": ["Ad", "Jh"], "winnings": -50, "baseline": 150}
+{"hand": 395, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9d", "8s"], "board": [], "bot_hole": ["Ad", "7h"], "winnings": -100, "baseline": 100}
+{"hand": 396, "pos": 1, "action": "b350c/kb231b1450b3040f", "ours": ["b350", "b231", "b3040"], "hole": ["Ad", "9s"], "board": ["Jc", "Ts", "7d"], "bot_hole": ["Qs", "8s"], "winnings": 1800, "baseline": 3000}
+{"hand": 397, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Tc", "6s"], "board": [], "bot_hole": ["Kc", "2s"], "winnings": -100, "baseline": 100}
+{"hand": 398, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Kc", "Qh"], "board": [], "bot_hole": ["Jc", "8d"], "winnings": 100, "baseline": -100}
+{"hand": 399, "pos": 0, "action": "b200c/b600c/kk/b528c", "ours": ["c", "b600", "k", "b528"], "hole": ["5s", "5c"], "board": ["Tc", "9h", "2s", "Td", "3s"], "bot_hole": ["Kc", "2h"], "winnings": 1328, "baseline": 528}
+{"hand": 400, "pos": 1, "action": "b250b750c/b1500f", "ours": ["b250", "c", "f"], "hole": ["Js", "9s"], "board": ["5d", "2s", "2c"], "bot_hole": ["As", "Jh"], "winnings": -750, "baseline": -150}
+{"hand": 401, "pos": 0, "action": "b200b575f", "ours": ["b575"], "hole": ["As", "Ah"], "board": [], "bot_hole": ["Jd", "6c"], "winnings": 200, "baseline": 0}
+{"hand": 402, "pos": 1, "action": "b250b750c/b750c/b1500b3975c/kb14525c", "ours": ["b250", "c", "c", "b3975", "b14525"], "hole": ["Th", "7h"], "board": ["9c", "6h", "3h", "Kd", "Qs"], "bot_hole": ["Qc", "4c"], "winnings": -20000, "baseline": -20600}
+{"hand": 403, "pos": 0, "action": "b200b575f", "ours": ["b575"], "hole": ["Ac", "Kc"], "board": [], "bot_hole": ["8c", "6h"], "winnings": 200, "baseline": 0}
+{"hand": 404, "pos": 1, "action": "cb300c/kb198c/kk/kk", "ours": ["c", "c", "b198", "k", "k"], "hole": ["Jd", "9c"], "board": ["Ac", "Tc", "2c", "Qd", "Qs"], "bot_hole": ["3h", "3d"], "winnings": -498, "baseline": -2898}
+{"hand": 405, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["4h", "3d"], "board": [], "bot_hole": ["9c", "7s"], "winnings": -100, "baseline": 700}
+{"hand": 406, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Jd", "6c"], "board": [], "bot_hole": ["Kh", "Tc"], "winnings": -100, "baseline": 100}
+{"hand": 407, "pos": 0, "action": "b200c/kb200c/kb400c/kb1600c", "ours": ["c", "k", "c", "k", "c", "k", "c"], "hole": ["Qc", "5c"], "board": ["Ah", "7s", "4c", "7h", "Kc"], "bot_hole": ["6d", "3s"], "winnings": 2400, "baseline": 2200}
+{"hand": 408, "pos": 1, "action": "b250f", "ours": ["b250"], "hole": ["6s", "4d"], "board": [], "bot_hole": ["8d", "3h"], "winnings": 100, "baseline": 0}
+{"hand": 409, "pos": 0, "action": "b200b950f", "ours": ["b950"], "hole": ["Kc", "7d"], "board": [], "bot_hole": ["9d", "8h"], "winnings": 200, "baseline": 600}
+{"hand": 410, "pos": 1, "action": "ck/kk/b100f", "ours": ["c", "k", "f"], "hole": ["Tc", "3s"], "board": ["Qh", "7h", "2s", "2d"], "bot_hole": ["3d", "2h"], "winnings": -100, "baseline": 1100}
+{"hand": 411, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8h", "5d"], "board": [], "bot_hole": ["8s", "4d"], "winnings": -100, "baseline": -500}
+{"hand": 412, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["9d", "7h"], "board": [], "bot_hole": ["Jc", "6s"], "winnings": 100, "baseline": 300}
+{"hand": 413, "pos": 0, "action": "b200b950c/b627c/b1041f", "ours": ["b950", "b627", "b1041"], "hole": ["Ac", "Qh"], "board": ["9s", "3c", "2s", "4c"], "bot_hole": ["Jc", "Td"], "winnings": 1577, "baseline": 2177}
+{"hand": 414, "pos": 1, "action": "b250b750f", "ours": ["b250", "f"], "hole": ["7s", "5c"], "board": [], "bot_hole": ["Ac", "Qd"], "winnings": -250, "baseline": -50}
+{"hand": 415, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["5c", "2d"], "board": [], "bot_hole": ["Kc", "Qd"], "winnings": -100, "baseline": -300}
+{"hand": 416, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["As", "7s"], "board": [], "bot_hole": ["3d", "2s"], "winnings": 100, "baseline": 300}
+{"hand": 417, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Qs", "6h"], "board": [], "bot_hole": ["Qc", "2d"], "winnings": -100, "baseline": -2500}
+{"hand": 418, "pos": 1, "action": "ck/kb300c/kb600c/kb660c", "ours": ["c", "b300", "b600", "b660"], "hole": ["8h", "5s"], "board": ["Ts", "Th", "2c", "6h", "4h"], "bot_hole": ["Td", "3c"], "winnings": -1660, "baseline": -1260}
+{"hand": 419, "pos": 0, "action": "b200b575c/kb625c/kk/b1800f", "ours": ["b575", "k", "c", "k", "b1800"], "hole": ["Jh", "Jd"], "board": ["8d", "6s", "4c", "Ad", "2h"], "bot_hole": ["Qc", "Ts"], "winnings": 1200, "baseline": 0}
+{"hand": 420, "pos": 1, "action": "b250c/kk/b250c/kk", "ours": ["b250", "k", "c", "k"], "hole": ["7d", "2d"], "board": ["As", "Ts", "7s", "9d", "3h"], "bot_hole": ["Qc", "9s"], "winnings": -500, "baseline": -300}
+{"hand": 421, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Ah", "2c"], "board": [], "bot_hole": ["4s", "2s"], "winnings": -100, "baseline": 100}
+{"hand": 422, "pos": 1, "action": "b350c/kb231c/kb383b1219f", "ours": ["b350", "b231", "b383", "f"], "hole": ["Qc", "8d"], "board": ["As", "Th", "3d", "7h"], "bot_hole": ["Ah", "3s"], "winnings": -964, "baseline": -764}
+{"hand": 423, "pos": 0, "action": "b200c/kb200c/kk/b600b2000c", "ours": ["c", "k", "c", "k", "b600", "c"], "hole": ["Qs", "Jc"], "board": ["Jh", "Th", "6d", "Td", "5c"], "bot_hole": ["As", "Ad"], "winnings": -2400, "baseline": -800}
+{"hand": 424, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["8h", "6s"], "board": [], "bot_hole": ["Td", "8d"], "winnings": -100, "baseline": 100}
+{"hand": 425, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9c", "3h"], "board": [], "bot_hole": ["Qh", "4d"], "winnings": -100, "baseline": 100}
+{"hand": 426, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["7s", "6h"], "board": [], "bot_hole": ["Kd", "2s"], "winnings": 100, "baseline": -100}
+{"hand": 427, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jh", "7s"], "board": [], "bot_hole": ["Td", "4c"], "winnings": -100, "baseline": -500}
+{"hand": 428, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Js", "6s"], "board": [], "bot_hole": ["Qh", "3d"], "winnings": 100, "baseline": -100}
+{"hand": 429, "pos": 0, "action": "f", "ours": [], "hole": ["Jd", "2d"], "board": [], "bot_hole": ["4d", "2h"], "winnings": 50, "baseline": 0}
+{"hand": 430, "pos": 1, "action": "ck/kk/kk/kk", "ours": ["c", "k", "k", "k"], "hole": ["Jd", "2h"], "board": ["8s", "7s", "2d", "4h", "Ah"], "bot_hole": ["Td", "2c"], "winnings": 100, "baseline": -300}
+{"hand": 431, "pos": 0, "action": "b200b575c/b380f", "ours": ["b575", "b380"], "hole": ["Qc", "Js"], "board": ["9c", "8s", "6d"], "bot_hole": ["As", "Qh"], "winnings": 575, "baseline": 375}
+{"hand": 432, "pos": 1, "action": "f", "ours": ["f"], "hole": ["9h", "3d"], "board": [], "bot_hole": ["Kh", "7c"], "winnings": -50, "baseline": 0}
+{"hand": 433, "pos": 0, "action": "f", "ours": [], "hole": ["Qs", "8d"], "board": [], "bot_hole": ["7h", "2c"], "winnings": 50, "baseline": 0}
+{"hand": 434, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Qc", "3h"], "board": [], "bot_hole": ["Ac", "6c"], "winnings": -100, "baseline": -300}
+{"hand": 435, "pos": 0, "action": "f", "ours": [], "hole": ["Qc", "3c"], "board": [], "bot_hole": ["8c", "3s"], "winnings": 50, "baseline": 0}
+{"hand": 436, "pos": 1, "action": "ck/kk/kk/kb150c", "ours": ["c", "k", "k", "b150"], "hole": ["Ts", "5s"], "board": ["7h", "6c", "2h", "9c", "6h"], "bot_hole": ["9h", "2d"], "winnings": -250, "baseline": -350}
+{"hand": 437, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["5d", "4h"], "board": [], "bot_hole": ["8d", "6s"], "winnings": -100, "baseline": 100}
+{"hand": 438, "pos": 1, "action": "cb300c/kk/b300c/kk", "ours": ["c", "c", "k", "c", "k"], "hole": ["8d", "8c"], "board": ["Ad", "Js", "5c", "2h", "3h"], "bot_hole": ["Kh", "6d"], "winnings": 600, "baseline": 200}
+{"hand": 439, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Kd", "3h"], "board": [], "bot_hole": ["7h", "6c"], "winnings": -100, "baseline": 100}
+{"hand": 440, "pos": 1, "action": "ck/kk/kb300f", "ours": ["c", "k", "b300"], "hole": ["Kc", "Ts"], "board": ["Qs", "Qc", "9c", "Js"], "bot_hole": ["7c", "2h"], "winnings": 100, "baseline": 0}
+{"hand": 441, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6c", "2d"], "board": [], "bot_hole": ["Ts", "3s"], "winnings": -100, "baseline": 0}
+{"hand": 442, "pos": 1, "action": "b350c/kb231c/kb383f", "ours": ["b350", "b231", "b383"], "hole": ["6d", "4s"], "board": ["9c", "8h", "6c", "Ac"], "bot_hole": ["Qh", "Jd"], "winnings": 581, "baseline": 181}
+{"hand": 443, "pos": 0, "action": "b200c/kk/b132f", "ours": ["c", "k", "b132"], "hole": ["Td", "8s"], "board": ["As", "Qs", "2d", "Ah"], "bot_hole": ["Jc", "3h"], "winnings": 200, "baseline": 0}
+{"hand": 444, "pos": 1, "action": "b250c/kk/b250c/kb1500f", "ours": ["b250", "k", "c", "b1500"], "hole": ["4c", "2c"], "board": ["8h", "8c", "4s", "9c", "Qc"], "bot_hole": ["Jh", "4d"], "winnings": 500, "baseline": 1300}
+{"hand": 445, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["5c", "3d"], "board": [], "bot_hole": ["Qc", "5d"], "winnings": -100, "baseline": -300}
+{"hand": 446, "pos": 1, "action": "b250c/kk/kb750c/kb3000c", "ours": ["b250", "k", "b750", "b3000"], "hole": ["6c", "3h"], "board": ["Js", "5s", "2c", "Th", "Ac"], "bot_hole": ["Ah", "2s"], "winnings": -4000, "baseline": -3600}
+{"hand": 447, "pos": 0, "action": "f", "ours": [], "hole": ["9d", "8s"], "board": [], "bot_hole": ["5c", "2s"], "winnings": 50, "baseline": 0}
+{"hand": 448, "pos": 1, "action": "ck/kk/kk/b100f", "ours": ["c", "k", "k", "f"], "hole": ["Kd", "2h"], "board": ["Ah", "Ad", "9c", "Ac", "5d"], "bot_hole": ["As", "2c"], "winnings": -100, "baseline": 300}
+{"hand": 449, "pos": 0, "action": "b200b950f", "ours": ["b950"], "hole": ["Kd", "Jc"], "board": [], "bot_hole": ["Kh", "4c"], "winnings": 200, "baseline": 400}
+{"hand": 450, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Th", "7s"], "board": [], "bot_hole": ["Qc", "2s"], "winnings": 100, "baseline": 500}
+{"hand": 451, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9d", "3c"], "board": [], "bot_hole": ["Qs", "5c"], "winnings": -100, "baseline": -300}
+{"hand": 452, "pos": 1, "action": "cb300c/b300f", "ours": ["c", "c", "f"], "hole": ["2h", "2c"], "board": ["7s", "6d", "4h"], "bot_hole": ["Ac", "Js"], "winnings": -300, "baseline": -900}
+{"hand": 453, "pos": 0, "action": "b200c/kb200c/kb800c/kk", "ours": ["c", "k", "c", "k", "c", "k"], "hole": ["Qc", "Ts"], "board": ["Tc", "6h", "3c", "4d", "5d"], "bot_hole": ["Kh", "Th"], "winnings": -1200, "baseline": 0}
+{"hand": 454, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Jh", "4s"], "board": [], "bot_hole": ["Ad", "Qs"], "winnings": -100, "baseline": 100}
+{"hand": 455, "pos": 0, "action": "f", "ours": [], "hole": ["Qd", "6c"], "board": [], "bot_hole": ["9c", "3d"], "winnings": 50, "baseline": 0}
+{"hand": 456, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Js", "Jd"], "board": [], "bot_hole": ["Ad", "7c"], "winnings": 100, "baseline": -300}
+{"hand": 457, "pos": 0, "action": "b200c/kb200f", "ours": ["c", "k", "f"], "hole": ["Td", "3d"], "board": ["Qc", "8h", "7h"], "bot_hole": ["Th", "Tc"], "winnings": -200, "baseline": 0}
+{"hand": 458, "pos": 1, "action": "b350c/kk/b250c/kb1800f", "ours": ["b350", "k", "c", "b1800"], "hole": ["Ah", "8d"], "board": ["Jc", "8c", "2d", "Td", "8s"], "bot_hole": ["Kd", "7d"], "winnings": 600, "baseline": 200}
+{"hand": 459, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6s", "3d"], "board": [], "bot_hole": ["Jh", "3c"], "winnings": -100, "baseline": -300}
+{"hand": 460, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Ah", "Td"], "board": [], "bot_hole": ["9d", "6h"], "winnings": 100, "baseline": -100}
+{"hand": 461, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Tc", "7d"], "board": [], "bot_hole": ["9s", "7h"], "winnings": -100, "baseline": 300}
+{"hand": 462, "pos": 1, "action": "b250f", "ours": ["b250"], "hole": ["8h", "2h"], "board": [], "bot_hole": ["3s", "2d"], "winnings": 100, "baseline": 300}
+{"hand": 463, "pos": 0, "action": "b200c/b132f", "ours": ["c", "b132"], "hole": ["7h", "7c"], "board": ["Ah", "Jc", "3d"], "bot_hole": ["9c", "6s"], "winnings": 200, "baseline": 0}
+{"hand": 464, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["As", "9c"], "board": [], "bot_hole": ["Jc", "6s"], "winnings": 100, "baseline": 1700}
+{"hand": 465, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["4s", "3d"], "board": [], "bot_hole": ["6h", "3c"], "winnings": -100, "baseline": 300}
+{"hand": 466, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Qh", "3d"], "board": [], "bot_hole": ["Jd", "7s"], "winnings": 100, "baseline": -100}
+{"hand": 467, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Tc", "4h"], "board": [], "bot_hole": ["Th", "5c"], "winnings": -100, "baseline": 100}
+{"hand": 468, "pos": 1, "action": "b500b1500f", "ours": ["b500", "f"], "hole": ["Jh", "6h"], "board": [], "bot_hole": ["Ad", "6d"], "winnings": -500, "baseline": -900}
+{"hand": 469, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8s", "4c"], "board": [], "bot_hole": ["Qh", "Js"], "winnings": -100, "baseline": -500}
+{"hand": 470, "pos": 1, "action": "cb300c/b300f", "ours": ["c", "c", "f"], "hole": ["Qh", "7h"], "board": ["6s", "5h", "2c"], "bot_hole": ["5d", "4s"], "winnings": -300, "baseline": -1900}
+{"hand": 471, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9h", "8s"], "board": [], "bot_hole": ["Qd", "4d"], "winnings": -100, "baseline": 1500}
+{"hand": 472, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["8d", "5c"], "board": [], "bot_hole": ["7h", "7d"], "winnings": -100, "baseline": 100}
+{"hand": 473, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["4h", "3s"], "board": [], "bot_hole": ["Qh", "6h"], "winnings": -100, "baseline": 100}
+{"hand": 474, "pos": 1, "action": "b350c/kb231c/kk/kk", "ours": ["b350", "b231", "k", "k"], "hole": ["As", "7h"], "board": ["Kc", "4d", "3d", "Qh", "8h"], "bot_hole": ["Ah", "3s"], "winnings": -581, "baseline": -381}
+{"hand": 475, "pos": 0, "action": "b200b575c/kk/kk/b862c", "ours": ["b575", "k", "k", "b862"], "hole": ["Qs", "Jh"], "board": ["As", "4s", "2d", "8h", "Jc"], "bot_hole": ["Qc", "2c"], "winnings": 1437, "baseline": 1037}
+{"hand": 476, "pos": 1, "action": "b250f", "ours": ["b250"], "hole": ["Ts", "8s"], "board": [], "bot_hole": ["3d", "2c"], "winnings": 100, "baseline": -1100}
+{"hand": 477, "pos": 0, "action": "b200c/b132c/b219c/b364b1249f", "ours": ["c", "b132", "b219", "b364", "f"], "hole": ["Ah", "5c"], "board": ["Kc", "Qs", "7d", "7s", "9c"], "bot_hole": ["Ks", "9h"], "winnings": -915, "baseline": -515}
+{"hand": 478, "pos": 1, "action": "ck/kb150c/b350f", "ours": ["c", "b150", "f"], "hole": ["Tc", "2s"], "board": ["Jh", "4h", "3h", "3d"], "bot_hole": ["Kh", "3c"], "winnings": -250, "baseline": 950}
+{"hand": 479, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jc", "7h"], "board": [], "bot_hole": ["Ac", "6h"], "winnings": -100, "baseline": -300}
+{"hand": 480, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Th", "5c"], "board": [], "bot_hole": ["Ks", "7c"], "winnings": -100, "baseline": 100}
+{"hand": 481, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["3d", "2s"], "board": [], "bot_hole": ["Qd", "4d"], "winnings": -100, "baseline": 100}
+{"hand": 482, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Ah", "2s"], "board": [], "bot_hole": ["Kh", "9s"], "winnings": 100, "baseline": -300}
+{"hand": 483, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9s", "2d"], "board": [], "bot_hole": ["Qc", "3h"], "winnings": -100, "baseline": 0}
+{"hand": 484, "pos": 1, "action": "f", "ours": ["f"], "hole": ["9h", "2s"], "board": [], "bot_hole": ["7c", "6s"], "winnings": -50, "baseline": 0}
+{"hand": 485, "pos": 0, "action": "b200c/b600c/kk/kb1000f", "ours": ["c", "b600", "k", "k", "f"], "hole": ["3d", "3c"], "board": ["As", "7d", "2h", "5h", "9c"], "bot_hole": ["Ah", "7h"], "winnings": -800, "baseline": 400}
+{"hand": 486, "pos": 1, "action": "b500c/kb330b1000b6505b19500f", "ours": ["b500", "b330", "b6505", "f"], "hole": ["Qs", "5s"], "board": ["Ts", "Tc", "4c"], "bot_hole": ["Ac", "Th"], "winnings": -7005, "baseline": -6605}
+{"hand": 487, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8c", "2d"], "board": [], "bot_hole": ["5h", "5c"], "winnings": -100, "baseline": 0}
+{"hand": 488, "pos": 1, "action": "cb300c/kb198b1500c/b3600f", "ours": ["c", "c", "b198", "c", "f"], "hole": ["Jd", "8d"], "board": ["Kh", "9s", "8c", "5c"], "bot_hole": ["Js", "Ts"], "winnings": -1800, "baseline": 0}
+{"hand": 489, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Ac", "3s"], "board": [], "bot_hole": ["Ah", "7h"], "winnings": -100, "baseline": 100}
+{"hand": 490, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Js", "6h"], "board": [], "bot_hole": ["Ah", "Kc"], "winnings": -100, "baseline": 100}
+{"hand": 491, "pos": 0, "action": "b200c/b132f", "ours": ["c", "b132"], "hole": ["Ad", "Tc"], "board": ["As", "2s", "2h"], "bot_hole": ["Jd", "6s"], "winnings": 200, "baseline": 0}
+{"hand": 492, "pos": 1, "action": "b250f", "ours": ["b250"], "hole": ["8d", "2d"], "board": [], "bot_hole": ["8h", "2s"], "winnings": 100, "baseline": 0}
+{"hand": 493, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9h", "7d"], "board": [], "bot_hole": ["6c", "3h"], "winnings": -100, "baseline": 100}
+{"hand": 494, "pos": 1, "action": "b350b1500f", "ours": ["b350", "f"], "hole": ["As", "7d"], "board": [], "bot_hole": ["9c", "8c"], "winnings": -350, "baseline": -950}
+{"hand": 495, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["4d", "2s"], "board": [], "bot_hole": ["9d", "4h"], "winnings": -100, "baseline": 300}
+{"hand": 496, "pos": 1, "action": "f", "ours": ["f"], "hole": ["4h", "2c"], "board": [], "bot_hole": ["Th", "3h"], "winnings": -50, "baseline": 0}
+{"hand": 497, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Js", "6d"], "board": [], "bot_hole": ["9c", "8s"], "winnings": -100, "baseline": 100}
+{"hand": 498, "pos": 1, "action": "ck/kk/b100c/kb132c", "ours": ["c", "k", "c", "b132"], "hole": ["6h", "6d"], "board": ["Ah", "8c", "7s", "8d", "Ad"], "bot_hole": ["9c", "5h"], "winnings": -332, "baseline": 2068}
+{"hand": 499, "pos": 0, "action": "f", "ours": [], "hole": ["Tc", "7s"], "board": [], "bot_hole": ["9h", "3c"], "winnings": 50, "baseline": 0}
+{"hand": 500, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Ah", "7h"], "board": [], "bot_hole": ["9s", "2c"], "winnings": 100, "baseline": 0}
+{"hand": 501, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["5d", "3h"], "board": [], "bot_hole": ["Th", "4h"], "winnings": -100, "baseline": 100}
+{"hand": 502, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Ac", "6d"], "board": [], "bot_hole": ["7h", "5d"], "winnings": 100, "baseline": -700}
+{"hand": 503, "pos": 0, "action": "b200b575f", "ours": ["b575"], "hole": ["8c", "4c"], "board": [], "bot_hole": ["Jh", "6c"], "winnings": 200, "baseline": 400}
+{"hand": 504, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Kc", "3d"], "board": [], "bot_hole": ["Ks", "Td"], "winnings": -100, "baseline": 300}
+{"hand": 505, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Qd", "4h"], "board": [], "bot_hole": ["Ad", "2s"], "winnings": -100, "baseline": -300}
+{"hand": 506, "pos": 1, "action": "b250c/kb165f", "ours": ["b250", "b165"], "hole": ["7h", "6h"], "board": ["Ts", "Th", "7c"], "bot_hole": ["Kc", "2s"], "winnings": 250, "baseline": 50}
+{"hand": 507, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["4d", "2d"], "board": [], "bot_hole": ["9s", "9c"], "winnings": -100, "baseline": -500}
+{"hand": 508, "pos": 1, "action": "b250c/kk/b250c/b1000c", "ours": ["b250", "k", "c", "c"], "hole": ["5s", "4s"], "board": ["Jh", "6h", "4d", "Jd", "9s"], "bot_hole": ["8h", "7d"], "winnings": 1500, "baseline": 1900}
+{"hand": 509, "pos": 0, "action": "b200c/kb200f", "ours": ["c", "k", "f"], "hole": ["Jd", "Td"], "board": ["4c", "3c", "2h"], "bot_hole": ["6s", "4s"], "winnings": -200, "baseline": 5200}
+{"hand": 510, "pos": 1, "action": "ck/kb150f", "ours": ["c", "b150"], "hole": ["Tc", "9d"], "board": ["Td", "4s", "2h"], "bot_hole": ["7d", "5h"], "winnings": 100, "baseline": -100}
+{"hand": 511, "pos": 0, "action": "b200c/kb200c/kb800f", "ours": ["c", "k", "c", "k", "f"], "hole": ["As", "7d"], "board": ["Js", "9h", "4s", "8d"], "bot_hole": ["Jh", "Tc"], "winnings": -400, "baseline": 0}
+{"hand": 512, "pos": 1, "action": "b250c/kk/b250f", "ours": ["b250", "k", "f"], "hole": ["6s", "4d"], "board": ["Qs", "Qd", "9h", "5c"], "bot_hole": ["Td", "9c"], "winnings": -250, "baseline": -50}
+{"hand": 513, "pos": 0, "action": "b200c/b600f", "ours": ["c", "b600"], "hole": ["Ad", "Jc"], "board": ["Qh", "6s", "2h"], "bot_hole": ["9h", "4c"], "winnings": 200, "baseline": 0}
+{"hand": 514, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Ad", "Qs"], "board": [], "bot_hole": ["Qd", "9s"], "winnings": 100, "baseline": 500}
+{"hand": 515, "pos": 0, "action": "b200c/kb200c/kk/kk", "ours": ["c", "k", "c", "k", "k"], "hole": ["Kd", "9h"], "board": ["Ac", "Jh", "7d", "Kc", "2d"], "bot_hole": ["Qc", "8h"], "winnings": 400, "baseline": 0}
+{"hand": 516, "pos": 1, "action": "b350c/kk/b250c/kk", "ours": ["b350", "k", "c", "k"], "hole": ["Ad", "7h"], "board": ["Kh", "9c", "8d", "Jd", "8h"], "bot_hole": ["Qc", "9s"], "winnings": -600, "baseline": -200}
+{"hand": 517, "pos": 0, "action": "b200c/b132c/kk/b219c", "ours": ["c", "b132", "k", "b219"], "hole": ["Js", "8s"], "board": ["Kd", "9s", "3c", "5s", "6s"], "bot_hole": ["Ac", "9c"], "winnings": 551, "baseline": -4849}
+{"hand": 518, "pos": 1, "action": "f", "ours": ["f"], "hole": ["9c", "2s"], "board": [], "bot_hole": ["Ac", "6s"], "winnings": -50, "baseline": 0}
+{"hand": 519, "pos": 0, "action": "b200b950f", "ours": ["b950"], "hole": ["Kc", "Th"], "board": [], "bot_hole": ["Jd", "7d"], "winnings": 200, "baseline": -200}
+{"hand": 520, "pos": 1, "action": "b250c/b250b662f", "ours": ["b250", "b662"], "hole": ["Jh", "Th"], "board": ["8h", "8d", "7h"], "bot_hole": ["9s", "4c"], "winnings": 500, "baseline": 900}
+{"hand": 521, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8c", "7s"], "board": [], "bot_hole": ["Td", "4d"], "winnings": -100, "baseline": 700}
+{"hand": 522, "pos": 1, "action": "ck/kk/kk/kk", "ours": ["c", "k", "k", "k"], "hole": ["Td", "3s"], "board": ["Kc", "6h", "3h", "Ac", "5d"], "bot_hole": ["Jd", "4h"], "winnings": 100, "baseline": -300}
+{"hand": 523, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6h", "5c"], "board": [], "bot_hole": ["Qh", "6s"], "winnings": -100, "baseline": 1100}
+{"hand": 524, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Qc", "4s"], "board": [], "bot_hole": ["Qh", "Td"], "winnings": -100, "baseline": 100}
+{"hand": 525, "pos": 0, "action": "b200c/kk/b132f", "ours": ["c", "k", "b132"], "hole": ["Th", "9s"], "board": ["Kc", "Qd", "5d", "5s"], "bot_hole": ["Js", "4h"], "winnings": 200, "baseline": 0}
+{"hand": 526, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Kh", "Kc"], "board": [], "bot_hole": ["Jc", "4h"], "winnings": 100, "baseline": -100}
+{"hand": 527, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jd", "8h"], "board": [], "bot_hole": ["Qc", "9s"], "winnings": -100, "baseline": -500}
+{"hand": 528, "pos": 1, "action": "b250f", "ours": ["b250"], "hole": ["5h", "4d"], "board": [], "bot_hole": ["9d", "2s"], "winnings": 100, "baseline": 0}
+{"hand": 529, "pos": 0, "action": "b200b950b2400f", "ours": ["b950", "f"], "hole": ["Ks", "Jd"], "board": [], "bot_hole": ["As", "9h"], "winnings": -950, "baseline": -150}
+{"hand": 530, "pos": 1, "action": "f", "ours": ["f"], "hole": ["7c", "4s"], "board": [], "bot_hole": ["9c", "6c"], "winnings": -50, "baseline": 0}
+{"hand": 531, "pos": 0, "action": "f", "ours": [], "hole": ["8c", "5h"], "board": [], "bot_hole": ["7s", "2c"], "winnings": 50, "baseline": 0}
+{"hand": 532, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Kc", "2s"], "board": [], "bot_hole": ["9h", "4s"], "winnings": 100, "baseline": 500}
+{"hand": 533, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8h", "3c"], "board": [], "bot_hole": ["Kh", "6s"], "winnings": -100, "baseline": 0}
+{"hand": 534, "pos": 1, "action": "b350c/kk/b250c/kk", "ours": ["b350", "k", "c", "k"], "hole": ["Qd", "3h"], "board": ["Qc", "8c", "6c", "3c", "Th"], "bot_hole": ["Js", "7s"], "winnings": 600, "baseline": 800}
+{"hand": 535, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6c", "2h"], "board": [], "bot_hole": ["8c", "5s"], "winnings": -100, "baseline": 0}
+{"hand": 536, "pos": 1, "action": "b350c/kb231c/kb383b1219f", "ours": ["b350", "b231", "b383", "f"], "hole": ["Jh", "7c"], "board": ["Ts", "9d", "4d", "4c"], "bot_hole": ["Jd", "8c"], "winnings": -964, "baseline": 236}
+{"hand": 537, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Qc", "3s"], "board": [], "bot_hole": ["Qd", "9d"], "winnings": -100, "baseline": 100}
+{"hand": 538, "pos": 1, "action": "b250c/kb165c/kb274c/kb2067c", "ours": ["b250", "b165", "b274", "b2067"], "hole": ["7s", "4s"], "board": ["Qh", "3s", "2s", "3h", "Jc"], "bot_hole": ["Ah", "2c"], "winnings": -2756, "baseline": -1556}
+{"hand": 539, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jd", "5c"], "board": [], "bot_hole": ["Qh", "3s"], "winnings": -100, "baseline": -3700}
+{"hand": 540, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["7h", "4d"], "board": [], "bot_hole": ["Qh", "3h"], "winnings": -100, "baseline": -50}
+{"hand": 541, "pos": 0, "action": "b200c/kk/b300c/b330c", "ours": ["c", "k", "b300", "b330"], "hole": ["Td", "9d"], "board": ["Jc", "Th", "7h", "2c", "Jd"], "bot_hole": ["Kh", "Js"], "winnings": -830, "baseline": 9970}
+{"hand": 542, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Td", "3d"], "board": [], "bot_hole": ["4c", "2d"], "winnings": 100, "baseline": 300}
+{"hand": 543, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Qc", "3h"], "board": [], "bot_hole": ["6h", "5s"], "winnings": -100, "baseline": 100}
+{"hand": 544, "pos": 1, "action": "b250c/kk/kb750f", "ours": ["b250", "k", "b750"], "hole": ["4s", "3h"], "board": ["Ks", "6c", "2h", "Th"], "bot_hole": ["Qs", "4h"], "winnings": 250, "baseline": 50}
+{"hand": 545, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Ks", "3d"], "board": [], "bot_hole": ["6h", "2h"], "winnings": -100, "baseline": 300}
+{"hand": 546, "pos": 1, "action": "b250b750c/b750c/b3000f", "ours": ["b250", "c", "c", "f"], "hole": ["5c", "4c"], "board": ["9h", "6c", "5d", "6h"], "bot_hole": ["Jh", "Th"], "winnings": -1500, "baseline": -300}
+{"hand": 547, "pos": 0, "action": "b200b575c/kb1225f", "ours": ["b575", "k", "f"], "hole": ["8c", "6h"], "board": ["Th", "5h", "2d"], "bot_hole": ["Kd", "6s"], "winnings": -575, "baseline": -375}
+{"hand": 548, "pos": 1, "action": "b250c/kk/kk/kb165c", "ours": ["b250", "k", "k", "b165"], "hole": ["5d", "2d"], "board": ["Ks", "9h", "4d", "4s", "Ah"], "bot_hole": ["Qs", "7d"], "winnings": -415, "baseline": -615}
+{"hand": 549, "pos": 0, "action": "b200c/kk/kb200c/kb400c", "ours": ["c", "k", "k", "c", "k", "c"], "hole": ["Td", "9h"], "board": ["Js", "3h", "2c", "9s", "Qs"], "bot_hole": ["Ad", "7c"], "winnings": 800, "baseline": 200}
+{"hand": 550, "pos": 1, "action": "b250c/kb165f", "ours": ["b250", "b165"], "hole": ["As", "3s"], "board": ["Th", "5s", "5d"], "bot_hole": ["Qs", "4h"], "winnings": 250, "baseline": 50}
+{"hand": 551, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["3h", "2h"], "board": [], "bot_hole": ["Ac", "5d"], "winnings": -100, "baseline": 100}
+{"hand": 552, "pos": 1, "action": "cb300c/b300c/b1200b8400f", "ours": ["c", "c", "c", "b8400"], "hole": ["Ts", "5s"], "board": ["6c", "5c", "4d", "8c"], "bot_hole": ["4h", "2c"], "winnings": 1800, "baseline": 1600}
+{"hand": 553, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jh", "6c"], "board": [], "bot_hole": ["4s", "3c"], "winnings": -100, "baseline": 100}
+{"hand": 554, "pos": 1, "action": "b250b750c/b750f", "ours": ["b250", "c", "f"], "hole": ["5s", "3d"], "board": ["Kc", "8h", "7d"], "bot_hole": ["Qs", "8s"], "winnings": -750, "baseline": -550}
+{"hand": 555, "pos": 0, "action": "b200b950b3000f", "ours": ["b950", "f"], "hole": ["Tc", "8h"], "board": [], "bot_hole": ["Qs", "Qd"], "winnings": -950, "baseline": -350}
+{"hand": 556, "pos": 1, "action": "b250c/kb750c/kk/kk", "ours": ["b250", "b750", "k", "k"], "hole": ["Th", "8c"], "board": ["As", "6c", "4h", "8d", "9c"], "bot_hole": ["2s", "2d"], "winnings": 1000, "baseline": -2600}
+{"hand": 557, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Js", "5d"], "board": [], "bot_hole": ["Jd", "4d"], "winnings": -100, "baseline": 100}
+{"hand": 558, "pos": 1, "action": "f", "ours": ["f"], "hole": ["9s", "4d"], "board": [], "bot_hole": ["As", "Ah"], "winnings": -50, "baseline": 150}
+{"hand": 559, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8c", "7h"], "board": [], "bot_hole": ["Ac", "3s"], "winnings": -100, "baseline": 100}
+{"hand": 560, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Ah", "7c"], "board": [], "bot_hole": ["7h", "3c"], "winnings": 100, "baseline": 0}
+{"hand": 561, "pos": 0, "action": "b200b575c/b1725b3450c/b2656f", "ours": ["b575", "b1725", "c", "b2656"], "hole": ["9s", "7s"], "board": ["Jh", "9d", "5c", "9c"], "bot_hole": ["8d", "7h"], "winnings": 4025, "baseline": 2825}
+{"hand": 562, "pos": 1, "action": "ck/kb300f", "ours": ["c", "b300"], "hole": ["Ks", "2c"], "board": ["9h", "8d", "8c"], "bot_hole": ["Jc", "2h"], "winnings": 100, "baseline": -300}
+{"hand": 563, "pos": 0, "action": "f", "ours": [], "hole": ["Qs", "2d"], "board": [], "bot_hole": ["9c", "3d"], "winnings": 50, "baseline": 0}
+{"hand": 564, "pos": 1, "action": "b250b750c/kb1125c/kb2812c/kk", "ours": ["b250", "c", "b1125", "b2812", "k"], "hole": ["Kc", "Qc"], "board": ["Qh", "Tc", "9h", "9c", "Kd"], "bot_hole": ["Ks", "Ts"], "winnings": 4687, "baseline": 1087}
+{"hand": 565, "pos": 0, "action": "b200c/b300f", "ours": ["c", "b300"], "hole": ["Ks", "6s"], "board": ["Kc", "Jh", "5s"], "bot_hole": ["Qh", "6c"], "winnings": 200, "baseline": 0}
+{"hand": 566, "pos": 1, "action": "ck/kk/b100c/b200c", "ours": ["c", "k", "c", "c"], "hole": ["Ts", "4h"], "board": ["7c", "6c", "2h", "Td", "Ad"], "bot_hole": ["7s", "4d"], "winnings": 400, "baseline": 600}
+{"hand": 567, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9c", "2h"], "board": [], "bot_hole": ["Th", "3d"], "winnings": -100, "baseline": 0}
+{"hand": 568, "pos": 1, "action": "b250c/kk/kk/b250c", "ours": ["b250", "k", "k", "c"], "hole": ["6c", "3c"], "board": ["Kc", "Td", "4c", "Ah", "6s"], "bot_hole": ["Th", "7c"], "winnings": -500, "baseline": -900}
+{"hand": 569, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jd", "2c"], "board": [], "bot_hole": ["6s", "4c"], "winnings": -100, "baseline": 300}
+{"hand": 570, "pos": 1, "action": "b250b750c/kk/b750b1988c/kk", "ours": ["b250", "c", "k", "b1988", "k"], "hole": ["3h", "2h"], "board": ["6d", "5h", "3d", "3s", "4h"], "bot_hole": ["Kh", "6h"], "winnings": 2738, "baseline": 2938}
+{"hand": 571, "pos": 0, "action": "f", "ours": [], "hole": ["Kc", "6h"], "board": [], "bot_hole": ["9d", "3s"], "winnings": 50, "baseline": 0}
+{"hand": 572, "pos": 1, "action": "cb300c/kk/b300c/b600c", "ours": ["c", "c", "k", "c", "c"], "hole": ["Tc", "8d"], "board": ["Ac", "Th", "9s", "4s", "6s"], "bot_hole": ["Ad", "7c"], "winnings": -1200, "baseline": -800}
+{"hand": 573, "pos": 0, "action": "b200b950b2400b7088f", "ours": ["b950", "b7088"], "hole": ["Kh", "Kd"], "board": [], "bot_hole": ["6s", "5s"], "winnings": 2400, "baseline": -1200}
+{"hand": 574, "pos": 1, "action": "f", "ours": ["f"], "hole": ["9d", "5c"], "board": [], "bot_hole": ["Js", "7s"], "winnings": -50, "baseline": 150}
+{"hand": 575, "pos": 0, "action": "b200c/b132f", "ours": ["c", "b132"], "hole": ["Ah", "Tc"], "board": ["8s", "6s", "4h"], "bot_hole": ["Qh", "3c"], "winnings": 200, "baseline": -200}
+{"hand": 576, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Ah", "7c"], "board": [], "bot_hole": ["8d", "3d"], "winnings": 100, "baseline": -300}
+{"hand": 577, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6h", "2h"], "board": [], "bot_hole": ["Js", "Jd"], "winnings": -100, "baseline": -1300}
+{"hand": 578, "pos": 1, "action": "b250c/kb165c/kk/b385f", "ours": ["b250", "b165", "k", "f"], "hole": ["6c", "3s"], "board": ["8s", "4s", "3d", "5d", "Kh"], "bot_hole": ["Ad", "5s"], "winnings": -415, "baseline": 385}
+{"hand": 579, "pos": 0, "action": "b200b575c/b380c/b630f", "ours": ["b575", "b380", "b630"], "hole": ["Jh", "Tc"], "board": ["Th", "6h", "2d", "Ad"], "bot_hole": ["Qh", "Jd"], "winnings": 955, "baseline": -2645}
+{"hand": 580, "pos": 1, "action": "ck/kk/kk/kk", "ours": ["c", "k", "k", "k"], "hole": ["Kh", "3h"], "board": ["Jd", "5s", "3s", "Js", "5c"], "bot_hole": ["Ts", "4d"], "winnings": 100, "baseline": -100}
+{"hand": 581, "pos": 0, "action": "b200b950b3000b20000f", "ours": ["b950", "b20000"], "hole": ["Js", "Jc"], "board": [], "bot_hole": ["Kd", "5d"], "winnings": 3000, "baseline": 10200}
+{"hand": 582, "pos": 1, "action": "f", "ours": ["f"], "hole": ["5s", "3c"], "board": [], "bot_hole": ["Jc", "Tc"], "winnings": -50, "baseline": 150}
+{"hand": 583, "pos": 0, "action": "b200b365c/b241c/kk/b909c", "ours": ["b365", "b241", "k", "b909"], "hole": ["Ks", "Qs"], "board": ["Qh", "8h", "6s", "Ac", "2s"], "bot_hole": ["Kh", "2h"], "winnings": 1515, "baseline": -3885}
+{"hand": 584, "pos": 1, "action": "b350c/kb1050c/b1600b18600c/", "ours": ["b350", "b1050", "b18600"], "hole": ["Ad", "9h"], "board": ["Ah", "Jc", "9d", "Td", "3d"], "bot_hole": ["Jd", "8d"], "winnings": -20000, "baseline": -17600}
+{"hand": 585, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["4c", "3s"], "board": [], "bot_hole": ["Jc", "5h"], "winnings": -100, "baseline": 100}
+{"hand": 586, "pos": 1, "action": "ck/kk/b100f", "ours": ["c", "k", "f"], "hole": ["Qd", "Js"], "board": ["Ks", "Ts", "7s", "Th"], "bot_hole": ["9d", "8c"], "winnings": -100, "baseline": -1300}
+{"hand": 587, "pos": 0, "action": "b200b950f", "ours": ["b950"], "hole": ["Kh", "6s"], "board": [], "bot_hole": ["Td", "7s"], "winnings": 200, "baseline": 400}
+{"hand": 588, "pos": 1, "action": "f", "ours": ["f"], "hole": ["9d", "5s"], "board": [], "bot_hole": ["Kc", "8c"], "winnings": -50, "baseline": -450}
+{"hand": 589, "pos": 0, "action": "b200b950f", "ours": ["b950"], "hole": ["Kh", "7s"], "board": [], "bot_hole": ["Js", "6c"], "winnings": 200, "baseline": 1000}
+{"hand": 590, "pos": 1, "action": "b350c/kb231c/kb872c/kb2180c", "ours": ["b350", "b231", "b872", "b2180"], "hole": ["Kd", "8c"], "board": ["7h", "5c", "3d", "2s", "Ah"], "bot_hole": ["Td", "7s"], "winnings": -3633, "baseline": -3233}
+{"hand": 591, "pos": 0, "action": "b200c/kb200c/kk/b600f", "ours": ["c", "k", "c", "k", "b600"], "hole": ["Jd", "7d"], "board": ["Kh", "7h", "3d", "6s", "Jh"], "bot_hole": ["9h", "9d"], "winnings": 400, "baseline": -800}
+{"hand": 592, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Kd", "Jc"], "board": [], "bot_hole": ["5s", "3h"], "winnings": 100, "baseline": -100}
+{"hand": 593, "pos": 0, "action": "b200c/b300c/kk/b330b2200b7652f", "ours": ["c", "b300", "k", "b330", "b7652"], "hole": ["Qc", "4c"], "board": ["Kd", "Tc", "4s", "8s", "4h"], "bot_hole": ["Ad", "8h"], "winnings": 2700, "baseline": 1500}
+{"hand": 594, "pos": 1, "action": "f", "ours": ["f"], "hole": ["8s", "3d"], "board": [], "bot_hole": ["Qs", "Js"], "winnings": -50, "baseline": 0}
+{"hand": 595, "pos": 0, "action": "b200c/b600c/kk/kk", "ours": ["c", "b600", "k", "k"], "hole": ["Qs", "6s"], "board": ["As", "Kd", "Kc", "Qh", "Jc"], "bot_hole": ["Qc", "8s"], "winnings": 0, "baseline": -200}
+{"hand": 596, "pos": 1, "action": "ck/kk/b100b265c/kb548b1235f", "ours": ["c", "k", "b265", "b548", "f"], "hole": ["Ks", "8d"], "board": ["Jh", "Jd", "4s", "7h", "6c"], "bot_hole": ["Kd", "4d"], "winnings": -913, "baseline": -313}
+{"hand": 597, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8s", "6d"], "board": [], "bot_hole": ["Td", "6c"], "winnings": -100, "baseline": -3700}
+{"hand": 598, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Ad", "2s"], "board": [], "bot_hole": ["Jd", "9s"], "winnings": 100, "baseline": 700}
+{"hand": 599, "pos": 0, "action": "b200c/kb200f", "ours": ["c", "k", "f"], "hole": ["Jd", "3d"], "board": ["Ts", "8h", "5s"], "bot_hole": ["Jc", "8c"], "winnings": -200, "baseline": 0}
+{"hand": 600, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Kc", "8s"], "board": [], "bot_hole": ["Ks", "2d"], "winnings": 100, "baseline": -100}
+{"hand": 601, "pos": 0, "action": "f", "ours": [], "hole": ["Ad", "Jh"], "board": [], "bot_hole": ["8d", "3h"], "winnings": 50, "baseline": 0}
+{"hand": 602, "pos": 1, "action": "ck/kb150f", "ours": ["c", "b150"], "hole": ["Td", "8d"], "board": ["Ts", "5d", "5c"], "bot_hole": ["9d", "2h"], "winnings": 100, "baseline": 0}
+{"hand": 603, "pos": 0, "action": "b200c/b132f", "ours": ["c", "b132"], "hole": ["Ad", "7c"], "board": ["9s", "7h", "6h"], "bot_hole": ["Qh", "4s"], "winnings": 200, "baseline": -600}
+{"hand": 604, "pos": 1, "action": "ck/kb300f", "ours": ["c", "b300"], "hole": ["Ts", "3h"], "board": ["Jh", "9d", "2d"], "bot_hole": ["6c", "3c"], "winnings": 100, "baseline": -100}
+{"hand": 605, "pos": 0, "action": "f", "ours": [], "hole": ["9c", "6c"], "board": [], "bot_hole": ["4d", "2c"], "winnings": 50, "baseline": 0}
+{"hand": 606, "pos": 1, "action": "ck/kb300f", "ours": ["c", "b300"], "hole": ["8h", "5c"], "board": ["Kc", "4h", "4c"], "bot_hole": ["7d", "6h"], "winnings": 100, "baseline": -100}
+{"hand": 607, "pos": 0, "action": "b200b365c/kk/b241f", "ours": ["b365", "k", "b241"], "hole": ["Ks", "9c"], "board": ["8c", "5h", "2s", "Kh"], "bot_hole": ["Qh", "7d"], "winnings": 365, "baseline": 165}
+{"hand": 608, "pos": 1, "action": "b250c/kk/kk/b250b2125f", "ours": ["b250", "k", "k", "b2125"], "hole": ["9d", "6d"], "board": ["Jc", "7d", "5h", "6c", "8s"], "bot_hole": ["Qh", "Tc"], "winnings": 500, "baseline": 300}
+{"hand": 609, "pos": 0, "action": "f", "ours": [], "hole": ["Jd", "4s"], "board": [], "bot_hole": ["8s", "2h"], "winnings": 50, "baseline": 0}
+{"hand": 610, "pos": 1, "action": "f", "ours": ["f"], "hole": ["4d", "3c"], "board": [], "bot_hole": ["Kd", "3h"], "winnings": -50, "baseline": -250}
+{"hand": 611, "pos": 0, "action": "b200c/kb200c/b264f", "ours": ["c", "k", "c", "b264"], "hole": ["Ah", "Jh"], "board": ["Ad", "3c", "2h", "3d"], "bot_hole": ["Qd", "2c"], "winnings": 400, "baseline": 200}
+{"hand": 612, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["9c", "6h"], "board": [], "bot_hole": ["Ah", "8s"], "winnings": -100, "baseline": 1100}
+{"hand": 613, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8c", "2h"], "board": [], "bot_hole": ["Js", "Jc"], "winnings": -100, "baseline": 0}
+{"hand": 614, "pos": 1, "action": "b250c/kb165f", "ours": ["b250", "b165"], "hole": ["Kh", "9h"], "board": ["Ad", "5d", "2h"], "bot_hole": ["Qs", "6c"], "winnings": 250, "baseline": 50}
+{"hand": 615, "pos": 0, "action": "f", "ours": [], "hole": ["6h", "3d"], "board": [], "bot_hole": ["9c", "3s"], "winnings": 50, "baseline": 0}
+{"hand": 616, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["As", "Qh"], "board": [], "bot_hole": ["Jc", "4h"], "winnings": 100, "baseline": 900}
+{"hand": 617, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Ts", "6h"], "board": [], "bot_hole": ["Ah", "4s"], "winnings": -100, "baseline": -900}
+{"hand": 618, "pos": 1, "action": "ck/kb300f", "ours": ["c", "b300"], "hole": ["Tc", "5h"], "board": ["8h", "7c", "3c"], "bot_hole": ["Qs", "6d"], "winnings": 100, "baseline": -100}
+{"hand": 619, "pos": 0, "action": "b200b575f", "ours": ["b575"], "hole": ["Ts", "5s"], "board": [], "bot_hole": ["Js", "6c"], "winnings": 200, "baseline": -200}
+{"hand": 620, "pos": 1, "action": "cb300c/kk/kk/b300c", "ours": ["c", "c", "k", "k", "c"], "hole": ["7s", "7h"], "board": ["Ac", "Kd", "8c", "5h", "Tc"], "bot_hole": ["Td", "9s"], "winnings": -600, "baseline": 0}
+{"hand": 621, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8c", "7d"], "board": [], "bot_hole": ["9s", "3s"], "winnings": -100, "baseline": -500}
+{"hand": 622, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Qd", "7s"], "board": [], "bot_hole": ["Tc", "5h"], "winnings": 100, "baseline": 500}
+{"hand": 623, "pos": 0, "action": "b200b950f", "ours": ["b950"], "hole": ["Ah", "Kh"], "board": [], "bot_hole": ["8s", "2s"], "winnings": 200, "baseline": 0}
+{"hand": 624, "pos": 1, "action": "cb300c/b300c/b1200c/kk", "ours": ["c", "c", "c", "c", "k"], "hole": ["9h", "9d"], "board": ["As", "Qd", "5h", "3d", "Kd"], "bot_hole": ["Ah", "Th"], "winnings": -1800, "baseline": -1200}
+{"hand": 625, "pos": 0, "action": "b200c/kb200c/kb400c/kk", "ours": ["c", "k", "c", "k", "c", "k"], "hole": ["Ah", "6h"], "board": ["5s", "5d", "4s", "Kh", "2h"], "bot_hole": ["Tc", "4c"], "winnings": -800, "baseline": -600}
+{"hand": 626, "pos": 1, "action": "f", "ours": ["f"], "hole": ["4h", "2s"], "board": [], "bot_hole": ["Jc", "3d"], "winnings": -50, "baseline": 0}
+{"hand": 627, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9d", "2s"], "board": [], "bot_hole": ["9c", "6c"], "winnings": -100, "baseline": 0}
+{"hand": 628, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["As", "6h"], "board": [], "bot_hole": ["Kc", "2d"], "winnings": 100, "baseline": -100}
+{"hand": 629, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Qh", "4d"], "board": [], "bot_hole": ["Qs", "5s"], "winnings": -100, "baseline": 100}
+{"hand": 630, "pos": 1, "action": "ck/kk/kb300f", "ours": ["c", "k", "b300"], "hole": ["6h", "6d"], "board": ["7d", "4c", "3d", "5d"], "bot_hole": ["9h", "4s"], "winnings": 100, "baseline": -300}
+{"hand": 631, "pos": 0, "action": "b200c/b600f", "ours": ["c", "b600"], "hole": ["As", "Qd"], "board": ["9h", "5s", "3h"], "bot_hole": ["4d", "3c"], "winnings": 200, "baseline": 0}
+{"hand": 632, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Td", "Tc"], "board": [], "bot_hole": ["7c", "4d"], "winnings": 100, "baseline": -100}
+{"hand": 633, "pos": 0, "action": "b200b950f", "ours": ["b950"], "hole": ["Ks", "Kh"], "board": [], "bot_hole": ["7s", "6d"], "winnings": 200, "baseline": -400}
+{"hand": 634, "pos": 1, "action": "b350c/b650c/b2000c/kk", "ours": ["b350", "c", "c", "k"], "hole": ["Ac", "8d"], "board": ["Tc", "4d", "2c", "8c", "Jh"], "bot_hole": ["5s", "3s"], "winnings": 3000, "baseline": 600}
+{"hand": 635, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6h", "4d"], "board": [], "bot_hole": ["Kh", "6s"], "winnings": -100, "baseline": -300}
+{"hand": 636, "pos": 1, "action": "f", "ours": ["f"], "hole": ["7c", "2d"], "board": [], "bot_hole": ["Ts", "7h"], "winnings": -50, "baseline": 0}
+{"hand": 637, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Tc", "5d"], "board": [], "bot_hole": ["Jc", "7s"], "winnings": -100, "baseline": 100}
+{"hand": 638, "pos": 1, "action": "ck/kk/kb150f", "ours": ["c", "k", "b150"], "hole": ["7h", "4s"], "board": ["Ts", "Td", "3c", "3d"], "bot_hole": ["Jc", "5h"], "winnings": 100, "baseline": 150}
+{"hand": 639, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6d", "4s"], "board": [], "bot_hole": ["Kh", "6c"], "winnings": -100, "baseline": 1100}
+{"hand": 640, "pos": 1, "action": "b250c/kk/kb165c/kk", "ours": ["b250", "k", "b165", "k"], "hole": ["Kd", "8d"], "board": ["Qh", "9s", "6c", "Ac", "2h"], "bot_hole": ["8s", "6d"], "winnings": -415, "baseline": -215}
+{"hand": 641, "pos": 0, "action": "b200c/kb200f", "ours": ["c", "k", "f"], "hole": ["Jh", "2h"], "board": ["Qc", "9s", "3c"], "bot_hole": ["Jd", "3d"], "winnings": -200, "baseline": 0}
+{"hand": 642, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Ah", "9h"], "board": [], "bot_hole": ["7h", "5d"], "winnings": 100, "baseline": -100}
+{"hand": 643, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6d", "2h"], "board": [], "bot_hole": ["Ac", "Th"], "winnings": -100, "baseline": 0}
+{"hand": 644, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Jh", "Jd"], "board": [], "bot_hole": ["Qh", "8d"], "winnings": 100, "baseline": -100}
+{"hand": 645, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Td", "4h"], "board": [], "bot_hole": ["Ac", "7c"], "winnings": -100, "baseline": 300}
+{"hand": 646, "pos": 1, "action": "ck/kk/kb150c/kb165f", "ours": ["c", "k", "b150", "b165"], "hole": ["4c", "3h"], "board": ["Qs", "9h", "7c", "Js", "5h"], "bot_hole": ["Th", "6c"], "winnings": 250, "baseline": 450}
+{"hand": 647, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Kd", "3c"], "board": [], "bot_hole": ["Jc", "Td"], "winnings": -100, "baseline": -1700}
+{"hand": 648, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Th", "5d"], "board": [], "bot_hole": ["Jc", "7c"], "winnings": -100, "baseline": 100}
+{"hand": 649, "pos": 0, "action": "b200b365c/b241f", "ours": ["b365", "b241"], "hole": ["As", "Qc"], "board": ["Qd", "5c", "4s"], "bot_hole": ["Jd", "2c"], "winnings": 365, "baseline": 165}
+{"hand": 650, "pos": 1, "action": "ck/kk/b100c/b200b950f", "ours": ["c", "k", "c", "b950"], "hole": ["8h", "7d"], "board": ["Jd", "9d", "7h", "Ad", "Jc"], "bot_hole": ["8d", "4c"], "winnings": 400, "baseline": 0}
+{"hand": 651, "pos": 0, "action": "b200c/kb200c/b600c/b1500c", "ours": ["c", "k", "c", "b600", "b1500"], "hole": ["Jh", "9s"], "board": ["Js", "3s", "3h", "8h", "9h"], "bot_hole": ["As", "Ac"], "winnings": -2500, "baseline": -1900}
+{"hand": 652, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Kd", "5h"], "board": [], "bot_hole": ["Qh", "3c"], "winnings": 100, "baseline": -100}
+{"hand": 653, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jc", "4h"], "board": [], "bot_hole": ["Ks", "3d"], "winnings": -100, "baseline": 300}
+{"hand": 654, "pos": 1, "action": "f", "ours": ["f"], "hole": ["4c", "2c"], "board": [], "bot_hole": ["Jd", "8c"], "winnings": -50, "baseline": -250}
+{"hand": 655, "pos": 0, "action": "b200c/kk/b132c/kb868f", "ours": ["c", "k", "b132", "k", "f"], "hole": ["As", "Td"], "board": ["Jh", "7s", "4h", "5c", "8h"], "bot_hole": ["Ac", "3s"], "winnings": -332, "baseline": -532}
+{"hand": 656, "pos": 1, "action": "b350c/kk/kb525f", "ours": ["b350", "k", "b525"], "hole": ["Ks", "9d"], "board": ["Qs", "7d", "6s", "2c"], "bot_hole": ["Jd", "8d"], "winnings": 350, "baseline": -250}
+{"hand": 657, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Qh", "3s"], "board": [], "bot_hole": ["Ad", "6h"], "winnings": -100, "baseline": -500}
+{"hand": 658, "pos": 1, "action": "f", "ours": ["f"], "hole": ["9s", "5c"], "board": [], "bot_hole": ["Qh", "7d"], "winnings": -50, "baseline": 1150}
+{"hand": 659, "pos": 0, "action": "b200c/b132c/kk/kk", "ours": ["c", "b132", "k", "k"], "hole": ["Kh", "3h"], "board": ["Ad", "9c", "5c", "3c", "Kc"], "bot_hole": ["Kd", "Ts"], "winnings": 332, "baseline": -868}
+{"hand": 660, "pos": 1, "action": "f", "ours": ["f"], "hole": ["9s", "2c"], "board": [], "bot_hole": ["Th", "2h"], "winnings": -50, "baseline": 0}
+{"hand": 661, "pos": 0, "action": "b200c/kb200f", "ours": ["c", "k", "f"], "hole": ["Jc", "9d"], "board": ["Ad", "5h", "3s"], "bot_hole": ["7s", "4s"], "winnings": -200, "baseline": 1000}
+{"hand": 662, "pos": 1, "action": "b350b1500f", "ours": ["b350", "f"], "hole": ["Jc", "8d"], "board": [], "bot_hole": ["Ad", "Qs"], "winnings": -350, "baseline": -150}
+{"hand": 663, "pos": 0, "action": "b200b575b1800b5419f", "ours": ["b575", "b5419"], "hole": ["Kd", "Qc"], "board": [], "bot_hole": ["Ts", "7s"], "winnings": 1800, "baseline": -5400}
+{"hand": 664, "pos": 1, "action": "f", "ours": ["f"], "hole": ["8h", "4s"], "board": [], "bot_hole": ["3h", "3d"], "winnings": -50, "baseline": 150}
+{"hand": 665, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9s", "7c"], "board": [], "bot_hole": ["Kh", "6h"], "winnings": -100, "baseline": 100}
+{"hand": 666, "pos": 1, "action": "b250b750c/kb2250f", "ours": ["b250", "c", "b2250"], "hole": ["Kd", "Qh"], "board": ["Ad", "Kh", "2c"], "bot_hole": ["8s", "6s"], "winnings": 750, "baseline": 550}
+{"hand": 667, "pos": 0, "action": "b200c/b600b1200b2322f", "ours": ["c", "b600", "b2322"], "hole": ["Qc", "Jh"], "board": ["As", "Kd", "8d"], "bot_hole": ["Kc", "Jc"], "winnings": 1400, "baseline": 200}
+{"hand": 668, "pos": 1, "action": "cb300b900c/kb2700f", "ours": ["c", "b900", "b2700"], "hole": ["Qh", "Tc"], "board": ["Th", "4h", "4c"], "bot_hole": ["Ad", "Qs"], "winnings": 900, "baseline": -300}
+{"hand": 669, "pos": 0, "action": "b200b575c/kk/kk/kb625f", "ours": ["b575", "k", "k", "k", "f"], "hole": ["Ad", "Kd"], "board": ["Jc", "6d", "2s", "4h", "8d"], "bot_hole": ["8h", "7d"], "winnings": -575, "baseline": 625}
+{"hand": 670, "pos": 1, "action": "b350c/kk/kb525b2350c/b2700f", "ours": ["b350", "k", "b525", "c", "f"], "hole": ["Jd", "6h"], "board": ["Jh", "8s", "2h", "4c", "Qh"], "bot_hole": ["Jc", "8c"], "winnings": -2700, "baseline": -2500}
+{"hand": 671, "pos": 0, "action": "b200c/b132c/b219c/kk", "ours": ["c", "b132", "b219", "k"], "hole": ["Qh", "7h"], "board": ["Ks", "Kd", "3s", "5d", "2d"], "bot_hole": ["Ac", "Th"], "winnings": -551, "baseline": -351}
+{"hand": 672, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Ac", "5h"], "board": [], "bot_hole": ["5s", "3h"], "winnings": 100, "baseline": 900}
+{"hand": 673, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9c", "2c"], "board": [], "bot_hole": ["Tc", "3c"], "winnings": -100, "baseline": 100}
+{"hand": 674, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["5c", "3h"], "board": [], "bot_hole": ["Ah", "7h"], "winnings": -100, "baseline": 100}
+{"hand": 675, "pos": 0, "action": "b200c/b300c/b750c/b1875b5950b18750c", "ours": ["c", "b300", "b750", "b1875", "b18750"], "hole": ["7d", "7c"], "board": ["8s", "7s", "3s", "Tc", "8c"], "bot_hole": ["Ts", "8d"], "winnings": -20000, "baseline": 0}
+{"hand": 676, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Qd", "5h"], "board": [], "bot_hole": ["Ts", "8d"], "winnings": 100, "baseline": 300}
+{"hand": 677, "pos": 0, "action": "b200b575f", "ours": ["b575"], "hole": ["Kd", "2d"], "board": [], "bot_hole": ["8s", "2s"], "winnings": 200, "baseline": 600}
+{"hand": 678, "pos": 1, "action": "f", "ours": ["f"], "hole": ["7s", "2h"], "board": [], "bot_hole": ["Td", "9c"], "winnings": -50, "baseline": 0}
+{"hand": 679, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["5s", "3d"], "board": [], "bot_hole": ["Kd", "Jh"], "winnings": -100, "baseline": 300}
+{"hand": 680, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["9d", "5d"], "board": [], "bot_hole": ["8s", "2c"], "winnings": 100, "baseline": 0}
+{"hand": 681, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Kc", "2h"], "board": [], "bot_hole": ["Qd", "Jc"], "winnings": -100, "baseline": 700}
+{"hand": 682, "pos": 1, "action": "ck/kk/kk/b100f", "ours": ["c", "k", "k", "f"], "hole": ["Qc", "9s"], "board": ["Kc", "Jc", "3d", "8s", "Ks"], "bot_hole": ["7c", "4d"], "winnings": -100, "baseline": -300}
+{"hand": 683, "pos": 0, "action": "b200c/kb200c/b264f", "ours": ["c", "k", "c", "b264"], "hole": ["Kh", "5h"], "board": ["Kd", "Td", "9h", "Qc"], "bot_hole": ["Tc", "3d"], "winnings": 400, "baseline": -400}
+{"hand": 684, "pos": 1, "action": "b250c/kk/kk/kb165f", "ours": ["b250", "k", "k", "b165"], "hole": ["7s", "6d"], "board": ["5h", "5d", "2h", "As", "Kc"], "bot_hole": ["9d", "6c"], "winnings": 250, "baseline": 50}
+{"hand": 685, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9d", "3c"], "board": [], "bot_hole": ["Tc", "4h"], "winnings": -100, "baseline": -300}
+{"hand": 686, "pos": 1, "action": "b350c/kb231b850b5378f", "ours": ["b350", "b231", "b5378"], "hole": ["Ah", "4d"], "board": ["6c", "5s", "3h"], "bot_hole": ["5d", "2d"], "winnings": 1200, "baseline": 1600}
+{"hand": 687, "pos": 0, "action": "b200b575c/b862c/kk/b4311f", "ours": ["b575", "b862", "k", "b4311"], "hole": ["As", "Ac"], "board": ["7d", "6d", "3d", "Kc", "9h"], "bot_hole": ["Qd", "Jc"], "winnings": 1437, "baseline": -363}
+{"hand": 688, "pos": 1, "action": "cb300c/kb900f", "ours": ["c", "c", "b900"], "hole": ["Qd", "2d"], "board": ["Kc", "7h", "4c"], "bot_hole": ["5s", "5h"], "winnings": 300, "baseline": 700}
+{"hand": 689, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Ac", "2s"], "board": [], "bot_hole": ["4s", "3c"], "winnings": -100, "baseline": 100}
+{"hand": 690, "pos": 1, "action": "ck/kb150f", "ours": ["c", "b150"], "hole": ["9d", "9c"], "board": ["Tc", "9s", "5c"], "bot_hole": ["Qd", "3c"], "winnings": 100, "baseline": -100}
+{"hand": 691, "pos": 0, "action": "b200c/b132c/b219c/kk", "ours": ["c", "b132", "b219", "k"], "hole": ["Ah", "5h"], "board": ["9s", "8d", "2c", "8s", "Qs"], "bot_hole": ["Qc", "3c"], "winnings": -551, "baseline": 49}
+{"hand": 692, "pos": 1, "action": "ck/kk/b100c/kb132f", "ours": ["c", "k", "c", "b132"], "hole": ["9s", "9c"], "board": ["Ac", "Kd", "6d", "8s", "4h"], "bot_hole": ["7d", "2d"], "winnings": 200, "baseline": 600}
+{"hand": 693, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9d", "5s"], "board": [], "bot_hole": ["6d", "4d"], "winnings": -100, "baseline": -500}
+{"hand": 694, "pos": 1, "action": "b250b750c/b750b1988c/kk/b1762c", "ours": ["b250", "c", "b1988", "k", "c"], "hole": ["4h", "3h"], "board": ["Kc", "4s", "2h", "Ks", "3d"], "bot_hole": ["5h", "5d"], "winnings": -4500, "baseline": -3700}
+{"hand": 695, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Td", "7s"], "board": [], "bot_hole": ["Kh", "5s"], "winnings": -100, "baseline": 100}
+{"hand": 696, "pos": 1, "action": "b350c/kk/kb231f", "ours": ["b350", "k", "b231"], "hole": ["Jd", "7s"], "board": ["Ac", "Qd", "4h", "5c"], "bot_hole": ["Js", "6s"], "winnings": 350, "baseline": 150}
+{"hand": 697, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Qs", "3d"], "board": [], "bot_hole": ["Td", "9h"], "winnings": -100, "baseline": 100}
+{"hand": 698, "pos": 1, "action": "b350b900c/b900f", "ours": ["b350", "c", "f"], "hole": ["2s", "2d"], "board": ["Ad", "8d", "5h"], "bot_hole": ["Jc", "Th"], "winnings": -900, "baseline": -1500}
+{"hand": 699, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Ts", "2h"], "board": [], "bot_hole": ["Jh", "Jc"], "winnings": -100, "baseline": 300}
+{"hand": 700, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Qh", "7s"], "board": [], "bot_hole": ["Kh", "9c"], "winnings": -100, "baseline": -300}
+{"hand": 701, "pos": 0, "action": "f", "ours": [], "hole": ["Ah", "5d"], "board": [], "bot_hole": ["8c", "2d"], "winnings": 50, "baseline": 0}
+{"hand": 702, "pos": 1, "action": "b350c/kk/kk/b250b2425c", "ours": ["b350", "k", "k", "b2425"], "hole": ["Qs", "8s"], "board": ["9s", "6s", "3d", "5d", "Jc"], "bot_hole": ["Ks", "Jh"], "winnings": -2775, "baseline": -3175}
+{"hand": 703, "pos": 0, "action": "f", "ours": [], "hole": ["Td", "3s"], "board": [], "bot_hole": ["4c", "2h"], "winnings": 50, "baseline": 0}
+{"hand": 704, "pos": 1, "action": "b250f", "ours": ["b250"], "hole": ["8h", "7h"], "board": [], "bot_hole": ["9h", "2d"], "winnings": 100, "baseline": 0}
+{"hand": 705, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Tc", "5d"], "board": [], "bot_hole": ["Kh", "3h"], "winnings": -100, "baseline": 100}
+{"hand": 706, "pos": 1, "action": "b250c/kb750c/kk/b1500f", "ours": ["b250", "b750", "k", "f"], "hole": ["4h", "3s"], "board": ["Ad", "6s", "4d", "2c", "Qs"], "bot_hole": ["7d", "5h"], "winnings": -1000, "baseline": -600}
+{"hand": 707, "pos": 0, "action": "b200c/b600f", "ours": ["c", "b600"], "hole": ["5s", "5d"], "board": ["7d", "7c", "6s"], "bot_hole": ["4c", "3h"], "winnings": 200, "baseline": -1000}
+{"hand": 708, "pos": 1, "action": "f", "ours": ["f"], "hole": ["7d", "3h"], "board": [], "bot_hole": ["Td", "4c"], "winnings": -50, "baseline": 0}
+{"hand": 709, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["5s", "4c"], "board": [], "bot_hole": ["5d", "3d"], "winnings": -100, "baseline": 3100}
+{"hand": 710, "pos": 1, "action": "b250f", "ours": ["b250"], "hole": ["Tc", "7c"], "board": [], "bot_hole": ["Td", "3h"], "winnings": 100, "baseline": -100}
+{"hand": 711, "pos": 0, "action": "b200c/kb200c/kk/kb800c", "ours": ["c", "k", "c", "k", "k", "c"], "hole": ["6s", "6d"], "board": ["Ks", "8d", "8c", "Js", "Qh"], "bot_hole": ["Ac", "Kh"], "winnings": -1200, "baseline": 600}
+{"hand": 712, "pos": 1, "action": "ck/kk/b100f", "ours": ["c", "k", "f"], "hole": ["Kd", "4d"], "board": ["Jc", "3h", "3d", "8c"], "bot_hole": ["As", "Td"], "winnings": -100, "baseline": 300}
+{"hand": 713, "pos": 0, "action": "f", "ours": [], "hole": ["Jc", "3s"], "board": [], "bot_hole": ["4c", "2h"], "winnings": 50, "baseline": 0}
+{"hand": 714, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Qh", "8d"], "board": [], "bot_hole": ["Ks", "3d"], "winnings": 100, "baseline": 500}
+{"hand": 715, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9s", "3c"], "board": [], "bot_hole": ["Ac", "8h"], "winnings": -100, "baseline": -300}
+{"hand": 716, "pos": 1, "action": "cb300c/b300b1425f", "ours": ["c", "c", "b1425"], "hole": ["4d", "4c"], "board": ["Ks", "9h", "3h"], "bot_hole": ["Jd", "7d"], "winnings": 600, "baseline": 1800}
+{"hand": 717, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jh", "7c"], "board": [], "bot_hole": ["Jd", "6d"], "winnings": -100, "baseline": -300}
+{"hand": 718, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Kh", "Qc"], "board": [], "bot_hole": ["Js", "3c"], "winnings": 100, "baseline": -100}
+{"hand": 719, "pos": 0, "action": "b200b950c/kb1050c/b1320f", "ours": ["b950", "k", "c", "b1320"], "hole": ["As", "8h"], "board": ["Qs", "Qh", "6c", "2d"], "bot_hole": ["Kh", "3h"], "winnings": 2000, "baseline": 1600}
+{"hand": 720, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["8h", "5s"], "board": [], "bot_hole": ["Ad", "6c"], "winnings": -100, "baseline": 100}
+{"hand": 721, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Ks", "4h"], "board": [], "bot_hole": ["Td", "5s"], "winnings": -100, "baseline": -500}
+{"hand": 722, "pos": 1, "action": "ck/kb150c/kb750f", "ours": ["c", "b150", "b750"], "hole": ["Jd", "5h"], "board": ["Ac", "Td", "3h", "6d"], "bot_hole": ["Qc", "5c"], "winnings": 250, "baseline": 450}
+{"hand": 723, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Td", "3s"], "board": [], "bot_hole": ["Kh", "9h"], "winnings": -100, "baseline": 100}
+{"hand": 724, "pos": 1, "action": "b250c/kb375f", "ours": ["b250", "b375"], "hole": ["4c", "2c"], "board": ["8h", "4s", "2h"], "bot_hole": ["9s", "6h"], "winnings": 250, "baseline": 50}
+{"hand": 725, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Qd", "5s"], "board": [], "bot_hole": ["Kh", "Qc"], "winnings": -100, "baseline": 100}
+{"hand": 726, "pos": 1, "action": "ck/kk/kk/kb150b500f", "ours": ["c", "k", "k", "b150", "f"], "hole": ["7c", "4s"], "board": ["Td", "9h", "7s", "5h", "8d"], "bot_hole": ["Jc", "5s"], "winnings": -250, "baseline": -200}
+{"hand": 727, "pos": 0, "action": "b200b950f", "ours": ["b950"], "hole": ["As", "Kc"], "board": [], "bot_hole": ["Qc", "3h"], "winnings": 200, "baseline": 0}
+{"hand": 728, "pos": 1, "action": "b250c/kk/b250c/kb1500f", "ours": ["b250", "k", "c", "b1500"], "hole": ["7h", "4s"], "board": ["Kd", "Td", "3c", "4h", "7d"], "bot_hole": ["Jc", "9d"], "winnings": 500, "baseline": 550}
+{"hand": 729, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jc", "7s"], "board": [], "bot_hole": ["Qs", "Jd"], "winnings": -100, "baseline": 300}
+{"hand": 730, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Ad", "Qd"], "board": [], "bot_hole": ["Jd", "3h"], "winnings": 100, "baseline": -100}
+{"hand": 731, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8d", "2s"], "board": [], "bot_hole": ["Ah", "7h"], "winnings": -100, "baseline": 0}
+{"hand": 732, "pos": 1, "action": "ck/kk/kb150c/kb165c", "ours": ["c", "k", "b150", "b165"], "hole": ["Th", "2s"], "board": ["Qc", "Jc", "5c", "3d", "7s"], "bot_hole": ["Jh", "5s"], "winnings": -415, "baseline": -15}
+{"hand": 733, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8h", "2s"], "board": [], "bot_hole": ["Th", "4d"], "winnings": -100, "baseline": 0}
+{"hand": 734, "pos": 1, "action": "b250c/kk/b250c/b1000c", "ours": ["b250", "k", "c", "c"], "hole": ["Ac", "3c"], "board": ["Jh", "Jc", "8d", "8c", "Ad"], "bot_hole": ["9d", "8h"], "winnings": -1500, "baseline": -300}
+{"hand": 735, "pos": 0, "action": "b200c/b132c/kk/kk", "ours": ["c", "b132", "k", "k"], "hole": ["Ah", "7d"], "board": ["Jd", "9h", "2h", "8h", "As"], "bot_hole": ["Qd", "9c"], "winnings": 332, "baseline": -868}
+{"hand": 736, "pos": 1, "action": "cb300c/kb198f", "ours": ["c", "c", "b198"], "hole": ["Kd", "4d"], "board": ["6c", "5h", "5d"], "bot_hole": ["Qh", "9h"], "winnings": 300, "baseline": -300}
+{"hand": 737, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Tc", "2h"], "board": [], "bot_hole": ["Jd", "Th"], "winnings": -100, "baseline": 100}
+{"hand": 738, "pos": 1, "action": "b350c/b650c/b1000f", "ours": ["b350", "c", "f"], "hole": ["5d", "4d"], "board": ["4c", "3c", "2s", "Js"], "bot_hole": ["Ac", "5s"], "winnings": -1000, "baseline": -200}
+{"hand": 739, "pos": 0, "action": "b200c/kb200f", "ours": ["c", "k", "f"], "hole": ["8s", "7s"], "board": ["Jd", "Jc", "3c"], "bot_hole": ["Tc", "4s"], "winnings": -200, "baseline": -400}
+{"hand": 740, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Jh", "4d"], "board": [], "bot_hole": ["Ks", "5s"], "winnings": -100, "baseline": -300}
+{"hand": 741, "pos": 0, "action": "b200c/kk/b300b600c/kk", "ours": ["c", "k", "b300", "c", "k"], "hole": ["Qc", "Jh"], "board": ["Jd", "5h", "4c", "7d", "Ts"], "bot_hole": ["Kc", "8d"], "winnings": 800, "baseline": 0}
+{"hand": 742, "pos": 1, "action": "b350c/b250c/b1200b4800f", "ours": ["b350", "c", "b4800"], "hole": ["Kd", "7d"], "board": ["As", "Td", "9h", "5s"], "bot_hole": ["6s", "4s"], "winnings": 1800, "baseline": 2400}
+{"hand": 743, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["5d", "3s"], "board": [], "bot_hole": ["Qh", "Td"], "winnings": -100, "baseline": 100}
+{"hand": 744, "pos": 1, "action": "b350b900f", "ours": ["b350", "f"], "hole": ["Ac", "6d"], "board": [], "bot_hole": ["Th", "9c"], "winnings": -350, "baseline": 250}
+{"hand": 745, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9c", "2h"], "board": [], "bot_hole": ["Ks", "Kc"], "winnings": -100, "baseline": 0}
+{"hand": 746, "pos": 1, "action": "ck/kk/kk/kb150f", "ours": ["c", "k", "k", "b150"], "hole": ["8h", "5d"], "board": ["Js", "Jh", "5c", "Kh", "6s"], "bot_hole": ["Ad", "2s"], "winnings": 100, "baseline": -700}
+{"hand": 747, "pos": 0, "action": "b200c/kb200c/kk/b600f", "ours": ["c", "k", "c", "k", "b600"], "hole": ["Th", "Tc"], "board": ["Ac", "9d", "7h", "4s", "4c"], "bot_hole": ["8h", "5d"], "winnings": 400, "baseline": 200}
+{"hand": 748, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Th", "7c"], "board": [], "bot_hole": ["4d", "3c"], "winnings": 100, "baseline": 300}
+{"hand": 749, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["3c", "2d"], "board": [], "bot_hole": ["Jd", "8d"], "winnings": -100, "baseline": -300}
+{"hand": 750, "pos": 1, "action": "b250f", "ours": ["b250"], "hole": ["4s", "2s"], "board": [], "bot_hole": ["7h", "2d"], "winnings": 100, "baseline": 0}
+{"hand": 751, "pos": 0, "action": "f", "ours": [], "hole": ["9s", "9h"], "board": [], "bot_hole": ["6h", "2s"], "winnings": 50, "baseline": 0}
+{"hand": 752, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["6c", "4d"], "board": [], "bot_hole": ["Qh", "8d"], "winnings": 100, "baseline": 500}
+{"hand": 753, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jc", "4d"], "board": [], "bot_hole": ["Tc", "6c"], "winnings": -100, "baseline": -500}
+{"hand": 754, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Ks", "6h"], "board": [], "bot_hole": ["Qh", "3d"], "winnings": 100, "baseline": 300}
+{"hand": 755, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["5d", "2d"], "board": [], "bot_hole": ["Ts", "4s"], "winnings": -100, "baseline": 300}
+{"hand": 756, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["8s", "8h"], "board": [], "bot_hole": ["Js", "3c"], "winnings": 100, "baseline": 500}
+{"hand": 757, "pos": 0, "action": "b200c/b132f", "ours": ["c", "b132"], "hole": ["3d", "3c"], "board": ["Ad", "8c", "7d"], "bot_hole": ["Js", "5h"], "winnings": 200, "baseline": 0}
+{"hand": 758, "pos": 1, "action": "f", "ours": ["f"], "hole": ["6h", "2d"], "board": [], "bot_hole": ["Ad", "8h"], "winnings": -50, "baseline": 0}
+{"hand": 759, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6s", "4s"], "board": [], "bot_hole": ["9c", "8s"], "winnings": -100, "baseline": 500}
+{"hand": 760, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["9s", "6c"], "board": [], "bot_hole": ["Ac", "Ks"], "winnings": -100, "baseline": 100}
+{"hand": 761, "pos": 0, "action": "f", "ours": [], "hole": ["5s", "4c"], "board": [], "bot_hole": ["6s", "2h"], "winnings": 50, "baseline": 0}
+{"hand": 762, "pos": 1, "action": "b350c/kb231c/kk/kk", "ours": ["b350", "b231", "k", "k"], "hole": ["9d", "6c"], "board": ["Kd", "Tc", "4s", "9s", "Qs"], "bot_hole": ["6d", "4d"], "winnings": 581, "baseline": 781}
+{"hand": 763, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6s", "2d"], "board": [], "bot_hole": ["Th", "3h"], "winnings": -100, "baseline": 0}
+{"hand": 764, "pos": 1, "action": "b250c/kb750c/kb3000f", "ours": ["b250", "b750", "b3000"], "hole": ["6s", "3h"], "board": ["Kh", "5d", "2h", "7d"], "bot_hole": ["Kd", "Th"], "winnings": 1000, "baseline": -600}
+{"hand": 765, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jc", "2h"], "board": [], "bot_hole": ["8h", "5s"], "winnings": -100, "baseline": 100}
+{"hand": 766, "pos": 1, "action": "ck/kb150b500b1012c/kk/kb1668f", "ours": ["c", "b150", "b1012", "k", "b1668"], "hole": ["Th", "6s"], "board": ["As", "6h", "6d", "Ac", "5c"], "bot_hole": ["Qh", "7s"], "winnings": 1112, "baseline": 712}
+{"hand": 767, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9h", "2s"], "board": [], "bot_hole": ["Jc", "2d"], "winnings": -100, "baseline": 0}
+{"hand": 768, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Ac", "7d"], "board": [], "bot_hole": ["8d", "2h"], "winnings": 100, "baseline": 0}
+{"hand": 769, "pos": 0, "action": "f", "ours": [], "hole": ["As", "6d"], "board": [], "bot_hole": ["6h", "2s"], "winnings": 50, "baseline": 0}
+{"hand": 770, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Qc", "3h"], "board": [], "bot_hole": ["6c", "5h"], "winnings": -100, "baseline": -300}
+{"hand": 771, "pos": 0, "action": "f", "ours": [], "hole": ["6d", "3d"], "board": [], "bot_hole": ["8c", "3s"], "winnings": 50, "baseline": 0}
+{"hand": 772, "pos": 1, "action": "f", "ours": ["f"], "hole": ["7d", "3s"], "board": [], "bot_hole": ["5d", "4c"], "winnings": -50, "baseline": 0}
+{"hand": 773, "pos": 0, "action": "b200c/kk/b132b700f", "ours": ["c", "k", "b132", "f"], "hole": ["Jd", "4d"], "board": ["As", "Ks", "Th", "8s"], "bot_hole": ["Jc", "2d"], "winnings": -332, "baseline": -132}
+{"hand": 774, "pos": 1, "action": "b350c/kb231c/kb1743f", "ours": ["b350", "b231", "b1743"], "hole": ["As", "4h"], "board": ["7h", "5s", "5d", "Ad"], "bot_hole": ["Ks", "2s"], "winnings": 581, "baseline": -619}
+{"hand": 775, "pos": 0, "action": "b200b575f", "ours": ["b575"], "hole": ["Kh", "Td"], "board": [], "bot_hole": ["Qd", "7s"], "winnings": 200, "baseline": 2600}
+{"hand": 776, "pos": 1, "action": "b250c/b250f", "ours": ["b250", "f"], "hole": ["5d", "3h"], "board": ["Jc", "9h", "7h"], "bot_hole": ["Qh", "3c"], "winnings": -250, "baseline": -450}
+{"hand": 777, "pos": 0, "action": "b200c/kk/kb200c/kb800c", "ours": ["c", "k", "k", "c", "k", "c"], "hole": ["Jd", "8d"], "board": ["As", "Ks", "8c", "7d", "Ts"], "bot_hole": ["9c", "4d"], "winnings": 1200, "baseline": 1000}
+{"hand": 778, "pos": 1, "action": "ck/kk/b100f", "ours": ["c", "k", "f"], "hole": ["9h", "8h"], "board": ["Kh", "Td", "4d", "4c"], "bot_hole": ["Jh", "6h"], "winnings": -100, "baseline": 100}
+{"hand": 779, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Kd", "5s"], "board": [], "bot_hole": ["6d", "3c"], "winnings": -100, "baseline": 100}
+{"hand": 780, "pos": 1, "action": "b250c/kk/kk/b250c", "ours": ["b250", "k", "k", "c"], "hole": ["5s", "4d"], "board": ["Ah", "4c", "2d", "Kd", "9c"], "bot_hole": ["Js", "5c"], "winnings": 500, "baseline": 100}
+{"hand": 781, "pos": 0, "action": "b200b575c/b1725f", "ours": ["b575", "b1725"], "hole": ["Ah", "Qs"], "board": ["As", "Jc", "6d"], "bot_hole": ["Ac", "7d"], "winnings": 575, "baseline": 20575}
+{"hand": 782, "pos": 1, "action": "ck/kb300f", "ours": ["c", "b300"], "hole": ["Jh", "6d"], "board": ["Qh", "4s", "2c"], "bot_hole": ["3d", "2s"], "winnings": 100, "baseline": 500}
+{"hand": 783, "pos": 0, "action": "b200b575f", "ours": ["b575"], "hole": ["As", "Qc"], "board": [], "bot_hole": ["8c", "4c"], "winnings": 200, "baseline": 0}
+{"hand": 784, "pos": 1, "action": "ck/kb150c/kb165c/kb622b3185f", "ours": ["c", "b150", "b165", "b622", "f"], "hole": ["Tc", "5h"], "board": ["8d", "7s", "4h", "8h", "9s"], "bot_hole": ["8c", "4s"], "winnings": -1037, "baseline": -637}
+{"hand": 785, "pos": 0, "action": "b200c/kk/b132c/kb268c", "ours": ["c", "k", "b132", "k", "c"], "hole": ["Ah", "8h"], "board": ["5h", "5c", "2d", "Td", "Kd"], "bot_hole": ["Qs", "9c"], "winnings": 600, "baseline": 0}
+{"hand": 786, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["8c", "3c"], "board": [], "bot_hole": ["3d", "2d"], "winnings": 100, "baseline": -700}
+{"hand": 787, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jc", "5h"], "board": [], "bot_hole": ["6d", "5d"], "winnings": -100, "baseline": 100}
+{"hand": 788, "pos": 1, "action": "b250b750c/b750c/kb2250c/kb5625c", "ours": ["b250", "c", "c", "b2250", "b5625"], "hole": ["Kh", "Qd"], "board": ["8h", "5s", "5d", "Ks", "9c"], "bot_hole": ["Ac", "8s"], "winnings": 9375, "baseline": 8975}
+{"hand": 789, "pos": 0, "action": "b200c/b132c/b498c/kb970b7825f", "ours": ["c", "b132", "b498", "k", "b7825"], "hole": ["Ac", "9c"], "board": ["As", "Qc", "5c", "Ts", "6c"], "bot_hole": ["Js", "9s"], "winnings": 1800, "baseline": 1200}
+{"hand": 790, "pos": 1, "action": "b250f", "ours": ["b250"], "hole": ["9c", "8s"], "board": [], "bot_hole": ["6c", "2s"], "winnings": 100, "baseline": 0}
+{"hand": 791, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["5c", "3h"], "board": [], "bot_hole": ["Td", "4d"], "winnings": -100, "baseline": 1100}
+{"hand": 792, "pos": 1, "action": "f", "ours": ["f"], "hole": ["3h", "2d"], "board": [], "bot_hole": ["Jh", "6d"], "winnings": -50, "baseline": 0}
+{"hand": 793, "pos": 0, "action": "b200b575c/kk/b1725f", "ours": ["b575", "k", "b1725"], "hole": ["Ad", "9c"], "board": ["Qh", "Jd", "9d", "6c"], "bot_hole": ["Ac", "8d"], "winnings": 575, "baseline": 375}
+{"hand": 794, "pos": 1, "action": "cb300c/kb450c/kb1125c/kk", "ours": ["c", "c", "b450", "b1125", "k"], "hole": ["Qs", "Jd"], "board": ["Qc", "Th", "8s", "5h", "Kh"], "bot_hole": ["Kc", "Jh"], "winnings": -1875, "baseline": -675}
+{"hand": 795, "pos": 0, "action": "b200c/kk/b600c/b528b3700f", "ours": ["c", "k", "b600", "b528", "f"], "hole": ["Qc", "2c"], "board": ["8h", "7s", "7h", "6c", "9d"], "bot_hole": ["9h", "7c"], "winnings": -1328, "baseline": -1128}
+{"hand": 796, "pos": 1, "action": "f", "ours": ["f"], "hole": ["5d", "3h"], "board": [], "bot_hole": ["Kc", "Jh"], "winnings": -50, "baseline": 1150}
+{"hand": 797, "pos": 0, "action": "b200c/b132c/kk/kk", "ours": ["c", "b132", "k", "k"], "hole": ["Th", "6h"], "board": ["Ks", "9h", "8d", "3h", "Qs"], "bot_hole": ["8c", "6d"], "winnings": -332, "baseline": -532}
+{"hand": 798, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["As", "Tc"], "board": [], "bot_hole": ["Qd", "7s"], "winnings": 100, "baseline": -100}
+{"hand": 799, "pos": 0, "action": "b200b575b1800b3392c/b2239f", "ours": ["b575", "b3392", "b2239"], "hole": ["Ad", "Qd"], "board": ["Jh", "Td", "3s"], "bot_hole": ["Ac", "Qc"], "winnings": 3392, "baseline": 5192}
+{"hand": 800, "pos": 1, "action": "b350c/kk/kk/kb525f", "ours": ["b350", "k", "k", "b525"], "hole": ["Qd", "8s"], "board": ["Js", "8c", "6d", "3c", "3h"], "bot_hole": ["Qc", "Th"], "winnings": 350, "baseline": -450}
+{"hand": 801, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Th", "6c"], "board": [], "bot_hole": ["7h", "6d"], "winnings": -100, "baseline": -500}
+{"hand": 802, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Td", "4c"], "board": [], "bot_hole": ["Ad", "Qc"], "winnings": -100, "baseline": 100}
+{"hand": 803, "pos": 0, "action": "b200b575c/kk/b380b1225c/kk", "ours": ["b575", "k", "b380", "c", "k"], "hole": ["Kc", "Th"], "board": ["Kh", "5h", "4h", "9c", "8d"], "bot_hole": ["Kd", "Qh"], "winnings": -1800, "baseline": -600}
+{"hand": 804, "pos": 1, "action": "b250b750c/b750c/kk/b1500c", "ours": ["b250", "c", "c", "k", "c"], "hole": ["5c", "4s"], "board": ["7s", "4h", "3s", "Qc", "8c"], "bot_hole": ["Th", "8h"], "winnings": -3000, "baseline": -3600}
+{"hand": 805, "pos": 0, "action": "f", "ours": [], "hole": ["Ts", "3h"], "board": [], "bot_hole": ["4s", "2h"], "winnings": 50, "baseline": 0}
+{"hand": 806, "pos": 1, "action": "f", "ours": ["f"], "hole": ["8d", "3s"], "board": [], "bot_hole": ["Ks", "6c"], "winnings": -50, "baseline": 0}
+{"hand": 807, "pos": 0, "action": "b200b950f", "ours": ["b950"], "hole": ["Ac", "8s"], "board": [], "bot_hole": ["7h", "6d"], "winnings": 200, "baseline": -1000}
+{"hand": 808, "pos": 1, "action": "f", "ours": ["f"], "hole": ["8s", "3c"], "board": [], "bot_hole": ["Qc", "8h"], "winnings": -50, "baseline": 0}
+{"hand": 809, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Th", "5c"], "board": [], "bot_hole": ["Kd", "7h"], "winnings": -100, "baseline": 100}
+{"hand": 810, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Jc", "7s"], "board": [], "bot_hole": ["Tc", "2h"], "winnings": 100, "baseline": 900}
+{"hand": 811, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["7d", "2h"], "board": [], "bot_hole": ["Qh", "2s"], "winnings": -100, "baseline": 0}
+{"hand": 812, "pos": 1, "action": "b250c/kk/b250f", "ours": ["b250", "k", "f"], "hole": ["6s", "3d"], "board": ["As", "5d", "5c", "Kc"], "bot_hole": ["Kd", "2h"], "winnings": -250, "baseline": 950}
+{"hand": 813, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9c", "6s"], "board": [], "bot_hole": ["Kh", "4s"], "winnings": -100, "baseline": 100}
+{"hand": 814, "pos": 1, "action": "cb300c/b300c/kb396c/kb2988f", "ours": ["c", "c", "c", "b396", "b2988"], "hole": ["6s", "6d"], "board": ["As", "Ah", "Kc", "6h", "7h"], "bot_hole": ["6c", "5c"], "winnings": 996, "baseline": -1404}
+{"hand": 815, "pos": 0, "action": "b200c/kb200c/b600b1200c/kb3200b12800c", "ours": ["c", "k", "c", "b600", "c", "k", "b12800"], "hole": ["Jc", "9s"], "board": ["Kh", "Jd", "Td", "Kd", "4d"], "bot_hole": ["Ks", "Th"], "winnings": -14400, "baseline": -12000}
+{"hand": 816, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Ts", "6h"], "board": [], "bot_hole": ["Kc", "Qd"], "winnings": -100, "baseline": 100}
+{"hand": 817, "pos": 0, "action": "b200c/kk/kk/b300f", "ours": ["c", "k", "k", "b300"], "hole": ["Qh", "8h"], "board": ["Kd", "7s", "4s", "8s", "Qd"], "bot_hole": ["2h", "2d"], "winnings": 200, "baseline": -400}
+{"hand": 818, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["As", "Ad"], "board": [], "bot_hole": ["Td", "8c"], "winnings": 100, "baseline": -500}
+{"hand": 819, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["7d", "6s"], "board": [], "bot_hole": ["3h", "3d"], "winnings": -100, "baseline": -300}
+{"hand": 820, "pos": 1, "action": "ck/kb150c/kb750f", "ours": ["c", "b150", "b750"], "hole": ["Jh", "6d"], "board": ["Qc", "8h", "5c", "4h"], "bot_hole": ["Jc", "8s"], "winnings": 250, "baseline": 1050}
+{"hand": 821, "pos": 0, "action": "f", "ours": [], "hole": ["Qd", "7c"], "board": [], "bot_hole": ["7s", "4c"], "winnings": 50, "baseline": 0}
+{"hand": 822, "pos": 1, "action": "f", "ours": ["f"], "hole": ["6h", "2d"], "board": [], "bot_hole": ["6s", "2s"], "winnings": -50, "baseline": 0}
+{"hand": 823, "pos": 0, "action": "f", "ours": [], "hole": ["Ad", "Jd"], "board": [], "bot_hole": ["7h", "3s"], "winnings": 50, "baseline": 0}
+{"hand": 824, "pos": 1, "action": "b250f", "ours": ["b250"], "hole": ["7h", "5h"], "board": [], "bot_hole": ["3h", "2s"], "winnings": 100, "baseline": -100}
+{"hand": 825, "pos": 0, "action": "b200c/kb200c/b264c/kb1736b3893c", "ours": ["c", "k", "c", "b264", "k", "b3893"], "hole": ["Js", "9s"], "board": ["Th", "Td", "3c", "Qc", "Ah"], "bot_hole": ["Jd", "Tc"], "winnings": -4557, "baseline": -2157}
+{"hand": 826, "pos": 1, "action": "f", "ours": ["f"], "hole": ["7c", "3h"], "board": [], "bot_hole": ["Ts", "7d"], "winnings": -50, "baseline": 0}
+{"hand": 827, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["7s", "4s"], "board": [], "bot_hole": ["Ah", "Td"], "winnings": -100, "baseline": 100}
+{"hand": 828, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Ks", "Kh"], "board": [], "bot_hole": ["4s", "3d"], "winnings": 100, "baseline": -300}
+{"hand": 829, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Js", "4c"], "board": [], "bot_hole": ["Ks", "Jd"], "winnings": -100, "baseline": -300}
+{"hand": 830, "pos": 1, "action": "b250c/b250f", "ours": ["b250", "f"], "hole": ["6c", "4c"], "board": ["Qc", "9h", "2c"], "bot_hole": ["Qh", "9d"], "winnings": -250, "baseline": 950}
+{"hand": 831, "pos": 0, "action": "b200b20000c///", "ours": ["b20000"], "hole": ["Qs", "7d"], "board": ["7h", "6s", "4c", "9h", "9d"], "bot_hole": ["As", "Kh"], "winnings": 20000, "baseline": 19800}
+{"hand": 832, "pos": 1, "action": "b250f", "ours": ["b250"], "hole": ["6s", "3d"], "board": [], "bot_hole": ["6c", "3s"], "winnings": 100, "baseline": 100}
+{"hand": 833, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8d", "4s"], "board": [], "bot_hole": ["Qh", "2c"], "winnings": -100, "baseline": -300}
+{"hand": 834, "pos": 1, "action": "b350b900f", "ours": ["b350", "f"], "hole": ["Ks", "4c"], "board": [], "bot_hole": ["Td", "9s"], "winnings": -350, "baseline": -2150}
+{"hand": 835, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Th", "3s"], "board": [], "bot_hole": ["Qh", "3d"], "winnings": -100, "baseline": -300}
+{"hand": 836, "pos": 1, "action": "ck/kb300f", "ours": ["c", "b300"], "hole": ["5c", "3h"], "board": ["Jd", "7h", "6c"], "bot_hole": ["Qd", "4c"], "winnings": 100, "baseline": -100}
+{"hand": 837, "pos": 0, "action": "b200b575b1800c/kk/b1188c/b4482c", "ours": ["b575", "c", "k", "b1188", "b4482"], "hole": ["Jh", "3h"], "board": ["9c", "6h", "4h", "7h", "8d"], "bot_hole": ["Ts", "6s"], "winnings": 7470, "baseline": 6270}
+{"hand": 838, "pos": 1, "action": "b250c/kb750f", "ours": ["b250", "b750"], "hole": ["As", "Ad"], "board": ["Kh", "5s", "2s"], "bot_hole": ["Qc", "7c"], "winnings": 250, "baseline": 50}
+{"hand": 839, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["4h", "3s"], "board": [], "bot_hole": ["Ts", "8s"], "winnings": -100, "baseline": 100}
+{"hand": 840, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["As", "4h"], "board": [], "bot_hole": ["Jd", "4s"], "winnings": 100, "baseline": -300}
+{"hand": 841, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Js", "2h"], "board": [], "bot_hole": ["9d", "4h"], "winnings": -100, "baseline": 300}
+{"hand": 842, "pos": 1, "action": "f", "ours": ["f"], "hole": ["9s", "3c"], "board": [], "bot_hole": ["9h", "4s"], "winnings": -50, "baseline": 0}
+{"hand": 843, "pos": 0, "action": "b200c/kb200c/b264c/kk", "ours": ["c", "k", "c", "b264", "k"], "hole": ["Jc", "Tc"], "board": ["Qs", "4c", "2c", "Th", "7d"], "bot_hole": ["Ks", "4s"], "winnings": 664, "baseline": -6536}
+{"hand": 844, "pos": 1, "action": "f", "ours": ["f"], "hole": ["5s", "2c"], "board": [], "bot_hole": ["Qd", "8h"], "winnings": -50, "baseline": 0}
+{"hand": 845, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["7s", "5d"], "board": [], "bot_hole": ["Tc", "6h"], "winnings": -100, "baseline": 100}
+{"hand": 846, "pos": 1, "action": "b350c/kk/kb1050c/kb924b5350f", "ours": ["b350", "k", "b1050", "b924", "f"], "hole": ["Ah", "8c"], "board": ["Jh", "5s", "3d", "Qc", "4c"], "bot_hole": ["4s", "4h"], "winnings": -2324, "baseline": -2124}
+{"hand": 847, "pos": 0, "action": "b200c/kb200c/kk/b600f", "ours": ["c", "k", "c", "k", "b600"], "hole": ["9s", "9d"], "board": ["Js", "Ts", "5c", "6c", "2h"], "bot_hole": ["Qs", "8d"], "winnings": 400, "baseline": 200}
+{"hand": 848, "pos": 1, "action": "ck/kk/b100f", "ours": ["c", "k", "f"], "hole": ["8s", "8h"], "board": ["Jh", "Tc", "5s", "Ad"], "bot_hole": ["Jc", "4c"], "winnings": -100, "baseline": 300}
+{"hand": 849, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jc", "3d"], "board": [], "bot_hole": ["7h", "4h"], "winnings": -100, "baseline": -300}
+{"hand": 850, "pos": 1, "action": "ck/kb150f", "ours": ["c", "b150"], "hole": ["Qh", "Jd"], "board": ["As", "Kd", "Th"], "bot_hole": ["9s", "7h"], "winnings": 100, "baseline": -300}
+{"hand": 851, "pos": 0, "action": "b200b950f", "ours": ["b950"], "hole": ["Ks", "Tc"], "board": [], "bot_hole": ["9d", "2d"], "winnings": 200, "baseline": 400}
+{"hand": 852, "pos": 1, "action": "ck/kk/b100f", "ours": ["c", "k", "f"], "hole": ["9c", "7s"], "board": ["Ac", "6c", "2s", "4h"], "bot_hole": ["9h", "6s"], "winnings": -100, "baseline": -500}
+{"hand": 853, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jd", "7h"], "board": [], "bot_hole": ["Ts", "2s"], "winnings": -100, "baseline": 100}
+{"hand": 854, "pos": 1, "action": "b250c/kk/kb165f", "ours": ["b250", "k", "b165"], "hole": ["Th", "9s"], "board": ["Ah", "Ac", "8h", "8s"], "bot_hole": ["Jc", "4d"], "winnings": 250, "baseline": 50}
+{"hand": 855, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["5c", "3d"], "board": [], "bot_hole": ["Ad", "2h"], "winnings": -100, "baseline": 300}
+{"hand": 856, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Ah", "9c"], "board": [], "bot_hole": ["Jc", "4d"], "winnings": 100, "baseline": -100}
+{"hand": 857, "pos": 0, "action": "f", "ours": [], "hole": ["Ks", "7s"], "board": [], "bot_hole": ["7h", "3s"], "winnings": 50, "baseline": 0}
+{"hand": 858, "pos": 1, "action": "b350c/kk/kb1050c/kb924c", "ours": ["b350", "k", "b1050", "b924"], "hole": ["Ad", "7c"], "board": ["Qd", "Th", "6s", "2c", "8s"], "bot_hole": ["Kd", "Tc"], "winnings": -2324, "baseline": -1924}
+{"hand": 859, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["5d", "2s"], "board": [], "bot_hole": ["6h", "5h"], "winnings": -100, "baseline": -500}
+{"hand": 860, "pos": 1, "action": "f", "ours": ["f"], "hole": ["3d", "2s"], "board": [], "bot_hole": ["Tc", "8s"], "winnings": -50, "baseline": 0}
+{"hand": 861, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8s", "7h"], "board": [], "bot_hole": ["Ah", "2d"], "winnings": -100, "baseline": 100}
+{"hand": 862, "pos": 1, "action": "ck/kk/kk/kk", "ours": ["c", "k", "k", "k"], "hole": ["Kc", "7d"], "board": ["Jc", "6s", "6d", "9c", "4h"], "bot_hole": ["Ts", "3h"], "winnings": 100, "baseline": -300}
+{"hand": 863, "pos": 0, "action": "b200b575c/kk/b1725c/b3450c", "ours": ["b575", "k", "b1725", "b3450"], "hole": ["As", "Qs"], "board": ["Jd", "Ts", "6d", "Qh", "6c"], "bot_hole": ["9h", "8c"], "winnings": -5750, "baseline": -350}
+{"hand": 864, "pos": 1, "action": "ck/kb150c/kb750f", "ours": ["c", "b150", "b750"], "hole": ["Jd", "7s"], "board": ["Td", "5c", "3d", "5s"], "bot_hole": ["Kh", "3c"], "winnings": 250, "baseline": 650}
+{"hand": 865, "pos": 0, "action": "b200c/b132c/kb268c/kb600c", "ours": ["c", "b132", "k", "c", "k", "c"], "hole": ["Qd", "Jd"], "board": ["Ks", "8c", "5s", "9h", "Kh"], "bot_hole": ["Qh", "9c"], "winnings": -1200, "baseline": -1800}
+{"hand": 866, "pos": 1, "action": "b350c/kb231f", "ours": ["b350", "b231"], "hole": ["Ad", "2d"], "board": ["Th", "Td", "8c"], "bot_hole": ["Kc", "5s"], "winnings": 350, "baseline": 150}
+{"hand": 867, "pos": 0, "action": "b200c/b132c/b219f", "ours": ["c", "b132", "b219"], "hole": ["Ad", "Ts"], "board": ["7d", "5c", "4h", "7h"], "bot_hole": ["Ks", "9h"], "winnings": 332, "baseline": 132}
+{"hand": 868, "pos": 1, "action": "f", "ours": ["f"], "hole": ["7h", "3s"], "board": [], "bot_hole": ["6h", "4c"], "winnings": -50, "baseline": 0}
+{"hand": 869, "pos": 0, "action": "b200b575f", "ours": ["b575"], "hole": ["Ah", "Ad"], "board": [], "bot_hole": ["Qc", "6h"], "winnings": 200, "baseline": 0}
+{"hand": 870, "pos": 1, "action": "f", "ours": ["f"], "hole": ["6d", "2h"], "board": [], "bot_hole": ["Th", "7h"], "winnings": -50, "baseline": 0}
+{"hand": 871, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Qc", "8h"], "board": [], "bot_hole": ["Ac", "Qs"], "winnings": -100, "baseline": 300}
+{"hand": 872, "pos": 1, "action": "ck/kb300f", "ours": ["c", "b300"], "hole": ["7s", "7c"], "board": ["Kh", "Qh", "4d"], "bot_hole": ["Td", "2s"], "winnings": 100, "baseline": -300}
+{"hand": 873, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6s", "5c"], "board": [], "bot_hole": ["Th", "7c"], "winnings": -100, "baseline": -1300}
+{"hand": 874, "pos": 1, "action": "b500c/kb330c/kb548f", "ours": ["b500", "b330", "b548"], "hole": ["Ah", "Qc"], "board": ["Qd", "6d", "4h", "5s"], "bot_hole": ["2d", "2c"], "winnings": 830, "baseline": 230}
+{"hand": 875, "pos": 0, "action": "b200c/b132f", "ours": ["c", "b132"], "hole": ["Qh", "Jd"], "board": ["7s", "7h", "6h"], "bot_hole": ["As", "8s"], "winnings": 200, "baseline": 400}
+{"hand": 876, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Kh", "2d"], "board": [], "bot_hole": ["Jh", "Th"], "winnings": -100, "baseline": 100}
+{"hand": 877, "pos": 0, "action": "b200b575c/kk/b862f", "ours": ["b575", "k", "b862"], "hole": ["Th", "Td"], "board": ["5d", "2s", "2c", "4s"], "bot_hole": ["Kh", "7c"], "winnings": 575, "baseline": -25}
+{"hand": 878, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Kh", "8d"], "board": [], "bot_hole": ["6s", "4d"], "winnings": 100, "baseline": 500}
+{"hand": 879, "pos": 0, "action": "b200c/kb200c/kk/kk", "ours": ["c", "k", "c", "k", "k"], "hole": ["As", "Jd"], "board": ["Ah", "Jh", "3h", "Td", "Kh"], "bot_hole": ["7d", "5s"], "winnings": 400, "baseline": 200}
+{"hand": 880, "pos": 1, "action": "b250b750c/b750f", "ours": ["b250", "c", "f"], "hole": ["Th", "5h"], "board": ["8d", "4h", "4d"], "bot_hole": ["Kd", "6d"], "winnings": -750, "baseline": -150}
+{"hand": 881, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Ts", "5h"], "board": [], "bot_hole": ["8d", "7h"], "winnings": -100, "baseline": 100}
+{"hand": 882, "pos": 1, "action": "b250b750f", "ours": ["b250", "f"], "hole": ["9h", "3h"], "board": [], "bot_hole": ["Kc", "Qs"], "winnings": -250, "baseline": -50}
+{"hand": 883, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9d", "7s"], "board": [], "bot_hole": ["Qs", "2h"], "winnings": -100, "baseline": -500}
+{"hand": 884, "pos": 1, "action": "b250b750c/b750b1988f", "ours": ["b250", "c", "b1988"], "hole": ["Kd", "Jc"], "board": ["Ac", "Qd", "5d"], "bot_hole": ["9c", "8c"], "winnings": 1500, "baseline": 900}
+{"hand": 885, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Js", "4h"], "board": [], "bot_hole": ["Kd", "8s"], "winnings": -100, "baseline": 100}
+{"hand": 886, "pos": 1, "action": "b250c/kk/kk/b250c", "ours": ["b250", "k", "k", "c"], "hole": ["6s", "5c"], "board": ["Ad", "Tc", "4c", "5d", "2h"], "bot_hole": ["2s", "2d"], "winnings": -500, "baseline": -1100}
+{"hand": 887, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9h", "3c"], "board": [], "bot_hole": ["8d", "4c"], "winnings": -100, "baseline": 100}
+{"hand": 888, "pos": 1, "action": "f", "ours": ["f"], "hole": ["7c", "2s"], "board": [], "bot_hole": ["Ac", "9h"], "winnings": -50, "baseline": 0}
+{"hand": 889, "pos": 0, "action": "b200b365f", "ours": ["b365"], "hole": ["Qh", "7d"], "board": [], "bot_hole": ["Kc", "2h"], "winnings": 200, "baseline": 400}
+{"hand": 890, "pos": 1, "action": "ck/kk/kk/b100f", "ours": ["c", "k", "k", "f"], "hole": ["Jd", "Td"], "board": ["9h", "7c", "5d", "Ad", "7h"], "bot_hole": ["Qh", "5s"], "winnings": -100, "baseline": -500}
+{"hand": 891, "pos": 0, "action": "b200c/b600f", "ours": ["c", "b600"], "hole": ["Ad", "Tc"], "board": ["Jd", "6c", "3d"], "bot_hole": ["Ac", "8c"], "winnings": 200, "baseline": 400}
+{"hand": 892, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Kc", "8d"], "board": [], "bot_hole": ["Qc", "3s"], "winnings": 100, "baseline": -100}
+{"hand": 893, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6h", "4h"], "board": [], "bot_hole": ["Ac", "Qc"], "winnings": -100, "baseline": 500}
+{"hand": 894, "pos": 1, "action": "b350c/kk/kb1050f", "ours": ["b350", "k", "b1050"], "hole": ["Kc", "9d"], "board": ["8d", "5d", "2s", "7s"], "bot_hole": ["Ad", "9h"], "winnings": 350, "baseline": -50}
+{"hand": 895, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["7h", "2c"], "board": [], "bot_hole": ["4c", "3h"], "winnings": -100, "baseline": 0}
+{"hand": 896, "pos": 1, "action": "b250c/kb750c/kb3000f", "ours": ["b250", "b750", "b3000"], "hole": ["7c", "2c"], "board": ["Ts", "7s", "7d", "3d"], "bot_hole": ["Jd", "8h"], "winnings": 1000, "baseline": 200}
+{"hand": 897, "pos": 0, "action": "b200c/b300c/b330b1300f", "ours": ["c", "b300", "b330", "f"], "hole": ["Ac", "9s"], "board": ["5c", "4c", "3c", "Ks"], "bot_hole": ["7c", "6c"], "winnings": -830, "baseline": 3970}
+{"hand": 898, "pos": 1, "action": "ck/kk/b100c/b200f", "ours": ["c", "k", "c", "f"], "hole": ["8c", "5h"], "board": ["Ks", "Ts", "7h", "8h", "Jd"], "bot_hole": ["8s", "7c"], "winnings": -200, "baseline": 200}
+{"hand": 899, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["6h", "3c"], "board": [], "bot_hole": ["9d", "5h"], "winnings": -100, "baseline": -500}
+{"hand": 900, "pos": 1, "action": "b350c/kk/kk/kk", "ours": ["b350", "k", "k", "k"], "hole": ["Qc", "5h"], "board": ["Kc", "9c", "6d", "5s", "4c"], "bot_hole": ["Ac", "Qd"], "winnings": 350, "baseline": 550}
+{"hand": 901, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Qs", "7c"], "board": [], "bot_hole": ["6h", "3s"], "winnings": -100, "baseline": 100}
+{"hand": 902, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Kc", "5d"], "board": [], "bot_hole": ["3h", "3c"], "winnings": -100, "baseline": -1300}
+{"hand": 903, "pos": 0, "action": "b200c/kb200b1700f", "ours": ["c", "k", "b1700"], "hole": ["Ac", "7s"], "board": ["Ad", "Jc", "9d"], "bot_hole": ["7h", "5s"], "winnings": 400, "baseline": 0}
+{"hand": 904, "pos": 1, "action": "f", "ours": ["f"], "hole": ["9d", "3d"], "board": [], "bot_hole": ["As", "Kc"], "winnings": -50, "baseline": 150}
+{"hand": 905, "pos": 0, "action": "b200c/kk/kk/b132b400c", "ours": ["c", "k", "k", "b132", "c"], "hole": ["9s", "6s"], "board": ["Ad", "7d", "2c", "6d", "9d"], "bot_hole": ["Kh", "3s"], "winnings": 600, "baseline": 0}
+{"hand": 906, "pos": 1, "action": "b250c/kb165c/kk/kb622c", "ours": ["b250", "b165", "k", "b622"], "hole": ["3d", "2d"], "board": ["Ac", "Jc", "4s", "Ks", "7c"], "bot_hole": ["Qs", "4h"], "winnings": -1037, "baseline": 163}
+{"hand": 907, "pos": 0, "action": "b200b365c/kk/kb100f", "ours": ["b365", "k", "k", "f"], "hole": ["Jd", "6s"], "board": ["Ah", "9s", "2h", "3d"], "bot_hole": ["Kc", "9c"], "winnings": -365, "baseline": -165}
+{"hand": 908, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Ks", "Kh"], "board": [], "bot_hole": ["9c", "3s"], "winnings": 100, "baseline": -300}
+{"hand": 909, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["7d", "5h"], "board": [], "bot_hole": ["Ks", "6h"], "winnings": -100, "baseline": -900}
+{"hand": 910, "pos": 1, "action": "f", "ours": ["f"], "hole": ["9h", "3c"], "board": [], "bot_hole": ["Js", "9c"], "winnings": -50, "baseline": 0}
+{"hand": 911, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Th", "4c"], "board": [], "bot_hole": ["8h", "4d"], "winnings": -100, "baseline": 100}
+{"hand": 912, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["As", "2d"], "board": [], "bot_hole": ["Ac", "2h"], "winnings": 100, "baseline": -100}
+{"hand": 913, "pos": 0, "action": "b200b575c/kk/b1725c/kb6700b17700f", "ours": ["b575", "k", "b1725", "k", "b17700"], "hole": ["9c", "2c"], "board": ["Ah", "8d", "2h", "2s", "Kd"], "bot_hole": ["8c", "7c"], "winnings": 9000, "baseline": 8600}
+{"hand": 914, "pos": 1, "action": "b250f", "ours": ["b250"], "hole": ["7h", "4d"], "board": [], "bot_hole": ["8s", "3c"], "winnings": 100, "baseline": 150}
+{"hand": 915, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8h", "2s"], "board": [], "bot_hole": ["Kh", "7c"], "winnings": -100, "baseline": 0}
+{"hand": 916, "pos": 1, "action": "ck/kk/b100c/kb300f", "ours": ["c", "k", "c", "b300"], "hole": ["9s", "5c"], "board": ["6d", "4c", "3h", "2h", "8h"], "bot_hole": ["As", "9d"], "winnings": 200, "baseline": 0}
+{"hand": 917, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["7c", "4c"], "board": [], "bot_hole": ["5d", "3d"], "winnings": -100, "baseline": -1300}
+{"hand": 918, "pos": 1, "action": "f", "ours": ["f"], "hole": ["8s", "3d"], "board": [], "bot_hole": ["7s", "2d"], "winnings": -50, "baseline": 0}
+{"hand": 919, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Ac", "3s"], "board": [], "bot_hole": ["Tc", "5c"], "winnings": -100, "baseline": -500}
+{"hand": 920, "pos": 1, "action": "ck/kb300f", "ours": ["c", "b300"], "hole": ["Qd", "Jh"], "board": ["7c", "5d", "4h"], "bot_hole": ["6h", "2s"], "winnings": 100, "baseline": 0}
+{"hand": 921, "pos": 0, "action": "b200b575c/b380b1225c/b1188b6300f", "ours": ["b575", "b380", "c", "b1188", "f"], "hole": ["Ts", "5s"], "board": ["8h", "7h", "5c", "3c"], "bot_hole": ["7d", "6h"], "winnings": -2988, "baseline": -2788}
+{"hand": 922, "pos": 1, "action": "b250b750c/kb495b1550c/kb1518b11500f", "ours": ["b250", "c", "b495", "c", "b1518", "f"], "hole": ["Ks", "Jc"], "board": ["9h", "7c", "6s", "8s"], "bot_hole": ["Qs", "Js"], "winnings": -3818, "baseline": -5618}
+{"hand": 923, "pos": 0, "action": "f", "ours": [], "hole": ["Ac", "Qc"], "board": [], "bot_hole": ["6h", "2s"], "winnings": 50, "baseline": 0}
+{"hand": 924, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["Jh", "2d"], "board": [], "bot_hole": ["8c", "6c"], "winnings": -100, "baseline": 300}
+{"hand": 925, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Kc", "3h"], "board": [], "bot_hole": ["8s", "7d"], "winnings": -100, "baseline": 700}
+{"hand": 926, "pos": 1, "action": "f", "ours": ["f"], "hole": ["3h", "2d"], "board": [], "bot_hole": ["6h", "4d"], "winnings": -50, "baseline": 0}
+{"hand": 927, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["7c", "3c"], "board": [], "bot_hole": ["Ks", "8c"], "winnings": -100, "baseline": -500}
+{"hand": 928, "pos": 1, "action": "f", "ours": ["f"], "hole": ["8d", "5s"], "board": [], "bot_hole": ["Qc", "Th"], "winnings": -50, "baseline": 350}
+{"hand": 929, "pos": 0, "action": "f", "ours": [], "hole": ["Qd", "6c"], "board": [], "bot_hole": ["7d", "2c"], "winnings": 50, "baseline": 0}
+{"hand": 930, "pos": 1, "action": "b250c/kk/kb165f", "ours": ["b250", "k", "b165"], "hole": ["6s", "4c"], "board": ["Kd", "4h", "2d", "8d"], "bot_hole": ["Tc", "9c"], "winnings": 250, "baseline": 450}
+{"hand": 931, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Qc", "7h"], "board": [], "bot_hole": ["6h", "4s"], "winnings": -100, "baseline": 100}
+{"hand": 932, "pos": 1, "action": "b350c/kk/kb1050f", "ours": ["b350", "k", "b1050"], "hole": ["Qh", "3s"], "board": ["Ad", "7c", "4c", "5s"], "bot_hole": ["Qd", "4d"], "winnings": 350, "baseline": 550}
+{"hand": 933, "pos": 0, "action": "b200c/kk/b132c/kb268b1369f", "ours": ["c", "k", "b132", "k", "b1369"], "hole": ["Ad", "4d"], "board": ["As", "Ts", "8d", "Tc", "Jd"], "bot_hole": ["Jh", "5c"], "winnings": 600, "baseline": 400}
+{"hand": 934, "pos": 1, "action": "cb300f", "ours": ["c", "f"], "hole": ["8d", "5s"], "board": [], "bot_hole": ["6h", "6d"], "winnings": -100, "baseline": 100}
+{"hand": 935, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8c", "5h"], "board": [], "bot_hole": ["Ks", "4s"], "winnings": -100, "baseline": 100}
+{"hand": 936, "pos": 1, "action": "ck/kk/b100c/kk", "ours": ["c", "k", "c", "k"], "hole": ["8h", "8c"], "board": ["Tc", "5h", "4s", "9c", "Kc"], "bot_hole": ["Jd", "4d"], "winnings": 200, "baseline": 0}
+{"hand": 937, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["7d", "2c"], "board": [], "bot_hole": ["Qs", "5s"], "winnings": -100, "baseline": 0}
+{"hand": 938, "pos": 1, "action": "b250b750f", "ours": ["b250", "f"], "hole": ["Jc", "3h"], "board": [], "bot_hole": ["Ad", "Kc"], "winnings": -250, "baseline": -50}
+{"hand": 939, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jc", "6s"], "board": [], "bot_hole": ["Ks", "9c"], "winnings": -100, "baseline": 300}
+{"hand": 940, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Qd", "7s"], "board": [], "bot_hole": ["Jh", "3d"], "winnings": 100, "baseline": -100}
+{"hand": 941, "pos": 0, "action": "b200b950b3000b9038f", "ours": ["b950", "b9038"], "hole": ["Ks", "Kc"], "board": [], "bot_hole": ["Td", "7d"], "winnings": 3000, "baseline": 1200}
+{"hand": 942, "pos": 1, "action": "ck/kb300f", "ours": ["c", "b300"], "hole": ["Qs", "3s"], "board": ["Ah", "9d", "2s"], "bot_hole": ["Jd", "5c"], "winnings": 100, "baseline": -100}
+{"hand": 943, "pos": 0, "action": "b200c/b600f", "ours": ["c", "b600"], "hole": ["Ad", "5d"], "board": ["Ac", "Qh", "4c"], "bot_hole": ["Td", "3c"], "winnings": 200, "baseline": 0}
+{"hand": 944, "pos": 1, "action": "f", "ours": ["f"], "hole": ["6h", "3d"], "board": [], "bot_hole": ["9c", "4h"], "winnings": -50, "baseline": -450}
+{"hand": 945, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Kd", "4h"], "board": [], "bot_hole": ["7d", "7c"], "winnings": -100, "baseline": 100}
+{"hand": 946, "pos": 1, "action": "ck/kk/b100c/b200c", "ours": ["c", "k", "c", "c"], "hole": ["Th", "8c"], "board": ["Qh", "Js", "Jc", "8s", "Jh"], "bot_hole": ["8h", "3s"], "winnings": 0, "baseline": -100}
+{"hand": 947, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8h", "3h"], "board": [], "bot_hole": ["Qh", "5c"], "winnings": -100, "baseline": -500}
+{"hand": 948, "pos": 1, "action": "ck/kb300f", "ours": ["c", "b300"], "hole": ["Kh", "9c"], "board": ["9s", "8s", "3c"], "bot_hole": ["8h", "4c"], "winnings": 100, "baseline": -3500}
+{"hand": 949, "pos": 0, "action": "b200c/b600f", "ours": ["c", "b600"], "hole": ["Kh", "9s"], "board": ["Ac", "Js", "6h"], "bot_hole": ["Qh", "9h"], "winnings": 200, "baseline": 0}
+{"hand": 950, "pos": 1, "action": "b350b1500f", "ours": ["b350", "f"], "hole": ["Kc", "4h"], "board": [], "bot_hole": ["Ah", "Kh"], "winnings": -350, "baseline": 1450}
+{"hand": 951, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jd", "8h"], "board": [], "bot_hole": ["Qc", "9d"], "winnings": -100, "baseline": 100}
+{"hand": 952, "pos": 1, "action": "cb300c/b300b1425f", "ours": ["c", "c", "b1425"], "hole": ["5s", "5d"], "board": ["Jh", "Th", "4s"], "bot_hole": ["5c", "4d"], "winnings": 600, "baseline": 400}
+{"hand": 953, "pos": 0, "action": "b200c/b132c/b219c/b1653f", "ours": ["c", "b132", "b219", "b1653"], "hole": ["Jc", "9d"], "board": ["Ah", "7d", "7c", "Tc", "8c"], "bot_hole": ["Ad", "Ts"], "winnings": 551, "baseline": 1151}
+{"hand": 954, "pos": 1, "action": "f", "ours": ["f"], "hole": ["9s", "2h"], "board": [], "bot_hole": ["Jd", "3c"], "winnings": -50, "baseline": 0}
+{"hand": 955, "pos": 0, "action": "b200c/b132c/b219f", "ours": ["c", "b132", "b219"], "hole": ["Ad", "9c"], "board": ["5s", "4c", "3d", "6s"], "bot_hole": ["Qc", "5c"], "winnings": 332, "baseline": -68}
+{"hand": 956, "pos": 1, "action": "b250f", "ours": ["b250"], "hole": ["Ks", "9s"], "board": [], "bot_hole": ["Th", "2s"], "winnings": 100, "baseline": -100}
+{"hand": 957, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["9h", "7s"], "board": [], "bot_hole": ["Qd", "2s"], "winnings": -100, "baseline": 300}
+{"hand": 958, "pos": 1, "action": "f", "ours": ["f"], "hole": ["4s", "2c"], "board": [], "bot_hole": ["Ac", "Td"], "winnings": -50, "baseline": 0}
+{"hand": 959, "pos": 0, "action": "b200b950c/b627f", "ours": ["b950", "b627"], "hole": ["Ac", "Kc"], "board": ["Jd", "Th", "9c"], "bot_hole": ["As", "2s"], "winnings": 950, "baseline": 1550}
+{"hand": 960, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["As", "3c"], "board": [], "bot_hole": ["Qc", "7s"], "winnings": 100, "baseline": -100}
+{"hand": 961, "pos": 0, "action": "b200b365f", "ours": ["b365"], "hole": ["Qs", "6h"], "board": [], "bot_hole": ["Qc", "5s"], "winnings": 200, "baseline": 400}
+{"hand": 962, "pos": 1, "action": "b350c/kk/b250f", "ours": ["b350", "k", "f"], "hole": ["Kc", "4c"], "board": ["Ts", "6s", "2h", "7c"], "bot_hole": ["Js", "9d"], "winnings": -350, "baseline": 250}
+{"hand": 963, "pos": 0, "action": "b200c/kb200f", "ours": ["c", "k", "f"], "hole": ["Ad", "4s"], "board": ["Jh", "7h", "6h"], "bot_hole": ["Tc", "5c"], "winnings": -200, "baseline": 0}
+{"hand": 964, "pos": 1, "action": "f", "ours": ["f"], "hole": ["9c", "2h"], "board": [], "bot_hole": ["Kh", "8h"], "winnings": -50, "baseline": 0}
+{"hand": 965, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Kh", "3d"], "board": [], "bot_hole": ["Kd", "7d"], "winnings": -100, "baseline": 300}
+{"hand": 966, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Ks", "9h"], "board": [], "bot_hole": ["Jh", "5d"], "winnings": 100, "baseline": 900}
+{"hand": 967, "pos": 0, "action": "b200c/kb200c/b264f", "ours": ["c", "k", "c", "b264"], "hole": ["As", "5h"], "board": ["Ad", "Ts", "9s", "4d"], "bot_hole": ["6c", "3h"], "winnings": 400, "baseline": 0}
+{"hand": 968, "pos": 1, "action": "cb300b564c/kb1692c/kb1489c/kk", "ours": ["c", "b564", "b1692", "b1489", "k"], "hole": ["Qd", "2h"], "board": ["Jh", "Ts", "7c", "2c", "6d"], "bot_hole": ["Kc", "Jd"], "winnings": -3745, "baseline": -2545}
+{"hand": 969, "pos": 0, "action": "b200c/b300f", "ours": ["c", "b300"], "hole": ["9s", "9h"], "board": ["Qd", "Ts", "3d"], "bot_hole": ["8h", "5c"], "winnings": 200, "baseline": 0}
+{"hand": 970, "pos": 1, "action": "b250b750c/b1500b3480f", "ours": ["b250", "c", "b3480"], "hole": ["8h", "6h"], "board": ["Ah", "Ks", "4h"], "bot_hole": ["5h", "5c"], "winnings": 2250, "baseline": -950}
+{"hand": 971, "pos": 0, "action": "b200c/kk/b132c/b996c", "ours": ["c", "k", "b132", "b996"], "hole": ["Ac", "4s"], "board": ["Ad", "Js", "Tc", "6s", "2h"], "bot_hole": ["Th", "4h"], "winnings": 1328, "baseline": 928}
+{"hand": 972, "pos": 1, "action": "ck/kb300b900f", "ours": ["c", "b300", "f"], "hole": ["Td", "3c"], "board": ["7s", "6c", "4s"], "bot_hole": ["9d", "8c"], "winnings": -400, "baseline": 400}
+{"hand": 973, "pos": 0, "action": "f", "ours": [], "hole": ["Ad", "8h"], "board": [], "bot_hole": ["3d", "2c"], "winnings": 50, "baseline": 0}
+{"hand": 974, "pos": 1, "action": "b250c/kk/b250c/kb1500f", "ours": ["b250", "k", "c", "b1500"], "hole": ["7d", "6h"], "board": ["Kh", "9s", "9c", "5c", "4c"], "bot_hole": ["Th", "8s"], "winnings": 500, "baseline": 1100}
+{"hand": 975, "pos": 0, "action": "b200b575c/b1725f", "ours": ["b575", "b1725"], "hole": ["Ad", "Qs"], "board": ["Qd", "4c", "3s"], "bot_hole": ["Jh", "5h"], "winnings": 575, "baseline": -3025}
+{"hand": 976, "pos": 1, "action": "b250c/kk/b250b662f", "ours": ["b250", "k", "b662"], "hole": ["Js", "8s"], "board": ["Ks", "Jd", "5d", "5s"], "bot_hole": ["Th", "9c"], "winnings": 500, "baseline": -100}
+{"hand": 977, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["7d", "6s"], "board": [], "bot_hole": ["Jc", "9h"], "winnings": -100, "baseline": 300}
+{"hand": 978, "pos": 1, "action": "ck/kb150c/kk/kb165f", "ours": ["c", "b150", "k", "b165"], "hole": ["Jc", "6h"], "board": ["Ad", "9h", "2c", "5d", "5h"], "bot_hole": ["Kc", "4c"], "winnings": 250, "baseline": 450}
+{"hand": 979, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8s", "2c"], "board": [], "bot_hole": ["Js", "6s"], "winnings": -100, "baseline": 0}
+{"hand": 980, "pos": 1, "action": "b350c/kb231c/kk/kk", "ours": ["b350", "b231", "k", "k"], "hole": ["As", "9c"], "board": ["Kh", "8c", "4c", "Td", "5h"], "bot_hole": ["Ad", "9d"], "winnings": 0, "baseline": 0}
+{"hand": 981, "pos": 0, "action": "b200c/kk/b132f", "ours": ["c", "k", "b132"], "hole": ["3s", "3d"], "board": ["As", "Kd", "9d", "8d"], "bot_hole": ["Qh", "4s"], "winnings": 200, "baseline": 0}
+{"hand": 982, "pos": 1, "action": "b250c/b250b662b2000f", "ours": ["b250", "b662", "f"], "hole": ["Td", "6h"], "board": ["Kh", "Qd", "9s"], "bot_hole": ["Th", "6d"], "winnings": -912, "baseline": -1312}
+{"hand": 983, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["8d", "4h"], "board": [], "bot_hole": ["Qs", "Th"], "winnings": -100, "baseline": -500}
+{"hand": 984, "pos": 1, "action": "ck/kb150c/kb750f", "ours": ["c", "b150", "b750"], "hole": ["Tc", "4s"], "board": ["Kh", "Jd", "2c", "Th"], "bot_hole": ["6h", "2s"], "winnings": 250, "baseline": 150}
+{"hand": 985, "pos": 0, "action": "b200b950c/b627f", "ours": ["b950", "b627"], "hole": ["Kc", "6h"], "board": ["Js", "8d", "8c"], "bot_hole": ["Ac", "4h"], "winnings": 950, "baseline": 1150}
+{"hand": 986, "pos": 1, "action": "b250b750f", "ours": ["b250", "f"], "hole": ["5d", "3h"], "board": [], "bot_hole": ["9h", "7d"], "winnings": -250, "baseline": -50}
+{"hand": 987, "pos": 0, "action": "f", "ours": [], "hole": ["Th", "6s"], "board": [], "bot_hole": ["7d", "3s"], "winnings": 50, "baseline": 0}
+{"hand": 988, "pos": 1, "action": "b500f", "ours": ["b500"], "hole": ["Ad", "Kd"], "board": [], "bot_hole": ["6h", "5d"], "winnings": 100, "baseline": -1100}
+{"hand": 989, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["4c", "2d"], "board": [], "bot_hole": ["Kh", "5s"], "winnings": -100, "baseline": -300}
+{"hand": 990, "pos": 1, "action": "ck/kk/kk/b100b475f", "ours": ["c", "k", "k", "b475"], "hole": ["9s", "9d"], "board": ["Kd", "Td", "5d", "Qc", "6d"], "bot_hole": ["5c", "2d"], "winnings": 200, "baseline": -200}
+{"hand": 991, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["Jh", "3s"], "board": [], "bot_hole": ["Ts", "2d"], "winnings": -100, "baseline": -300}
+{"hand": 992, "pos": 1, "action": "b350f", "ours": ["b350"], "hole": ["Kc", "3s"], "board": [], "bot_hole": ["Td", "2h"], "winnings": 100, "baseline": -100}
+{"hand": 993, "pos": 0, "action": "b200c/b300f", "ours": ["c", "b300"], "hole": ["7d", "7c"], "board": ["Td", "6h", "5d"], "bot_hole": ["Qc", "7s"], "winnings": 200, "baseline": 0}
+{"hand": 994, "pos": 1, "action": "b250c/kb165f", "ours": ["b250", "b165"], "hole": ["Jh", "Th"], "board": ["Js", "Jc", "6h"], "bot_hole": ["Ah", "2c"], "winnings": 250, "baseline": -150}
+{"hand": 995, "pos": 0, "action": "b200b950c/b627f", "ours": ["b950", "b627"], "hole": ["Kh", "7d"], "board": ["8d", "5c", "2c"], "bot_hole": ["Ts", "9c"], "winnings": 950, "baseline": 1150}
+{"hand": 996, "pos": 1, "action": "b250c/kk/kb750f", "ours": ["b250", "k", "b750"], "hole": ["9c", "8c"], "board": ["9h", "7h", "3c", "5s"], "bot_hole": ["Ac", "Ts"], "winnings": 250, "baseline": -150}
+{"hand": 997, "pos": 0, "action": "b200b950f", "ours": ["b950"], "hole": ["Kd", "7c"], "board": [], "bot_hole": ["8c", "5s"], "winnings": 200, "baseline": 400}
+{"hand": 998, "pos": 1, "action": "f", "ours": ["f"], "hole": ["6c", "3s"], "board": [], "bot_hole": ["Kc", "7c"], "winnings": -50, "baseline": -250}
+{"hand": 999, "pos": 0, "action": "b200f", "ours": ["f"], "hole": ["4s", "3c"], "board": [], "bot_hole": ["Kh", "Ts"], "winnings": -100, "baseline": -300}
+{"hand": 1000, "pos": 1, "action": "b350b900f", "ours": ["b350", "f"], "hole": ["Qc", "3d"], "board": [], "bot_hole": ["Ad", "Ks"], "winnings": -350, "baseline": -150}
