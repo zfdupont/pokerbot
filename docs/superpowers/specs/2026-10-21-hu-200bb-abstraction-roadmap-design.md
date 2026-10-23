@@ -115,10 +115,13 @@ From the 3,000-hand Slumbot run (baseline score, BB, summed):
 - Use `scripts/eval_blueprint_h2h.py` (duplicate deals, shared random numbers, `|t| >= 2` gate per `.mex/patterns/eval-checkpoint-ab.md`) at 200 BB.
 - **Plateau rule (my call):**
   - Snapshots every 5M iterations.
-  - An arm is converged at snapshot N when N is not less exploitable than snapshot N-10M by **paired LBR** at `|t| >= 2` (revised 2026-10-22): `scripts/arm_plateau.py --config <arm config>` runs local best response (turn and river, the paper's "fcpa 3-4") against both snapshots on the same 100k duplicate decks and t-tests the per-deck differences. Check after each sync, locally, while training continues.
-    - Why: head-to-head between two near-converged snapshots is not transitive (P0's 25M lost to its own 15M at t=-2.31), while LBR measures one fixed thing, a lower bound on exploitability.
-    - LBR decides when an arm has stopped improving. It does not pick winners: the gates below stay head-to-head plus Slumbot, since Slumbot is about as exploitable by LBR as our blueprints yet beats them by about 100 BB/100.
-    - The earlier head-to-head rule stays available as `--method h2h`.
+  - An arm is converged when its **LBR trend** has stopped (revised again 2026-10-22, evening). `scripts/arm_plateau.py --config <arm config>` runs LBR (turn and river, the paper's "fcpa 3-4") on every snapshot on the same 100k decks (seed 1), regresses each deck's LBR on iterations over the last 4 snapshots, and t-tests the mean slope (BB/100 per 10M iterations). Converged when the windows ending at the newest two snapshots both have |t| < 2. Check after each sync, locally.
+    - Why not a pair of snapshots: LBR moves 10-18 BB/100 between neighbouring snapshots beyond deck noise (C3: 25M vs 15M t=-2.69, 35M vs 25M t=+3.82), so any single pair can read flat on a dip. On the sweep data the one-sided pair rule called C3 converged at 15M despite a significant rise (+22, t=+3.84).
+    - Why two windows: one flat window can be a dip between rises (C3's 10-25M window, t=-0.7, sits between two rises). The second window costs one extra 5M snapshot, about $0.03.
+    - Rules compared on the sweep (slope over 4 snapshots): residual-error OLS on snapshot means (2 df) missed C0's early rise (t=3.71 < 4.30); an equivalence test (90% CI within +-10 per 10M) never converged; the paired per-deck slope flagged every early rise and called the flat late windows converged (my call).
+    - Both directions count: LBR rises early in training for every arm (+16 to +28 BB/100 by 10-15M), so "converged" means stopped changing, not stopped improving.
+    - LBR decides when an arm has stopped changing. It does not pick winners: the gates below stay head-to-head plus Slumbot.
+    - The pair rules stay available: `--method h2h` (head-to-head, N vs N-lag) and `paired_lbr` in `scripts/eval_sixmax_lbr.py`.
   - **Iteration caps:** C0 is capped at 60M. Every other arm's cap is `C0_plateau × (arm_infosets / C0_infosets)`, at least 20M. The ceiling is 150M for Phase 2 arms and 500M for Phase 3 arms (revised 2026-10-21: the 255/255/255 maximum is about 8.1x C0, and a 150M ceiling would undertrain every map above about 2.5x C0). The budget rules below still apply to every arm.
   - Worked example: if C0 plateaus at 25M with 40k infosets, an arm with 120k infosets is capped at 75M.
   - Infoset counts come from the trained checkpoint (C0) or a 2M-iteration probe run (other arms).

@@ -9,10 +9,11 @@ import pytest
 import sixmax
 from scripts.arm_plateau import (
     converged,
-    converged_lbr,
+    converged_trend,
     iteration_cap,
     pick_pair,
     snapshot_iters,
+    trend,
 )
 from scripts.eval_blueprint_h2h import run_h2h
 from scripts.eval_sixmax_lbr import paired_lbr, run_lbr
@@ -91,14 +92,6 @@ def test_cap_cli_phase3(monkeypatch, capsys):
         "--phase", "3"])
     arm_plateau.main()
     assert capsys.readouterr().out.strip() == "500000000"
-
-
-def test_converged_lbr_rule():
-    # Lower LBR is better: only a significant drop keeps the arm training.
-    assert converged_lbr({"mean": -6.0, "t": -2.5}) is False
-    assert converged_lbr({"mean": -6.0, "t": -1.5}) is True
-    assert converged_lbr({"mean": 8.0, "t": 3.0}) is True
-    assert converged_lbr({"mean": 0.0, "t": 0.0}) is True
 
 
 def test_converged_rule():
@@ -185,13 +178,14 @@ def test_plateau_cli_self_snapshots_converge(monkeypatch, capsys, tiny_ckpt):
 
 
 def test_lag_non_positive_rejected(monkeypatch, capsys, tmp_path):
-    """--lag <= 0 would pair a snapshot with itself; refuse it up front."""
+    """h2h: --lag <= 0 would pair a snapshot with itself; refuse it up front."""
     from scripts import arm_plateau
 
     for bad in ("0", "-1"):
         monkeypatch.setattr(sys, "argv", [
             "arm_plateau.py", "--snapshots",
-            os.path.join(str(tmp_path), "*.bin"), "--lag", bad])
+            os.path.join(str(tmp_path), "*.bin"), "--method", "h2h",
+            "--lag", bad])
         with pytest.raises(SystemExit):
             arm_plateau.main()
         assert "must be positive" in capsys.readouterr().err
@@ -202,7 +196,8 @@ def test_lag_still_validated_before_globbing(monkeypatch, capsys, tiny_ckpt):
     from scripts import arm_plateau
 
     monkeypatch.setattr(sys, "argv", [
-        "arm_plateau.py", "--snapshots", "/nonexistent/*.bin", "--lag", "0"])
+        "arm_plateau.py", "--snapshots", "/nonexistent/*.bin",
+        "--method", "h2h", "--lag", "0"])
     with pytest.raises(SystemExit):
         arm_plateau.main()
     assert "must be positive" in capsys.readouterr().err
@@ -294,34 +289,105 @@ def test_paired_lbr_refuses_different_stacks(monkeypatch, tiny_ckpt):
         drv.paired_lbr(tiny_ckpt, tiny_ckpt, _CONFIG, 2, 1)
 
 
-def test_plateau_cli_lbr_self_snapshots_converge(monkeypatch, capsys,
-                                                 tiny_ckpt):
+def test_trend_recovers_a_linear_slope():
+    # Every deck rises 3 BB/100 per 5M around its own offset: the paired slope
+    # is exactly 6 per 10M and deck offsets do not add noise.
+    import numpy as np
+    rng = np.random.default_rng(0)
+    offsets = rng.normal(400, 1600, size=1000)
+    iters = [5_000_000, 10_000_000, 15_000_000, 20_000_000]
+    per_deck = [offsets + 3.0 * k for k in range(4)]
+    stats = trend(iters, per_deck)
+    assert stats["slope"] == pytest.approx(6.0)
+    assert stats["se"] == pytest.approx(0.0, abs=1e-9)
+    assert stats["decks"] == 1000
+
+
+def test_trend_flat_noise_is_not_significant():
+    import numpy as np
+    rng = np.random.default_rng(1)
+    base = rng.normal(400, 1600, size=4000)
+    per_deck = [base + rng.normal(0, 300, size=4000) for _ in range(4)]
+    stats = trend([5e6, 10e6, 15e6, 20e6], per_deck)
+    assert abs(stats["t"]) < 3.0
+    assert stats["se"] > 0
+
+
+def test_trend_irregular_spacing_uses_real_iterations():
+    # Values linear in iterations at uneven spacing (cap snapshot 27.7M).
+    iters = [15_000_000, 20_000_000, 25_000_000, 27_705_826]
+    per_deck = [[i / 1e6, i / 1e6 + 1.0] for i in iters]
+    assert trend(iters, per_deck)["slope"] == pytest.approx(10.0)
+
+
+def test_trend_refuses_bad_windows():
+    with pytest.raises(ValueError, match=">= 2 snapshots"):
+        trend([5e6], [[1.0, 2.0]])
+    with pytest.raises(ValueError, match="distinct"):
+        trend([5e6, 5e6], [[1.0, 2.0], [2.0, 3.0]])
+
+
+def test_converged_trend_needs_two_flat_windows():
+    flat, moving = {"t": 0.5}, {"t": 3.1}
+    assert converged_trend([moving, flat, flat]) is True
+    assert converged_trend([flat, moving]) is False   # newest window moving
+    assert converged_trend([moving, flat]) is False   # one flat window = dip?
+    assert converged_trend([flat]) is False           # not enough evidence
+    assert converged_trend([{"t": -2.5}, {"t": 0.1}]) is False
+
+
+def _snapshot_copies(tiny_ckpt, prefix, iters):
+    directory = os.path.dirname(tiny_ckpt)
+    for i in iters:
+        shutil.copyfile(tiny_ckpt, os.path.join(directory, f"{prefix}_{i}.bin"))
+    return os.path.join(directory, f"{prefix}_*.bin")
+
+
+def test_plateau_cli_trend_identical_snapshots_converge(monkeypatch, capsys,
+                                                        tiny_ckpt, tmp_path):
     from scripts import arm_plateau
 
-    directory = os.path.dirname(tiny_ckpt)
-    for iters in (100, 200):
-        shutil.copyfile(tiny_ckpt,
-                        os.path.join(directory, f"lbr_{iters}.bin"))
-    monkeypatch.setattr(sys, "argv", [
-        "arm_plateau.py", "--snapshots", os.path.join(directory, "lbr_*.bin"),
-        "--lag", "100", "--decks", "8", "--config", _CONFIG])
+    glob_ = _snapshot_copies(tiny_ckpt, "trend", (100, 200, 300, 400, 500))
+    cache = tmp_path / "cache"
+    argv = ["arm_plateau.py", "--snapshots", glob_, "--decks", "6",
+            "--config", _CONFIG, "--per-deck-dir", str(cache)]
+    monkeypatch.setattr(sys, "argv", argv)
     arm_plateau.main()
     out = capsys.readouterr().out
-    assert "iters=200" in out and "iters=100" in out
-    assert "n=8 paired decks" in out
+    assert out.count("window ") == 2
     assert "VERDICT: converged" in out
+    assert len(list(cache.iterdir())) == 5      # one cached file per snapshot
+    # A second check reuses the cache and gives the same verdict.
+    monkeypatch.setattr(sys, "argv", argv)
+    arm_plateau.main()
+    assert "VERDICT: converged" in capsys.readouterr().out
 
 
-def test_plateau_cli_lbr_rejects_one_deck(monkeypatch, capsys, tiny_ckpt):
+def test_plateau_cli_trend_too_few_snapshots(monkeypatch, capsys, tiny_ckpt,
+                                             tmp_path):
     from scripts import arm_plateau
 
-    directory = os.path.dirname(tiny_ckpt)
-    for iters in (100, 200):
-        shutil.copyfile(tiny_ckpt,
-                        os.path.join(directory, f"one_{iters}.bin"))
+    glob_ = _snapshot_copies(tiny_ckpt, "few", (100, 200, 300, 400))
     monkeypatch.setattr(sys, "argv", [
-        "arm_plateau.py", "--snapshots", os.path.join(directory, "one_*.bin"),
-        "--lag", "100", "--decks", "1", "--config", _CONFIG])
+        "arm_plateau.py", "--snapshots", glob_, "--decks", "4",
+        "--config", _CONFIG, "--per-deck-dir", str(tmp_path / "c")])
+    arm_plateau.main()
+    out = capsys.readouterr().out
+    assert "need 5 snapshots for two windows (have 4)" in out
+    assert "VERDICT: training" in out
+
+
+@pytest.mark.parametrize("flag, value, match", [
+    ("--decks", "1", "at least 2"), ("--window", "2", "at least 3")])
+def test_plateau_cli_trend_rejects_bad_args(monkeypatch, capsys, tiny_ckpt,
+                                            flag, value, match):
+    from scripts import arm_plateau
+
+    glob_ = _snapshot_copies(tiny_ckpt, "bad", (100, 200))
+    monkeypatch.setattr(sys, "argv", [
+        "arm_plateau.py", "--snapshots", glob_, "--config", _CONFIG,
+        flag, value])
     with pytest.raises(SystemExit):
         arm_plateau.main()
-    assert "at least 2" in capsys.readouterr().err
+    assert match in capsys.readouterr().err
+

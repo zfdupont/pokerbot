@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
 """Decide when an abstraction arm has plateaued, and its iteration cap.
 
-An arm is converged at snapshot N when N is not less exploitable than
-snapshot N-lag by paired LBR at |t| >= 2 (spec 1d, revised 2026-10-22): both
-snapshots face local best response on the same decks and the per-deck
-differences are t-tested. `--method h2h` keeps the earlier rule, N does not
-beat N-lag head-to-head at |t| >= 2 (patterns/eval-checkpoint-ab.md). Snapshots
-are the trainer's `<base>_<iters>.bin` files; any digit count is accepted, and
-a lag that lands between snapshots uses the newest one at or below N-lag.
+An arm is converged when LBR exploitability has stopped trending (spec 1d,
+revised 2026-10-22): every snapshot faces local best response on the same decks
+(turn+river, seed-shared), the per-deck LBR values of the last `--window`
+snapshots are regressed on iterations deck by deck, and the window's slope
+(BB/100 per 10M iterations) is t-tested against 0. The arm is converged when
+the windows ending at the newest two snapshots both have |t| < 2: one flat
+window can be a dip between two rises. Per-deck values are cached in
+`--per-deck-dir` (shared with scripts/lbr_sweep.py), so a check after each sync
+only runs LBR on new snapshots.
+
+`--method h2h` keeps the earlier pair rule, N does not beat N-lag head-to-head
+at |t| >= 2 (patterns/eval-checkpoint-ab.md); a lag that lands between
+snapshots uses the newest one at or below N-lag. Snapshots are the trainer's
+`<base>_<iters>.bin` files; any digit count is accepted.
 
 The iteration cap is C0's plateau scaled by the arm's infoset count, clamped to
 [20M, 150M] for Phase 2 arms and [20M, 500M] for Phase 3 arms (`--phase 3`).
@@ -15,8 +22,8 @@ The iteration cap is C0's plateau scaled by the arm's infoset count, clamped to
 
 Usage:
     uv run python scripts/arm_plateau.py \\
-        --snapshots 'sixmax/checkpoints/hu200_c0_*.bin' --lag 10000000 \\
-        --config sixmax/configs/hu200.toml
+        --snapshots 'sixmax/checkpoints/hu200_c2_*.bin' \\
+        --config sixmax/configs/hu200_c2.toml
     uv run python scripts/arm_plateau.py --infosets sixmax/checkpoints/hu200_c0.bin
     uv run python scripts/arm_plateau.py --cap 25000000 40000 120000
     uv run python scripts/arm_plateau.py --cap 60000000 33831 217000 --phase 3
@@ -86,11 +93,40 @@ def converged(stats):
     return not (stats["mean"] > 0 and stats["t"] >= 2.0)
 
 
-def converged_lbr(stats):
-    """Converged unless the newer snapshot is still less exploitable: lower
-    LBR is better, so `mean` (newer - older) must be <= -2 standard errors
-    to keep training."""
-    return not (stats["mean"] < 0 and stats["t"] <= -2.0)
+_PER_10M = 1e7
+
+
+def trend(iters, per_deck):
+    """Paired LBR trend over one window of snapshots.
+
+    `iters` holds each snapshot's iteration count; `per_deck[i]` its per-deck
+    LBR values (BB/100) on the same decks. Each deck's values are regressed on
+    iterations by least squares, and the slopes are averaged over decks, so
+    deck luck cancels as in a paired test. Returns {slope, se, t, decks} with
+    slope and se in BB/100 per 10M iterations; t is 0 when se is 0.
+    """
+    import numpy as np
+
+    if len(iters) < 2 or len(iters) != len(per_deck):
+        raise ValueError("trend needs >= 2 snapshots with per-deck values")
+    x = np.asarray(iters, dtype=float) / _PER_10M
+    dx = x - x.mean()
+    sxx = float((dx * dx).sum())
+    if sxx == 0.0:
+        raise ValueError("trend needs snapshots at distinct iterations")
+    y = np.stack([np.asarray(v, dtype=float) for v in per_deck])
+    slopes = (dx[:, None] * (y - y.mean(axis=0))).sum(axis=0) / sxx
+    n = slopes.size
+    slope = float(slopes.mean())
+    se = float(slopes.std(ddof=1) / np.sqrt(n)) if n > 1 else 0.0
+    return {"slope": slope, "se": se, "t": slope / se if se > 0 else 0.0,
+            "decks": n}
+
+
+def converged_trend(windows):
+    """Converged when the last two windows' slopes are both within 2 se of
+    0. Fewer than two windows is not enough evidence: keep training."""
+    return len(windows) >= 2 and all(abs(w["t"]) < 2.0 for w in windows[-2:])
 
 
 def _infosets(path):
@@ -105,12 +141,18 @@ def main():
     p.add_argument("--snapshots",
                    help="glob of <base>_<iters>.bin snapshots")
     p.add_argument("--lag", type=int, default=10_000_000,
-                   help="iterations between the compared snapshots")
+                   help="h2h: iterations between the compared snapshots")
     p.add_argument("--method", choices=("lbr", "h2h"), default="lbr",
-                   help="paired LBR exploitability (default) or head-to-head")
+                   help="LBR trend over snapshots (default) or head-to-head")
+    p.add_argument("--window", type=int, default=4,
+                   help="lbr: snapshots per trend window (>= 3)")
     p.add_argument("--decks", type=int, default=100000,
-                   help="lbr: duplicate decks shared by both snapshots "
-                        "(100k gives se ~5 BB/100, about 7 min on 8 cores)")
+                   help="lbr: duplicate decks shared by every snapshot "
+                        "(100k: about 3.5 min per new snapshot on 8 cores)")
+    p.add_argument("--per-deck-dir",
+                   default=os.path.join("sixmax", "checkpoints",
+                                        "lbr_per_deck"),
+                   help="lbr: per-deck LBR cache (shared with lbr_sweep.py)")
     p.add_argument("--seed", type=int, default=1, help="lbr: deck seed")
     p.add_argument("--config", default=_DEFAULT_TOML,
                    help="lbr: config whose blueprint vocab the snapshots use")
@@ -139,6 +181,9 @@ def main():
         return
     if args.snapshots is None:
         p.error("--snapshots is required unless --infosets or --cap is given")
+    if args.method == "lbr":
+        _plateau_trend(p, args)
+        return
     if args.lag <= 0:
         p.error("--lag must be positive (a lag of 0 would compare a snapshot "
                 "with itself)")
@@ -147,9 +192,6 @@ def main():
         newest, older = pick_pair(glob.glob(args.snapshots), args.lag)
     except ValueError as exc:
         p.error(str(exc))
-    if args.method == "lbr":
-        _plateau_lbr(p, args, newest, older)
-        return
 
     from scripts.eval_blueprint_h2h import run_h2h
 
@@ -174,24 +216,55 @@ def main():
     print(f"VERDICT: {'converged' if converged(stats) else 'training'}")
 
 
-def _plateau_lbr(parser, args, newest, older):
-    from scripts.eval_sixmax_lbr import paired_lbr
+def _per_deck_lbr(path, args):
+    """Per-deck LBR values for one snapshot, from the cache or a fresh run."""
+    import numpy as np
+    from scripts.eval_sixmax_lbr import run_lbr
+    from scripts.lbr_sweep import per_deck_path
 
+    cached = per_deck_path(args.per_deck_dir, path, args.decks, args.seed)
+    if os.path.exists(cached):
+        return np.load(cached)
+    rep = run_lbr(path, args.config, args.decks, args.seed,
+                  threads=args.threads)
+    values = np.asarray(rep["per_deck"], dtype=np.float64)
+    os.makedirs(args.per_deck_dir, exist_ok=True)
+    np.save(cached, values)
+    return values
+
+
+def _plateau_trend(parser, args):
     if args.decks < 2:
         parser.error("--decks must be at least 2 (the t-test needs a spread)")
-    print(f"A = {newest} (iters={snapshot_iters(newest)})")
-    print(f"B = {older} (iters={snapshot_iters(older)})")
-    try:
-        stats = paired_lbr(newest, older, args.config, args.decks, args.seed,
-                           threads=args.threads)
-    except ValueError as exc:
-        parser.error(str(exc))
-    print(f"LBR(A) {stats['a_bb100']:+.2f}  LBR(B) {stats['b_bb100']:+.2f} "
-          f"BB/100 (turn+river, seed {args.seed})")
-    print(f"\nn={stats['n']} paired decks")
-    print(f"A - B: {stats['mean']:+.2f} BB/100  sd {stats['sd']:.1f}  "
-          f"se {stats['se']:.2f}  t={stats['t']:.2f}")
-    print(f"VERDICT: {'converged' if converged_lbr(stats) else 'training'}")
+    if args.window < 3:
+        parser.error("--window must be at least 3 (a 2-point line has no "
+                     "check against a dip)")
+    snaps = []
+    for path in glob.glob(args.snapshots):
+        m = _SNAPSHOT_RE.search(os.path.basename(path))
+        if m is not None:
+            snaps.append((int(m.group(1)), path))
+    snaps.sort()
+    if not snaps:
+        parser.error("no snapshots")
+    # The last two windows need window + 1 snapshots; older ones are unused.
+    used = snaps[-(args.window + 1):]
+    values = {}
+    for iters, path in used:
+        values[iters] = _per_deck_lbr(path, args)
+        print(f"{iters:>12,}  LBR {values[iters].mean():+8.2f} BB/100",
+              flush=True)
+    windows = []
+    for end in range(args.window, len(used) + 1):
+        w = [i for i, _ in used[end - args.window:end]]
+        stats = trend(w, [values[i] for i in w])
+        windows.append(stats)
+        print(f"window {w[0]:,}-{w[-1]:,}: slope {stats['slope']:+.2f} "
+              f"BB/100 per 10M  se {stats['se']:.2f}  t={stats['t']:+.2f}")
+    if len(windows) < 2:
+        print(f"need {args.window + 1} snapshots for two windows "
+              f"(have {len(used)})")
+    print(f"VERDICT: {'converged' if converged_trend(windows) else 'training'}")
 
 
 if __name__ == "__main__":

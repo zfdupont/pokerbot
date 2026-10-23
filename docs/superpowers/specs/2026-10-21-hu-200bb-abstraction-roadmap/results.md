@@ -120,3 +120,19 @@ Each arm at its cap (P0 at 25M) vs C0@25M, eval_blueprint_h2h, 8 seeds x 20k dup
 - Phase 2 winner on the local gate: C2. Next per spec: C2 to Slumbot at 13k hands.
 - C3's SPR layout costs 54% more infosets than C1 for the same result.
 - P0's corrected gate is borderline (+6.76, t=1.92; LBR no difference). Keep C0's map per the rule, but the card-map question stays open for Phase 3.
+
+
+## Plateau rule: LBR trend test (spec 1d revised), 2026-10-22
+
+`arm_plateau.py --method lbr` now t-tests the paired LBR slope over the last 4 snapshots and needs the last two windows flat (|t| < 2). On the cached sweep values (100k decks, seed 1):
+
+| Arm | Window | Slope BB/100 per 10M | se | t | Window | Slope | se | t | Verdict |
+|---|---|---:|---:|---:|---|---:|---:|---:|---|
+| C0 | 5-20M | +19.01 | 3.88 | +4.90 | 10-25M | +4.93 | 3.65 | +1.35 | training (snapshots end at 25M) |
+| P0 | 5-20M | +13.31 | 4.17 | +3.19 | 10-25M | +6.15 | 3.86 | +1.59 | training (snapshots end at 25M) |
+| C1 | 10-25M | +2.57 | 3.85 | +0.67 | 15-27.7M | +0.01 | 4.27 | +0.00 | converged |
+| C2 | 20-35M | -1.72 | 3.58 | -0.48 | 25-38.5M | +1.03 | 3.83 | +0.27 | converged |
+| C3 | 25-40M | +12.84 | 3.31 | +3.88 | 30-42.5M | +6.44 | 3.80 | +1.70 | training at cap: flagged possibly undertrained |
+
+- C0 and P0 read "training" only because their last snapshot is 25M (the saved final checkpoints are also 25M), so the early-rise window is still one of the two. One more 5M snapshot each (`--resume`, about $0.03 each) would settle it.
+- Gate 2's ranking does not depend on this: C2 is converged by either rule, and C0 at 25M sits on its flat stretch (15-25M within 7 BB/100).
