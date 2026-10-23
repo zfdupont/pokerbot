@@ -147,3 +147,14 @@ Ruling (2026-10-23): C0 and P0 are treated as converged at 25M without a second 
 - Regression check vs the previous confirmed score (-118.3 +/- 42): +67.8 better, so PASS (blocks only if worse by > 2 combined SE).
 - Phase 2 extra stop ("improved by at least 2 SE over -118"): 3.2 SE on C2's own SE (pass, my reading); 1.44 combined SE. Recorded as passing; the spec's wording is ambiguous.
 - Breakdown (baseline BB summed): pots < 10 BB +4,245 (n 11,227); 10-40 -105 (n 1,366); 40-100 -1,471 (n 236); 100+ -7,863 (n 171). Showdown -10,893 (n 1,711); folds +5,699 (n 11,289); 3-bet pots -1,155 (n 4,614). Small pots and fold equity win; about 400 big pots, mostly at showdown, lose more than all of it. Points at deep big-pot decisions (bet-size history, leak B / Phase 4; later-street card buckets, Phase 3).
+
+## Diagnosis: C2's Slumbot big-pot losses are off-tree infoset misses, 2026-10-23
+
+Every logged decision of ours (29,096) was replayed through the deploy agent's key builder (`SixmaxAgent`, as `eval_slumbot` plays it) and looked up in the table.
+
+- C2 missed its table on **41.1% of preflop decisions** (5,840), all in one context: preflop, 1 raise, pot 3.0 BB, the big blind facing Slumbot's 2 BB min-open. Our opens are 2.5/3.5/5 BB, so training never produces a 3.0 BB pot facing an open, and C2's first pot edge (3 BB) files it in a bucket of its own. Postflop misses 5.9/8.3/6.5% (pots of exactly 3.0 or 6.0 BB after Slumbot's small bets).
+- A miss plays uniformly over the legal mask. At the preflop miss C2 raised 2,894, **jammed 200 BB 997 times**, called 985, folded 964 (1/6 each of six legal actions).
+- Hands with a miss: raw -85.7 +/- 36.1 BB/100 (n 6,225); hands without: -18.1 +/- 23.6 (n 6,775; not a random sample, since it excludes Slumbot's min-open hands). 114 of the 171 pots >= 100 BB had a miss and lost -6,351 of the -7,863 baseline BB.
+- Same decisions through other tables: C0 (edges 7/15/40) 0.0% preflop, 0.0/1.8/2.5% postflop; C1 (edges 4/8/16/...) 0.0% preflop but 23.1% on the flop (pot 4.0 BB after a called 2 BB open), 14.5/10.5% turn/river.
+- So finer pot edges open holes at off-tree sizes below the smallest trained pots. Self-play head-to-head and LBR use only our own bet sizes and cannot see this; only an outside opponent's sizes do.
+- Proposed fix (no retraining): in the deploy bridge, on a miss fall back to the nearest pot bucket present in the table before uniform, and make the final fallback safer than uniform (uniform includes the 200 BB jam). Then re-run C2 on Slumbot. The C2 Slumbot number above is a lower bound on the abstraction's quality.
