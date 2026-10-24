@@ -649,7 +649,61 @@
     "confound": "different bet menus; C2 nearest-bucket 9.3%, C4 0.1% plus aliasing of 2.5 BB opens"
    },
    "lbr_cap_bb100": 365.92,
-   "slumbot": null
+   "slumbot": {
+    "hands": 13000,
+    "date": "2026-10-23",
+    "raw_bb100": -35.0,
+    "raw_se": 15.6,
+    "baseline_bb100": -25.4,
+    "baseline_se": 16.6,
+    "baseline_by_seat": {
+     "bb": -17.7,
+     "sb": -33.1
+    },
+    "lookups": {
+     "hit": 31821,
+     "nearest": 387,
+     "safe": 0,
+     "uniform": 0
+    },
+    "size_bins_baseline_bb": {
+     "<10": [
+      11537,
+      -1482.4
+     ],
+     "10-40": [
+      1166,
+      1259.0
+     ],
+     "40-100": [
+      208,
+      -1421.2
+     ],
+     "100+": [
+      89,
+      -1655.0
+     ]
+    },
+    "showdown_baseline_bb": [
+     1999,
+     -4445.4
+    ],
+    "fold_baseline_bb": [
+     11001,
+     1145.8
+    ],
+    "threebet_pots_baseline_bb": [
+     2019,
+     -1452.3
+    ],
+    "log": "slumbot_c4_38m_13000.jsonl",
+    "fallback": "nearest",
+    "vs_previous": {
+     "previous": -50.5,
+     "previous_se": 21.2,
+     "verdict": "pass"
+    }
+   }
   }
  ],
  "invalid_note": "All live-engine h2h before commit d8097b7 are invalid (raise-count reset bug); LBR and Slumbot are unaffected."

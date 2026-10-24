@@ -186,3 +186,21 @@ Every logged decision of ours (29,096) was replayed through the deploy agent's k
 
 - Off-menu translation of the min-size opens nets only +1.36 for C2. The rest is in larger-pot spots: whoever opens 5 BB wins about 1.3-1.5 BB per open, and C2 opens 5 BB slightly more and earns slightly more per open.
 - Open-size aliasing: facing an open, the pots after 2.5/3.5/5 BB opens (3.5/4.5/6.0 BB) all file in pot bucket (3, 6] with the same raise count, so C2 answers all three opens with one strategy; C4 the same for 3.5/5 (its 2 BB open has bucket (0, 3]). C4's fold rates vs 2.5/3.5/5 BB opens: 58/56/56%. This is leak B (bet-size history in the key) at the first preflop decision.
+
+## Slumbot: C4 (2 BB open), 2026-10-23
+
+`eval_slumbot.py --checkpoint hu200_c4_38477898.bin --config hu200_c4.toml --hands 13000` (the first 1,000 hands are the earlier 1k run, resumed). Nearest-bucket fallback on. Log: `slumbot_c4_38m_13000.jsonl` (rows carry per-hand lookup counts). +/- is one standard error.
+
+| | C2 (13k) | C4 (13k) |
+|---|---:|---:|
+| Raw BB/100 | -50.5 +/- 21.2 | **-35.0 +/- 15.6** |
+| Baseline BB/100 | -40.0 +/- 21.9 | **-25.4 +/- 16.6** |
+| Lookups hit / nearest / safe / uniform | 76.5 / 23.5 / - / (uniform fallback) | 98.8 / 1.2 / 0 / 0 % |
+| Pots >= 100 BB: n, baseline BB | 171, -7,863 | 89, -1,655 |
+| Showdown baseline BB | -10,893 | -4,445 |
+| Pots < 10 BB baseline BB | +4,245 | -1,482 |
+
+- C4 - C2 = +15.5 BB/100, 0.59 combined SE: not significant. C4's SE is smaller (no random jams).
+- Regression check vs the confirmed C2 score: pass. Baseline -25.4 is one SE from the -20 target.
+- C2's small-pot profit was largely fold equity from uniform-fallback jams; with the 2 BB open on-tree that disappears, and big-pot losses fall about 80%.
+- Still open: the verified deploy raise-sizing gap (gross vs net pot for pot-fraction raises facing a bet) affects C4 too.
