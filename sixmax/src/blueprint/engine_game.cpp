@@ -91,11 +91,14 @@ void EngineGameState::apply(int action) {
             ++raises_[st];
             double target = vocab_->target_bb(action, bet_context());
             hand_.apply({EngineActionType::RaiseTo, target});
-            // Track only while the field is on: off mode (or no abstraction)
-            // must behave exactly as before, including for vocabularies whose
-            // unit has more than 3 sizes.
-            if (abstraction_ &&
-                abstraction_->bet_history() == BetHistory::LastRaise) {
+            // Track on every Bet/AllIn whenever the vocab can name a class,
+            // attached abstraction or not: the evaluator and the selection
+            // eval build unattached states, and their keys must carry the
+            // same class bits as the trainer's. Off mode still zeroes the
+            // field in abstract_key/pack_key, and a vocab with more than 3
+            // sizes per unit never records a class (supports_raise_classes is
+            // false there, so raise_class is never asked and cannot throw).
+            if (vocab_->supports_raise_classes()) {
                 // Class 4 is decided by the resulting state, not the action
                 // index: a Bet the engine caps at the stack is an all-in too.
                 last_raise_[st] = hand_.player(seat).all_in
@@ -109,6 +112,15 @@ void EngineGameState::apply(int action) {
 }
 
 uint64_t EngineGameState::abstract_key(const Abstraction& abs) const {
+    // A bet-history abstraction over a vocab that cannot name a raise class
+    // (more than 3 Bet sizes in a unit) would silently key zeros; refuse.
+    // Construction refuses the attached case; this covers unattached states
+    // keyed against someone else's abstraction (probs_for, evaluators).
+    if (abs.bet_history() == BetHistory::LastRaise &&
+        !vocab_->supports_raise_classes())
+        throw std::invalid_argument(
+            "abstract_key: bet_history requires at most 3 Bet sizes per unit "
+            "(raise_class unavailable)");
     const int p = hand_.current_player();
     const int n = hand_.num_players();
     const int street = (int)hand_.street();

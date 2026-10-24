@@ -54,8 +54,11 @@ public:
     double to_call()   const { return hand_.to_call(); }
     std::array<uint8_t, 4> raises_per_street() const { return raises_; }
     // Size class of the last bet/raise on each street (0 = none, 1-3 = rank in
-    // the vocab's same-unit sizes, 4 = all-in). Tracked only while the attached
-    // abstraction has bet history on; otherwise all zeros. Reset with the hand.
+    // the vocab's same-unit sizes, 4 = all-in). Recorded on every Bet/AllIn as
+    // long as the vocab supports classes, whether or not an abstraction is
+    // attached — so unattached states (the A/B evaluator and the selection
+    // eval) key a bet_history checkpoint identically to the trainer. Off-mode
+    // keys still zero the field in abstract_key/pack_key. Reset with the hand.
     std::array<uint8_t, 4> last_raise_classes() const { return last_raise_; }
 
     // True-card / mutable access for the LBR exploiter (never exposed to Python).

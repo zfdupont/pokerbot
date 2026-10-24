@@ -32,7 +32,8 @@ public:
     // else 1 + the index's rank among Bet entries of the same SizeUnit (the
     // vocab lists sizes ascending). Computed once in the constructor. Throws
     // std::invalid_argument for a Bet whose unit has more than 3 sizes (3 bits
-    // cannot encode the ranks); the constructor itself never throws.
+    // cannot encode the ranks) and std::out_of_range for an index outside
+    // [0, size()) — it is exposed to Python. The constructor never throws.
     int raise_class(int idx) const;
     // False when some SizeUnit has more than 3 Bet entries. Such a vocab is
     // legal while the key field is off; an abstraction with bet history on

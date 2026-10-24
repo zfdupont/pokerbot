@@ -74,6 +74,8 @@ double ActionVocab::target_bb(int idx, const BetContext& ctx) const {
 }
 
 int ActionVocab::raise_class(int idx) const {
+    if (idx < 0 || idx >= (int)raise_classes_.size())
+        throw std::out_of_range("raise_class: action index out of range");
     const uint8_t cls = raise_classes_[idx];
     if (cls == kRaiseClassUnavailable)
         throw std::invalid_argument(

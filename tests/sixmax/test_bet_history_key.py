@@ -69,6 +69,15 @@ def test_raise_class_refuses_four_sizes_in_a_unit(tmp_path):
         vocab.raise_class(6)
 
 
+def test_raise_class_bounds_checked(c4_vocab):
+    # raise_class is exposed to Python; an out-of-range index must raise
+    # rather than read past the class table.
+    with pytest.raises(IndexError):
+        c4_vocab.raise_class(c4_vocab.size())
+    with pytest.raises(IndexError):
+        c4_vocab.raise_class(-1)
+
+
 def test_off_mode_ignores_last_raise(abs_c4_layout):
     base = abs_c4_layout.pack_key(7, 2, [1, 1, 0, 0], 20.0, 180.0, 1, 0)
     assert abs_c4_layout.pack_key(7, 2, [1, 1, 0, 0], 20.0, 180.0, 1, 0,
@@ -143,13 +152,14 @@ def test_on_mode_four_size_vocab_refused_at_construction(
 
 def test_engine_abstract_key_includes_classes_only_when_on(c4_vocab, abs_c4_layout):
     actions = (4, 2, 1, 7)
-    # Off: no abstraction attached, so nothing is tracked and the key is zero
-    # in bits 30-41.
+    # Off: keys are taken against an off abstraction, which zeroes the field
+    # (tracking itself is unconditional, so the evaluator's unattached states
+    # key the same as the trainer's).
     off_state = _hu_state(c4_vocab)
     for a in actions:
         off_state.apply(a)
     off_key = off_state.abstract_key(abs_c4_layout)
-    # On: tracking from construction, same deck and actions -> same low bits.
+    # On: same deck and actions -> same low bits, class bits included.
     abs_c4_layout.set_bet_history("last_raise")
     on_state = _hu_state(c4_vocab, abstraction=abs_c4_layout)
     for a in actions:
@@ -157,3 +167,36 @@ def test_engine_abstract_key_includes_classes_only_when_on(c4_vocab, abs_c4_layo
     on_key = on_state.abstract_key(abs_c4_layout)
     assert (off_key >> 30) & 0xFFF == 0
     assert (on_key >> 30) & 0xFFF == 2 | (2 << 3)
+
+
+def test_unattached_state_keys_include_classes(c4_vocab, abs_c4_layout):
+    """An EngineGameState built without an abstraction (eval_sixmax.py's
+    _play_hand, the trainer's selection eval) must key exactly like the
+    trainer's attached state on the same line -- otherwise a C5 checkpoint
+    gets on-mode keys with zero class bits, misses, and silently plays
+    uniform."""
+    actions = (4, 2, 1, 7)          # open 3.5 (class 2), call, check, bet 0.75
+    abs_c4_layout.set_bet_history("last_raise")
+    attached = _hu_state(c4_vocab, abstraction=abs_c4_layout)
+    plain = _hu_state(c4_vocab)     # no abstraction: how the A/B eval builds
+    for a in actions:
+        attached.apply(a)
+        plain.apply(a)
+    assert plain.last_raise_classes() == attached.last_raise_classes()
+    assert plain.last_raise_classes() == [2, 2, 0, 0]
+    on_key = attached.abstract_key(abs_c4_layout)
+    assert (on_key >> 30) & 0xFFF != 0
+    assert plain.abstract_key(abs_c4_layout) == on_key
+
+
+def test_abstract_key_refuses_unsupported_vocab_when_on(tmp_path,
+                                                        abs_c4_layout):
+    """A 4-size-unit vocab cannot name a class, so an on-mode key would
+    silently carry zeros. Keying (not just construction) must refuse."""
+    vocab = _vocab_with_pot_sizes(tmp_path, [0.25, 0.5, 0.75, 1.0])
+    plain = _hu_state(vocab)        # unattached: construction cannot refuse
+    abs_c4_layout.set_bet_history("last_raise")
+    with pytest.raises(ValueError, match="raise_class"):
+        plain.abstract_key(abs_c4_layout)
+    abs_c4_layout.set_bet_history("off")
+    assert plain.abstract_key(abs_c4_layout) is not None   # off mode works
