@@ -48,7 +48,8 @@ def decode_key(key, pot_layout=None):
     returns it (`(mode, edges)`). Under the legacy layout (or when it is not
     given) the pot index is read from bits 18-19, as SIXBP001/002 wrote it.
     A non-legacy layout (SIXBP003) leaves bits 18-19 zero and puts the pot
-    index at bits 26-29, where up to 16 buckets fit.
+    index at bits 26-29, where up to 16 buckets fit. The last-raise class
+    field (SIXBP004, bits 30-41) is ignored here.
     """
     legacy = is_legacy_pot_layout(pot_layout)
     return {

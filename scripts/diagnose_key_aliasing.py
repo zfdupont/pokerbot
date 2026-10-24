@@ -30,6 +30,15 @@ def required_equity(to_call_bb, pot_bb):
     return to_call_bb / (pot_bb + to_call_bb)
 
 
+# A SIXBP004 key carries the last-raise class (bits 30-41), which this script
+# cannot rebuild: it sees the decision but not the action line that produced
+# it. Refuse rather than report aliasing over wrong keys.
+BET_HISTORY_REFUSAL = (
+    "diagnose_key_aliasing: refuses a bet_history checkpoint (this script "
+    "rebuilds keys without the last-raise field, so they would not be the "
+    "keys the agent queries)")
+
+
 def decision_key(deploy, *, hole, board, street, raises_per_street, pot_bb,
                  stack_bb, eff_stack_bb, live, after, **_ignored):
     """The infoset key the checkpoint's own abstraction gives this decision.
@@ -45,6 +54,8 @@ def decision_key(deploy, *, hole, board, street, raises_per_street, pot_bb,
     from agents.sixmax_agent import _is_legacy_pot_layout
 
     abstraction = deploy._strategy.abstraction()
+    if abstraction.bet_history() != "off":
+        raise ValueError(BET_HISTORY_REFUSAL)
     if eff_stack_bb is None:
         if not _is_legacy_pot_layout(abstraction.pot_layout()):
             raise ValueError(
@@ -94,6 +105,8 @@ def main():
     def factory(_):
         agent = SixmaxAgent(args.checkpoint)
         deploy = agent._deploy
+        if deploy.bet_history != "off":
+            raise SystemExit(BET_HISTORY_REFUSAL)
         inner = deploy.decide
 
         def logged(**kw):

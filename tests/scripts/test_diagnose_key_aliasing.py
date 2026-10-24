@@ -100,3 +100,30 @@ def test_script_key_matches_agent_key(c1_checkpoint):
     # index lives at bits 26-29.
     assert (script_key >> 18) & 0b11 == 0
     assert (script_key >> 26) & 0b1111 > 0
+
+
+class _BetHistoryStrategy:
+    """Just enough of a BlueprintStrategy for decision_key's refusal check."""
+
+    class _Abs:
+        @staticmethod
+        def bet_history():
+            return "last_raise"
+
+    @staticmethod
+    def abstraction():
+        return _BetHistoryStrategy._Abs()
+
+
+class _BetHistoryDeploy:
+    _strategy = _BetHistoryStrategy()
+
+
+def test_bet_history_checkpoint_refused():
+    """A SIXBP004 key carries bits 30-41 (last-raise class) that this script
+    cannot rebuild from the decision alone; it must refuse, not report
+    aliasing over keys the agent never queries."""
+    with pytest.raises(ValueError, match="bet_history"):
+        decision_key(_BetHistoryDeploy(), hole=[0, 5], board=[9, 20, 31],
+                     street=1, raises_per_street=[1, 1, 0, 0], pot_bb=7.5,
+                     stack_bb=98.0, eff_stack_bb=95.0, live=1, after=0)
