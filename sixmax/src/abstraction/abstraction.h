@@ -79,8 +79,9 @@ public:
     const PotLayout& pot_layout() const { return pot_layout_; }
     // Opt-in last-raise-class key field. Off (default) keeps keys and the
     // hash byte-identical to the historical artifacts; LastRaise adds bits
-    // 30-41 and mixes a tag into hash().
-    void set_bet_history(BetHistory mode) { bet_history_ = mode; }
+    // 30-41 and mixes a tag into hash(). Throws std::invalid_argument for an
+    // unknown mode.
+    void set_bet_history(BetHistory mode);
     BetHistory bet_history() const { return bet_history_; }
     uint64_t pack_key(int card, int street,
                       const std::array<uint8_t, 4>& raises, double pot_bb,

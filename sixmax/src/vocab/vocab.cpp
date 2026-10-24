@@ -5,6 +5,9 @@
 
 namespace sixmax {
 
+// Marker for a Bet index whose size unit has more than 3 entries.
+constexpr uint8_t kRaiseClassUnavailable = 0xFF;
+
 static uint64_t fnv1a(const std::vector<AbstractAction>& as) {
     uint64_t h = 1469598103934665603ull;
     auto mix = [&](uint64_t v) { h ^= v; h *= 1099511628211ull; };
@@ -20,7 +23,41 @@ static uint64_t fnv1a(const std::vector<AbstractAction>& as) {
 }
 
 ActionVocab::ActionVocab(std::vector<AbstractAction> actions)
-    : actions_(std::move(actions)), hash_(fnv1a(actions_)) {}
+    : actions_(std::move(actions)),
+      raise_classes_(actions_.size(), 0),
+      hash_(fnv1a(actions_)) {
+    // Precompute the per-index class table. A unit with more than 3 Bet sizes
+    // cannot be ranked in 3 bits: mark those entries unavailable but keep the
+    // vocab constructible, because off mode never asks for a class.
+    int bet_count[2] = {0, 0};
+    for (const auto& a : actions_)
+        if (a.type == ActionType::Bet) ++bet_count[(int)a.unit];
+    for (int u = 0; u < 2; ++u)
+        if (bet_count[u] > 3) supports_raise_classes_ = false;
+
+    int rank[2] = {0, 0};
+    for (size_t i = 0; i < actions_.size(); ++i) {
+        const auto& a = actions_[i];
+        switch (a.type) {
+            case ActionType::Fold:
+            case ActionType::Check:
+            case ActionType::Call:
+                raise_classes_[i] = 0;
+                break;
+            case ActionType::AllIn:
+                raise_classes_[i] = 4;
+                break;
+            case ActionType::Bet: {
+                const int u = (int)a.unit;
+                raise_classes_[i] = bet_count[u] > 3
+                    ? kRaiseClassUnavailable
+                    : (uint8_t)(1 + rank[u]);
+                ++rank[u];
+                break;
+            }
+        }
+    }
+}
 
 double ActionVocab::target_bb(int idx, const BetContext& ctx) const {
     const auto& a = actions_[idx];
@@ -37,28 +74,11 @@ double ActionVocab::target_bb(int idx, const BetContext& ctx) const {
 }
 
 int ActionVocab::raise_class(int idx) const {
-    const AbstractAction& a = actions_[idx];
-    switch (a.type) {
-        case ActionType::Fold:
-        case ActionType::Check:
-        case ActionType::Call:
-            return 0;
-        case ActionType::AllIn:
-            return 4;
-        case ActionType::Bet:
-            break;
-    }
-    int count = 0, rank = 0;
-    for (int i = 0; i < size(); ++i) {
-        const AbstractAction& b = actions_[i];
-        if (b.type != ActionType::Bet || b.unit != a.unit) continue;
-        ++count;
-        if (i < idx) ++rank;
-    }
-    if (count > 3)
+    const uint8_t cls = raise_classes_[idx];
+    if (cls == kRaiseClassUnavailable)
         throw std::invalid_argument(
             "raise_class: at most 3 Bet sizes per unit are supported");
-    return 1 + rank;
+    return (int)cls;
 }
 
 int ActionVocab::nearest(double bet_to_bb, const BetContext& ctx, double u) const {

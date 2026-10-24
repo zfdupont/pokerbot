@@ -1,4 +1,5 @@
 #pragma once
+#include <stdexcept>
 #include "abstraction/abstraction.h"
 #include "blueprint/game.h"
 #include "engine/engine.h"
@@ -16,7 +17,16 @@ class EngineGameState : public GameState {
 public:
     EngineGameState(HandState hand, const ActionVocab* vocab,
                     const Abstraction* abstraction = nullptr)
-        : hand_(std::move(hand)), vocab_(vocab), abstraction_(abstraction) {}
+        : hand_(std::move(hand)), vocab_(vocab), abstraction_(abstraction) {
+        // Refuse at construction, before any action is applied: a unit with
+        // more than 3 Bet sizes has no raise class. Off mode is untroubled.
+        if (abstraction_ &&
+            abstraction_->bet_history() == BetHistory::LastRaise &&
+            !vocab_->supports_raise_classes())
+            throw std::invalid_argument(
+                "EngineGameState: bet_history requires at most 3 Bet sizes "
+                "per unit (raise_class unavailable)");
+    }
     bool is_terminal() const override { return hand_.is_terminal(); }
     int current_player() const override { return hand_.current_player(); }
     void legal_mask(std::vector<uint8_t>& mask) const override;
@@ -44,7 +54,8 @@ public:
     double to_call()   const { return hand_.to_call(); }
     std::array<uint8_t, 4> raises_per_street() const { return raises_; }
     // Size class of the last bet/raise on each street (0 = none, 1-3 = rank in
-    // the vocab's same-unit sizes, 4 = all-in). Reset with the hand.
+    // the vocab's same-unit sizes, 4 = all-in). Tracked only while the attached
+    // abstraction has bet history on; otherwise all zeros. Reset with the hand.
     std::array<uint8_t, 4> last_raise_classes() const { return last_raise_; }
 
     // True-card / mutable access for the LBR exploiter (never exposed to Python).

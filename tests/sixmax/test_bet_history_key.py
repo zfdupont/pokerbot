@@ -40,9 +40,10 @@ def abs_c4_layout(synthetic_bucket_map):
     return abs_
 
 
-def _hu_state(vocab, stack_bb=200.0):
+def _hu_state(vocab, stack_bb=200.0, abstraction=None):
     cfg = sixmax.EngineConfig(num_players=2, starting_stack=stack_bb)
-    return sixmax.EngineGameState(cfg, 0, list(range(9)), vocab, [])
+    return sixmax.EngineGameState(cfg, 0, list(range(9)), vocab, [],
+                                  abstraction=abstraction)
 
 
 def _vocab_with_pot_sizes(tmp_path, sizes):
@@ -97,32 +98,62 @@ def test_unknown_bet_history_refused(abs_c4_layout):
         abs_c4_layout.set_bet_history("full")
 
 
-def test_engine_tracks_last_raise_per_street(c4_vocab):
-    # Open 3.5 BB (idx 4), call; flop: check, bet 0.33 (6), raise 1.5 (8), call.
-    st = _hu_state(c4_vocab)
+def test_engine_tracks_last_raise_per_street(c4_vocab, abs_c4_layout):
+    # Open 3.5 BB (idx 4) -> class 2, call; flop: check, bet 0.33 (6) -> 1,
+    # raise 1.5 (8) -> 3, call. The turn keeps the flop's last raise.
+    abs_c4_layout.set_bet_history("last_raise")
+    st = _hu_state(c4_vocab, abstraction=abs_c4_layout)
     for a in (4, 2, 1, 6, 8, 2):
         st.apply(a)
-    assert st.last_raise_classes() == [2, 3, 0, 0]   # turn: flop's last raise kept
+    assert st.last_raise_classes() == [2, 3, 0, 0]
 
 
-def test_capped_bet_is_all_in_class(c4_vocab):
-    # 20 BB stacks: a 1.5-pot raise over a 5 BB open targets 26 BB > 20 BB.
-    # First check st.legal_mask()[8]: if the engine allows it (and caps the
-    # raise at the stack), assert class 4 after apply(8). If it masks it, the
-    # capped case cannot arise in training; assert instead that the legal
-    # AllIn (9) gives class 4, and keep the all-in-by-state rule anyway.
-    st = _hu_state(c4_vocab, stack_bb=20.0)
+def test_capped_bet_is_all_in_class(c4_vocab, abs_c4_layout):
+    # 20 BB stacks: a 1.5-pot raise over a 5 BB open targets 26 BB > 20 BB, so
+    # the engine masks the capped Bet (index 8); the legal AllIn (9) is the
+    # only all-in. Class 4 follows from the resulting state either way.
+    abs_c4_layout.set_bet_history("last_raise")
+    st = _hu_state(c4_vocab, stack_bb=20.0, abstraction=abs_c4_layout)
     st.apply(5)
-    st.apply(8 if st.legal_mask()[8] else 9)
+    assert st.legal_mask()[8] == 0   # a capped Bet cannot be chosen
+    st.apply(9)
     assert st.last_raise_classes()[0] == 4
 
 
-def test_engine_abstract_key_includes_classes_only_when_on(c4_vocab, abs_c4_layout):
-    st = _hu_state(c4_vocab)
-    for a in (4, 2, 1, 7):
+def test_off_mode_four_size_vocab_plays_a_full_hand(tmp_path, abs_c4_layout):
+    # Off mode must not ask for a raise class: with 4 pot sizes the class table
+    # is unavailable, yet the hand must play through without throwing.
+    vocab = _vocab_with_pot_sizes(tmp_path, [0.25, 0.5, 0.75, 1.0])
+    st = _hu_state(vocab, abstraction=abs_c4_layout)   # bet history off
+    # 3 = open 2 BB, 2 = call; flop 6 = bet 0.25, 7 = raise 0.5, call;
+    # turn 8 = bet 0.75, 9 = raise 1.0, call; river check-check.
+    for a in (3, 2, 6, 7, 2, 8, 9, 2, 1, 1):
         st.apply(a)
-    off_key = st.abstract_key(abs_c4_layout)
+    assert st.is_terminal()
+    assert st.last_raise_classes() == [0, 0, 0, 0]
+
+
+def test_on_mode_four_size_vocab_refused_at_construction(
+        tmp_path, abs_c4_layout):
+    vocab = _vocab_with_pot_sizes(tmp_path, [0.25, 0.5, 0.75, 1.0])
     abs_c4_layout.set_bet_history("last_raise")
-    on_key = st.abstract_key(abs_c4_layout)
+    with pytest.raises(ValueError, match="raise_class"):
+        _hu_state(vocab, abstraction=abs_c4_layout)
+
+
+def test_engine_abstract_key_includes_classes_only_when_on(c4_vocab, abs_c4_layout):
+    actions = (4, 2, 1, 7)
+    # Off: no abstraction attached, so nothing is tracked and the key is zero
+    # in bits 30-41.
+    off_state = _hu_state(c4_vocab)
+    for a in actions:
+        off_state.apply(a)
+    off_key = off_state.abstract_key(abs_c4_layout)
+    # On: tracking from construction, same deck and actions -> same low bits.
+    abs_c4_layout.set_bet_history("last_raise")
+    on_state = _hu_state(c4_vocab, abstraction=abs_c4_layout)
+    for a in actions:
+        on_state.apply(a)
+    on_key = on_state.abstract_key(abs_c4_layout)
     assert (off_key >> 30) & 0xFFF == 0
     assert (on_key >> 30) & 0xFFF == 2 | (2 << 3)

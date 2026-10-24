@@ -91,11 +91,17 @@ void EngineGameState::apply(int action) {
             ++raises_[st];
             double target = vocab_->target_bb(action, bet_context());
             hand_.apply({EngineActionType::RaiseTo, target});
-            // Class 4 is decided by the resulting state, not the action index:
-            // a Bet the engine caps at the stack is an all-in too.
-            last_raise_[st] = hand_.player(seat).all_in
-                ? uint8_t(4)
-                : (uint8_t)vocab_->raise_class(action);
+            // Track only while the field is on: off mode (or no abstraction)
+            // must behave exactly as before, including for vocabularies whose
+            // unit has more than 3 sizes.
+            if (abstraction_ &&
+                abstraction_->bet_history() == BetHistory::LastRaise) {
+                // Class 4 is decided by the resulting state, not the action
+                // index: a Bet the engine caps at the stack is an all-in too.
+                last_raise_[st] = hand_.player(seat).all_in
+                    ? uint8_t(4)
+                    : (uint8_t)vocab_->raise_class(action);
+            }
             break;
         }
     }

@@ -30,9 +30,14 @@ public:
     double target_bb(int idx, const BetContext& ctx) const;
     // Size class for the infoset key: 0 for fold/check/call, 4 for all-in,
     // else 1 + the index's rank among Bet entries of the same SizeUnit (the
-    // vocab lists sizes ascending). Throws std::invalid_argument if that unit
-    // has more than 3 Bet entries (3 bits cannot encode the ranks).
+    // vocab lists sizes ascending). Computed once in the constructor. Throws
+    // std::invalid_argument for a Bet whose unit has more than 3 sizes (3 bits
+    // cannot encode the ranks); the constructor itself never throws.
     int raise_class(int idx) const;
+    // False when some SizeUnit has more than 3 Bet entries. Such a vocab is
+    // legal while the key field is off; an abstraction with bet history on
+    // refuses it when an EngineGameState is constructed.
+    bool supports_raise_classes() const { return supports_raise_classes_; }
     // Map an observed bet (raise-to, BB) onto the grid with randomized
     // pseudo-harmonic weighting; u in [0,1) supplied by caller.
     int nearest(double bet_to_bb, const BetContext& ctx, double u) const;
@@ -40,6 +45,8 @@ public:
 
 private:
     std::vector<AbstractAction> actions_;
+    std::vector<uint8_t> raise_classes_;  // per index; kUnavailable marker
+    bool supports_raise_classes_ = true;
     uint64_t hash_;
 };
 

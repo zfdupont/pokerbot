@@ -203,6 +203,12 @@ void Abstraction::set_pot_layout(PotLayout layout) {
     pot_layout_ = std::move(layout);
 }
 
+void Abstraction::set_bet_history(BetHistory mode) {
+    if (mode != BetHistory::Off && mode != BetHistory::LastRaise)
+        throw std::invalid_argument("bet_history: unknown mode");
+    bet_history_ = mode;
+}
+
 uint64_t Abstraction::pack_key(int card, int street,
                                const std::array<uint8_t, 4>& raises,
                                double pot_bb, double eff_stack_bb, int live,
