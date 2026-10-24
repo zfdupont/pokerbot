@@ -566,6 +566,21 @@ async def run(api_key: str, strategy, buy_in: int) -> None:
             continue
 
 
+def load_sixmax_strategy(checkpoint: str, toml: str):
+    """Load a six-max blueprint for the live tracker, refusing checkpoint
+    types this deployment path cannot key.
+
+    A bet_history (SIXBP004) checkpoint keys the size class of each street's
+    last raise, which the openpoker message stream does not carry: `decide`
+    would raise on every turn. Refuse once, up front."""
+    strategy = SixmaxDeployStrategy.load(checkpoint, toml)
+    if strategy.bet_history != "off":
+        raise SystemExit(
+            "bet_history checkpoints need a hand history "
+            "(heads-up SixmaxAgent only)")
+    return strategy
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run CFR bot on openpoker.ai")
     parser.add_argument("--api-key", default=os.environ.get("OPENPOKER_API_KEY"),
@@ -604,7 +619,7 @@ def main() -> None:
     if checkpoint.endswith(".bin"):
         toml = os.path.join(os.path.dirname(os.path.dirname(
             os.path.abspath(__file__))), "sixmax", "configs", "default.toml")
-        strategy = SixmaxDeployStrategy.load(checkpoint, toml)
+        strategy = load_sixmax_strategy(checkpoint, toml)
         log.info("Six-max blueprint strategy loaded.")
     elif _ckpt_path.suffix == ".pt" and _ckpt_path.stem.startswith("dream_"):
         toml = os.path.join(os.path.dirname(os.path.dirname(

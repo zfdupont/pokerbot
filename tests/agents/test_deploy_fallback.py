@@ -34,7 +34,11 @@ class _Abstraction:
     def bucket(self, hole, board):
         return 0
 
-    def pack_key(self, card, street, raises, pot_bb, eff_stack_bb, live, after):
+    def bet_history(self):
+        return "off"
+
+    def pack_key(self, card, street, raises, pot_bb, eff_stack_bb, live, after,
+                 last_raise=None):
         return (street, tuple(raises),
                 sa._pot_index(self._layout, pot_bb, eff_stack_bb))
 
@@ -93,7 +97,8 @@ def test_miss_uses_the_nearest_present_bucket():
     # 3.0 BB files in bucket 0, which training never reached.
     d = _deploy({_key(1): _one_hot(CALL), _key(2): _one_hot(ALLIN)})
     assert _decide(d, 3.0, _FACING)[0] == CALL
-    assert d.lookups == {"hit": 0, "nearest": 1, "safe": 0, "uniform": 0}
+    assert d.lookups == {"hit": 0, "nearest": 1, "safe": 0, "uniform": 0,
+                         "desync": 0}
 
 
 def test_equal_distance_prefers_the_lower_bucket():

@@ -28,7 +28,10 @@ cxx_library(
         "src/search/leaf_eval.cpp",
         "src/search/search_strategy.cpp",
     ],
-    headers = glob(["src/**/*.h"]),
+    # Exported (not private) headers: dependants (bindings, dream) must rebuild
+    # when a header changes. Private `headers` + -Isixmax/src leaves them stale
+    # (a header-only edit is invisible to Buck's dependant dep graph).
+    exported_headers = glob(["src/**/*.h"]),
     header_namespace = "",
     compiler_flags = ["-std=c++17", "-O3", _arch_flag, "-DNDEBUG"],
     exported_preprocessor_flags = ["-Isixmax/src"],
@@ -47,7 +50,7 @@ cxx_library(
         "src/dream/trainer.cpp",
         "src/dream/checkpoint.cpp",
     ],
-    headers = glob(["src/dream/*.h"]),
+    exported_headers = glob(["src/dream/*.h"]),
     header_namespace = "",
     compiler_flags = ["-std=c++17", "-O3", _arch_flag, "-DNDEBUG"],
     exported_preprocessor_flags = ["-Isixmax/src"],

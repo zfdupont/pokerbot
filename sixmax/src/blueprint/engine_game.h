@@ -1,4 +1,5 @@
 #pragma once
+#include <stdexcept>
 #include "abstraction/abstraction.h"
 #include "blueprint/game.h"
 #include "engine/engine.h"
@@ -16,7 +17,16 @@ class EngineGameState : public GameState {
 public:
     EngineGameState(HandState hand, const ActionVocab* vocab,
                     const Abstraction* abstraction = nullptr)
-        : hand_(std::move(hand)), vocab_(vocab), abstraction_(abstraction) {}
+        : hand_(std::move(hand)), vocab_(vocab), abstraction_(abstraction) {
+        // Refuse at construction, before any action is applied: a unit with
+        // more than 3 Bet sizes has no raise class. Off mode is untroubled.
+        if (abstraction_ &&
+            abstraction_->bet_history() == BetHistory::LastRaise &&
+            !vocab_->supports_raise_classes())
+            throw std::invalid_argument(
+                "EngineGameState: bet_history requires at most 3 Bet sizes "
+                "per unit (raise_class unavailable)");
+    }
     bool is_terminal() const override { return hand_.is_terminal(); }
     int current_player() const override { return hand_.current_player(); }
     void legal_mask(std::vector<uint8_t>& mask) const override;
@@ -43,6 +53,13 @@ public:
     double pot()       const { return hand_.pot(); }
     double to_call()   const { return hand_.to_call(); }
     std::array<uint8_t, 4> raises_per_street() const { return raises_; }
+    // Size class of the last bet/raise on each street (0 = none, 1-3 = rank in
+    // the vocab's same-unit sizes, 4 = all-in). Recorded on every Bet/AllIn as
+    // long as the vocab supports classes, whether or not an abstraction is
+    // attached — so unattached states (the A/B evaluator and the selection
+    // eval) key a bet_history checkpoint identically to the trainer. Off-mode
+    // keys still zero the field in abstract_key/pack_key. Reset with the hand.
+    std::array<uint8_t, 4> last_raise_classes() const { return last_raise_; }
 
     // True-card / mutable access for the LBR exploiter (never exposed to Python).
     const HandState& hand() const { return hand_; }
@@ -58,6 +75,7 @@ private:
     const Abstraction* abstraction_ = nullptr;
     std::vector<int> history_;          // naive-keyer input (unchanged)
     std::array<uint8_t, 4> raises_{};   // per-street raise count, capped 3
+    std::array<uint8_t, 4> last_raise_{};  // per-street last-raise size class
 };
 
 class EngineGame : public Game {

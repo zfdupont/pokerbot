@@ -7,6 +7,7 @@ namespace {
 
 constexpr int kLegacyPotShift = 18;
 constexpr int kPotShift = 26;
+constexpr int kLastRaiseShift = 30;
 
 }  // namespace
 
@@ -56,7 +57,8 @@ int pot_bucket(const PotLayout& layout, double pot_bb, double eff_stack_bb) {
 uint64_t pack_abstract_key(int card, int street,
                            const std::array<uint8_t, 4>& raises,
                            int pot_idx, bool legacy_layout, int live,
-                           int after) {
+                           int after,
+                           const std::array<uint8_t, 4>& last_raise) {
     uint64_t key = (uint64_t)card;                       // bits 0-7
     key |= (uint64_t)street << 8;                        // bits 8-9
     for (int st = 0; st < 4; ++st)
@@ -65,6 +67,9 @@ uint64_t pack_abstract_key(int card, int street,
            << (legacy_layout ? kLegacyPotShift : kPotShift);
     key |= (uint64_t)live << 20;                         // bits 20-22
     key |= (uint64_t)after << 23;                        // bits 23-25
+    for (int st = 0; st < 4; ++st)
+        key |= (uint64_t)(last_raise[st] & 7)
+               << (kLastRaiseShift + 3 * st);            // bits 30-41
     return key;
 }
 

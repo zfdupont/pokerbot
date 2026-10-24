@@ -2,6 +2,8 @@
 legal action dict via the blueprint bridge."""
 import os
 
+import pytest
+
 from scripts.openpoker_bot import SixmaxHandTracker
 from agents.sixmax_agent import SixmaxDeployStrategy
 
@@ -29,3 +31,34 @@ def test_sixmax_tracker_decides_preflop(blueprint_6max_ckpt):
     assert action["action"] in ("fold", "call", "raise", "all_in")
     if action["action"] == "raise":
         assert 40 <= action["amount"] <= 2000
+
+
+def test_bet_history_checkpoint_refused_at_load(monkeypatch):
+    """The openpoker message stream carries no action history, so a SIXBP004
+    checkpoint (whose key needs each street's last-raise class) is refused at
+    load instead of raising on every turn."""
+    from scripts import openpoker_bot
+
+    class _FakeDeploy:
+        @staticmethod
+        def load(checkpoint, toml):
+            return type("S", (), {"bet_history": "last_raise"})()
+
+    monkeypatch.setattr(openpoker_bot, "SixmaxDeployStrategy", _FakeDeploy)
+    with pytest.raises(SystemExit,
+                       match="bet_history checkpoints need a hand history"):
+        openpoker_bot.load_sixmax_strategy("ckpt.bin", _TOML)
+
+
+def test_off_mode_checkpoint_loads(monkeypatch):
+    from scripts import openpoker_bot
+
+    strategy = type("S", (), {"bet_history": "off"})()
+
+    class _FakeDeploy:
+        @staticmethod
+        def load(checkpoint, toml):
+            return strategy
+
+    monkeypatch.setattr(openpoker_bot, "SixmaxDeployStrategy", _FakeDeploy)
+    assert openpoker_bot.load_sixmax_strategy("ckpt.bin", _TOML) is strategy

@@ -108,6 +108,7 @@ PYBIND11_MODULE(sixmax, m) {
         .def("size", &sixmax::ActionVocab::size)
         .def("at", &sixmax::ActionVocab::at)
         .def("target_bb", &sixmax::ActionVocab::target_bb)
+        .def("raise_class", &sixmax::ActionVocab::raise_class)
         .def("nearest", &sixmax::ActionVocab::nearest)
         .def("hash", &sixmax::ActionVocab::hash);
     // --- MCCFR game interface (Task 1) ---
@@ -239,6 +240,10 @@ PYBIND11_MODULE(sixmax, m) {
              py::keep_alive<1, 7>())   // state holds Abstraction*
         .def("bet_context", &sixmax::EngineGameState::bet_context)
         .def("abstract_key", &sixmax::EngineGameState::abstract_key)
+        .def("last_raise_classes", [](const sixmax::EngineGameState& s) {
+            auto classes = s.last_raise_classes();
+            return std::vector<int>(classes.begin(), classes.end());
+        })
         .def("street", [](const sixmax::EngineGameState& s) { return (int)s.street(); })
         .def("board", &sixmax::EngineGameState::board)
         .def("hole_cards", [](const sixmax::EngineGameState& s, int p) {
@@ -594,22 +599,47 @@ PYBIND11_MODULE(sixmax, m) {
                      layout.mode == sixmax::PotMode::SPR ? "spr" : "bb";
                  return py::make_tuple(mode, layout.edges);
              })
+        .def("set_bet_history",
+             [](sixmax::Abstraction& a, const std::string& mode) {
+                 if (mode == "off")
+                     a.set_bet_history(sixmax::BetHistory::Off);
+                 else if (mode == "last_raise")
+                     a.set_bet_history(sixmax::BetHistory::LastRaise);
+                 else
+                     throw py::value_error(
+                         "bet_history must be 'off' or 'last_raise'");
+             },
+             py::arg("mode"))
+        .def("bet_history", [](const sixmax::Abstraction& a) {
+            return a.bet_history() == sixmax::BetHistory::LastRaise
+                       ? std::string("last_raise")
+                       : std::string("off");
+        })
         .def("pack_key",
              [](const sixmax::Abstraction& a, int card, int street,
                 const std::vector<int>& raises, double pot_bb,
-                double eff_stack_bb, int live, int after) {
+                double eff_stack_bb, int live, int after,
+                const py::object& last_raise) {
                  if (raises.size() != 4)
                      throw py::value_error("raises must have length 4");
                  std::array<uint8_t, 4> r{(uint8_t)raises[0],
                                           (uint8_t)raises[1],
                                           (uint8_t)raises[2],
                                           (uint8_t)raises[3]};
+                 std::array<uint8_t, 4> lr{};  // None = zeros
+                 if (!last_raise.is_none()) {
+                     auto v = last_raise.cast<std::vector<int>>();
+                     if (v.size() != 4)
+                         throw py::value_error(
+                             "last_raise must have length 4");
+                     for (int i = 0; i < 4; ++i) lr[i] = (uint8_t)v[i];
+                 }
                  return a.pack_key(card, street, r, pot_bb, eff_stack_bb,
-                                   live, after);
+                                   live, after, lr);
              },
              py::arg("card"), py::arg("street"), py::arg("raises"),
              py::arg("pot_bb"), py::arg("eff_stack_bb"), py::arg("live"),
-             py::arg("after"));
+             py::arg("after"), py::arg("last_raise") = py::none());
     m.def("blueprint_probs",
           [](const sixmax::BlueprintStrategy& st,
              const sixmax::EngineGameState& s) {
@@ -791,8 +821,9 @@ PYBIND11_MODULE(sixmax, m) {
         // Peek only the vocab hash: reuse the loader with the stored hash so
         // it cannot mismatch, then rebuild the abstraction (stored edges for
         // SIXBP001, resolved + hash-checked bucket map for SIXBP002/SIXBP003).
-        // SIXBP003 also restores its stored pot layout. `bucket_map` is an
-        // optional explicit map path (config/CLI override).
+        // SIXBP003 restores its stored pot layout; SIXBP004 also restores its
+        // bet-history mode. `bucket_map` is an optional explicit map path
+        // (config/CLI override).
         auto loaded = sixmax::load_blueprint(
             path, [&] {
                 std::ifstream i(path, std::ios::binary);
@@ -834,8 +865,14 @@ PYBIND11_MODULE(sixmax, m) {
               auto loaded = sixmax::load_blueprint(path, vocab->hash());
               // The abstraction is supplied by the caller, so refuse one that
               // does not match the artifact: resuming into the wrong key space
-              // would silently corrupt the imported table. The pot layout is
-              // checked first because a layout difference changes every key.
+              // would silently corrupt the imported table. The bet-history
+              // setting is checked first because it changes every key too, then
+              // the pot layout, which a layout difference also changes
+              // wholesale.
+              if (abstraction->bet_history() != loaded.bet_history)
+                  throw std::runtime_error(
+                      "bet history mismatch: checkpoint " + path +
+                      " was trained with a different bet-history setting");
               if (!same_pot_layout(abstraction->pot_layout(),
                                    loaded.pot_layout))
                   throw std::runtime_error(

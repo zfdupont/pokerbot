@@ -48,7 +48,8 @@ def decode_key(key, pot_layout=None):
     returns it (`(mode, edges)`). Under the legacy layout (or when it is not
     given) the pot index is read from bits 18-19, as SIXBP001/002 wrote it.
     A non-legacy layout (SIXBP003) leaves bits 18-19 zero and puts the pot
-    index at bits 26-29, where up to 16 buckets fit.
+    index at bits 26-29, where up to 16 buckets fit. The last-raise class
+    field (SIXBP004, bits 30-41) is ignored here.
     """
     legacy = is_legacy_pot_layout(pot_layout)
     return {
@@ -393,17 +394,19 @@ def _probe_card_id(hand):
 
 
 _SIXBP003_MAGIC = b"SIXBP003"
+_SIXBP004_MAGIC = b"SIXBP004"  # SIXBP003 + the bet-history mode
 
 
 def _pot_layout_for(checkpoint_path):
     """The checkpoint's own PotLayout, or `None` for the legacy formats.
 
-    Only SIXBP003 can carry a non-legacy layout, so a legacy run never pays to
-    mmap and hash a bucket map just to decode keys.
+    Only SIXBP003/SIXBP004 write a pot layout (SIXBP004 writes it even when
+    legacy), so a legacy run never pays to mmap and hash a bucket map just to
+    decode keys.
     """
     with open(checkpoint_path, "rb") as f:
         magic = f.read(8)
-    if magic != _SIXBP003_MAGIC:
+    if magic not in (_SIXBP003_MAGIC, _SIXBP004_MAGIC):
         return None
     return _sixmax().load_abstraction(checkpoint_path).pot_layout()
 

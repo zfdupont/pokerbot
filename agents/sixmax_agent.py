@@ -168,8 +168,11 @@ class SixmaxDeployStrategy:
         self._strategy = strategy
         self._vocab = vocab
         self._fallback = fallback
-        # Lookup outcomes since load: "hit", "nearest", "safe", "uniform".
-        self.lookups = {"hit": 0, "nearest": 0, "safe": 0, "uniform": 0}
+        # Lookup outcomes since load: "hit", "nearest", "safe", "uniform",
+        # and "desync" (counted by SixmaxAgent when the hand replay refuses
+        # the observed line, so no key was looked up at all).
+        self.lookups = {"hit": 0, "nearest": 0, "safe": 0, "uniform": 0,
+                        "desync": 0}
 
     @classmethod
     def load(cls, path, config_toml, section="blueprint", fallback="nearest"):
@@ -186,6 +189,11 @@ class SixmaxDeployStrategy:
         """Queryable infosets in the loaded checkpoint (unseen keys dropped)."""
         return self._strategy.num_infosets()
 
+    @property
+    def bet_history(self):
+        """The checkpoint's opt-in last-raise key field: "off" or "last_raise"."""
+        return self._strategy.abstraction().bet_history()
+
     def _card_bucket(self, hole, board, street):
         if street == 0:
             return sixmax.preflop_class(hole)
@@ -193,8 +201,11 @@ class SixmaxDeployStrategy:
 
     def decide(self, *, hole, board, street, raises_per_street, pot_bb,
                current_bet_bb, to_call_bb, stack_bb, live, after, legal, rng,
-               eff_stack_bb=None):
+               eff_stack_bb=None, last_raise=None):
         abstraction = self._strategy.abstraction()
+        if abstraction.bet_history() != "off" and last_raise is None:
+            raise ValueError(
+                "last_raise is required for bet_history checkpoints")
         if eff_stack_bb is None:
             if not _is_legacy_pot_layout(abstraction.pot_layout()):
                 raise ValueError(
@@ -205,7 +216,8 @@ class SixmaxDeployStrategy:
 
         def weights_at(pot):
             key = abstraction.pack_key(card, street, list(raises_per_street),
-                                       pot, eff_stack_bb, live, after)
+                                       pot, eff_stack_bb, live, after,
+                                       last_raise=last_raise)
             probs = self._strategy.probs(key)  # [] if unseen
             return [probs[i] if i < len(probs) else 0.0 for i in legal_idx]
 
@@ -581,19 +593,41 @@ class SixmaxAgent(PokerAgent):
                                            player)
 
         raises = [min(r, _RAISE_CAP) for r in game_state.raises_per_street]
+        last_raise = None
+        if self._deploy.bet_history != "off":
+            # The key field needs the size class of each street's last raise,
+            # which only the engine records: replay the observed line. A line
+            # the engine cannot represent (an off-menu opponent size) must not
+            # produce a key without the field, so play the safe action instead.
+            if n != 2:
+                raise ValueError("bet_history is heads-up only")
+            try:
+                last_raise = self._last_raise_classes(game_state, hole, board)
+            except ValueError:
+                self._deploy.lookups["desync"] += 1
+                legal_idx = [i for i, m in enumerate(legal) if m]
+                idx = self._deploy._safe_action(legal_idx, pot_bb, to_call_bb)
+                return self._translate(idx, to_call_chips, 0.0, bb, player)
         idx, raise_to_bb = self._deploy.decide(
             hole=hole, board=board, street=street,
             raises_per_street=raises, pot_bb=pot_bb,
             current_bet_bb=current_bet_bb, to_call_bb=to_call_bb,
             stack_bb=stack_bb, eff_stack_bb=eff_stack_bb, live=live,
-            after=after, legal=legal, rng=self._rng)
+            after=after, legal=legal, rng=self._rng, last_raise=last_raise)
         return self._translate(idx, to_call_chips, raise_to_bb, bb, player)
 
     def _action_to_vocab(self, state, action, amount, bb):
         """Map a live (Action, amount) at EngineGameState `state` to a vocab
-        index. FOLD/CHECK/CALL are the fixed indices 0/1/2; BET/RAISE quantise
-        the live raise-to (in bb) to the nearest vocab entry. u=0.0 makes the
-        pseudo-harmonic pick deterministic, which replay requires."""
+        index. FOLD/CHECK/CALL are the fixed indices 0/1/2; BET/RAISE snap the
+        live raise-to (in bb) to the closest menu entry legal at `state`.
+
+        The live engine deals in whole chips, so a bet the bridge translated
+        from a menu target comes back rounded by up to half a chip. Matching the
+        closest *legal* entry recovers that target deterministically (the
+        pseudo-harmonic `nearest(..., u=0)` rounds down off the grid instead,
+        which lands an off-menu or all-in-sized live bet on the wrong entry).
+        Bet entries are preflop opens and pot fractions; the legal mask keeps
+        units and short-stack caps consistent with the engine."""
         from models.enums import Action
         if action == Action.FOLD:
             return 0
@@ -601,22 +635,40 @@ class SixmaxAgent(PokerAgent):
             return 1
         if action == Action.CALL:
             return 2
+        vocab = self._deploy._vocab
         ctx = state.bet_context()
-        return self._deploy._vocab.nearest((amount or 0) / bb, ctx, 0.0)
+        mask = state.legal_mask()
+        bet_to_bb = (amount or 0) / bb
+        best = None
+        for i in range(vocab.size()):
+            a = vocab.at(i)
+            if a.type not in (sixmax.ActionType.Bet, sixmax.ActionType.AllIn):
+                continue
+            if not mask[i]:
+                continue
+            dist = abs(vocab.target_bb(i, ctx) - bet_to_bb)
+            if best is None or dist < best[0]:
+                best = (dist, i)
+        if best is not None:
+            return best[1]
+        # No legal raise entry (a desynced line): let the caller's legality
+        # check reject whatever `nearest` returns.
+        return vocab.nearest(bet_to_bb, ctx, 0.0)
 
-    def _replay_to_street_root(self, game_state, hole, board):
-        """Faithful EngineGameState at the START of the current betting round,
-        plus the current street's observed_actions (vocab indices).
+    def _hand_root(self, game_state, hole, board, abstraction=None):
+        """Fresh EngineGameState at the start of the hand (blinds posted).
 
         Hero is engine seat 0; the engine button is derived from the live button
         so preflop action order matches. Starting stacks are each seat's pre-hand
-        stack (stack + total_contributed) in the engine's BB=1 frame, so the
-        replayed pot equals the live pot. HU only (seat 1 is the sole opponent)."""
+        stack (stack + total_contributed) in the engine's BB=1 frame, so a
+        faithful replay reproduces the live pot. HU only (seat 1 is the sole
+        opponent). Pass `abstraction` to attach it to the state (the bet-history
+        key field needs it while applying actions); the search path leaves it
+        off."""
         import sixmax
         players = game_state.players
         n = len(players)
         bb = game_state.big_blind
-        street = game_state.betting_round
 
         hero_idx = players.index(self._hero)
         seat_live = [hero_idx] + [i for i in range(n) if i != hero_idx]
@@ -638,7 +690,17 @@ class SixmaxAgent(PokerAgent):
         stacks = [float(players[li].stack + players[li].total_contributed) / bb
                   for li in seat_live]
         button = (game_state.button_pos - hero_idx) % n
-        eng = sixmax.EngineGameState(cfg, button, deck, self._deploy._vocab, stacks)
+        return sixmax.EngineGameState(cfg, button, deck, self._deploy._vocab,
+                                      stacks, abstraction)
+
+    def _replay_to_street_root(self, game_state, hole, board, abstraction=None):
+        """Faithful EngineGameState at the START of the current betting round,
+        plus the current street's observed_actions (vocab indices), mapped
+        against that street-root state (the search path applies them in the
+        subgame). HU only (seat 1 is the sole opponent)."""
+        street = game_state.betting_round
+        bb = game_state.big_blind
+        eng = self._hand_root(game_state, hole, board, abstraction)
 
         prefix = []
         for (_pidx, action, amount, rnd) in game_state.action_history:
@@ -656,6 +718,40 @@ class SixmaxAgent(PokerAgent):
             elif rnd == street:
                 prefix.append(idx)          # in-street prefix: collected, not applied
         return eng, prefix
+
+    def _replay_to_now(self, game_state, hole, board):
+        """EngineGameState at the current decision, with the deploy abstraction
+        attached so it tracks each street's last-raise class.
+
+        Every observed action is mapped against the engine state it actually
+        faced, so the replay reproduces the live line's sizes (mapping the
+        current street's prefix against the street-root state would apply the
+        later actions of a multi-action street at the wrong pot). A line the
+        engine cannot represent raises ValueError; get_action then plays the
+        safe action rather than keying a state that is not this hand."""
+        street = game_state.betting_round
+        bb = game_state.big_blind
+        abstraction = self._deploy._strategy.abstraction()
+        eng = self._hand_root(game_state, hole, board, abstraction)
+        for (_pidx, action, amount, rnd) in game_state.action_history:
+            if eng.is_terminal() or rnd > street:
+                break
+            idx = self._action_to_vocab(eng, action, amount, bb)
+            if not eng.legal_mask()[idx]:
+                raise ValueError("replay desync: action illegal at engine state")
+            eng.apply(idx)
+        # The replay must stop exactly at this decision: same street, still
+        # live, and hero (engine seat 0) to act. Anything else means the engine
+        # read the line differently (a capped/all-in or order desync).
+        if (eng.is_terminal() or eng.street() != street
+                or eng.current_player() != 0):
+            raise ValueError("replay desync: engine left the live decision point")
+        return eng
+
+    def _last_raise_classes(self, game_state, hole, board):
+        """Per-street size class of the last bet/raise (0 none, 1-3 rank, 4
+        all-in), read from an EngineGameState replaying this hand's line."""
+        return self._replay_to_now(game_state, hole, board).last_raise_classes()
 
     def _opponent_prior(self, game_state, hole, board):
         """Opponent range prior over the 1326 combos from the preflop+earlier

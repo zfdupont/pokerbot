@@ -97,6 +97,51 @@ def parse_action(action, street):
     return tot, street_bet, raises
 
 
+def _walk(action, street):
+    """(street, Slumbot pos, token) for every token in `action` up to `street`.
+
+    The walk parse_action replays: the SB (pos 1) acts first preflop, the BB
+    (pos 0) first on every later street, and the actor alternates."""
+    segs = action.split("/")
+    segs += [""] * (street + 1 - len(segs))
+    for st in range(street + 1):
+        actor = 1 if st == 0 else 0
+        for tok in TOKEN_RE.findall(segs[st]):
+            yield st, actor, tok
+            actor ^= 1
+
+
+def action_history(action, street, seat_of):
+    """The line up to `street` in game/poker.py's action_history shape.
+
+    One entry per token: (engine seat, Action, amount, betting round), in the
+    order the actions were taken. Amounts follow what game/poker.py records for
+    a SixmaxAgent: a BET/RAISE carries the raise-to total for the street in
+    chips (Slumbot's `b<amt>` is exactly that total), CHECK/CALL/FOLD carry
+    None. A `b` is a RAISE when it raises a live bet and a BET when nothing is
+    to call; `c` is a CALL when facing a bet, otherwise a CHECK. Seat indices
+    are in `players` order via `seat_of` (Slumbot pos -> engine seat)."""
+    history = []
+    cur, seen, bets = 0, -1, [0, 0]
+    for st, pos, tok in _walk(action, street):
+        if st != seen:
+            seen = st
+            bets = [BB, SB] if st == 0 else [0, 0]   # blinds count preflop
+            cur = max(bets)
+        facing = cur > bets[pos]
+        if tok[0] == "b":
+            cur = bets[pos] = int(tok[1:])
+            action_, amount = (Action.RAISE if facing else Action.BET), cur
+        else:
+            if tok == "c":
+                bets[pos] = max(bets[pos], cur)
+            action_ = {"c": Action.CALL if facing else Action.CHECK,
+                       "k": Action.CHECK, "f": Action.FOLD}[tok]
+            amount = None
+        history.append((seat_of[pos], action_, amount, st))
+    return history
+
+
 def build_state(resp):
     """Shape one Slumbot response into the GameState stand-in the agent reads."""
     board = resp.get("board", [])
@@ -105,19 +150,23 @@ def build_state(resp):
     hero_pos = resp["client_pos"]           # 0 = BB, 1 = SB
     # engine seats: 0 = button/SB, 1 = BB
     seat_of = {1: 0, 0: 1}
+    history = action_history(resp["action"], street, seat_of)
+    folded = {pidx for pidx, a, _amt, _rnd in history if a == Action.FOLD}
     players = [None, None]
     for pos in (0, 1):
         stack = STACK - tot[pos] - sbet[pos]
-        players[seat_of[pos]] = SimpleNamespace(
+        seat = seat_of[pos]
+        players[seat] = SimpleNamespace(
             name=f"p{pos}",
             hole_cards=[card(c) for c in resp["hole_cards"]] if pos == hero_pos else [],
-            is_active=True, is_all_in=stack == 0,
-            current_bet=sbet[pos], stack=stack)
+            is_active=seat not in folded, is_all_in=stack == 0,
+            current_bet=sbet[pos], stack=stack,
+            total_contributed=tot[pos] + sbet[pos])
     gs = SimpleNamespace(
         big_blind=BB, players=players, betting_round=street,
         community_cards=[card(c) for c in board], button_pos=0,
         current_bet=max(sbet), pot=sum(tot) + sum(sbet),
-        raises_per_street=raises)
+        raises_per_street=raises, action_history=history)
     return gs, players[seat_of[hero_pos]], sbet[hero_pos] < max(sbet)
 
 
