@@ -437,9 +437,8 @@ class SixmaxHandTracker:
         can_raise = "raise" in valid or "all_in" in valid
         unopened_preflop = self.street == 0 and current_bet_bb <= 1.0 + 1e-9
         min_raise_to_bb = float(valid.get("raise", {}).get("min", 0.0)) / self.big_blind
-        ctx = __import__("sixmax").BetContext(
-            pot=pot_bb, current_bet=current_bet_bb, to_call=to_call_bb,
-            stack=stack_bb)
+        from agents.sixmax_agent import engine_bet_context
+        ctx = engine_bet_context(pot_bb, current_bet_bb, to_call_bb, stack_bb)
         sm = __import__("sixmax")
         mask = [0] * vocab.size()
         for i in range(vocab.size()):

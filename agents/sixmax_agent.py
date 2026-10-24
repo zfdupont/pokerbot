@@ -118,6 +118,20 @@ def _is_legacy_pot_layout(layout):
     return mode == "bb" and [float(e) for e in edges] == _LEGACY_POT_EDGES
 
 
+def engine_bet_context(pot_bb, current_bet_bb, to_call_bb, stack_bb):
+    """The BetContext the trainer sized raises with, from live values.
+
+    EngineGameState::bet_context passes the pot NET of the actor's call
+    (pot - owe); vocab.target_bb then targets current_bet + f*(pot + 2*owe).
+    The live pot is gross, so net the call out here, or every pot-fraction
+    raise facing a bet comes out f*owe larger than trained. Keys still use
+    the gross pot, as the engine's abstract_key does."""
+    import sixmax
+    return sixmax.BetContext(pot=pot_bb - to_call_bb,
+                             current_bet=current_bet_bb,
+                             to_call=to_call_bb, stack=stack_bb)
+
+
 # What a deployed agent does when its infoset is not in the table (an
 # opponent's off-tree size can land a pot bucket training never reached).
 # Play and evaluation only: the trainer never calls this class, so training
@@ -282,8 +296,8 @@ class SixmaxDeployStrategy:
     def _finish(self, idx, pot_bb, current_bet_bb, to_call_bb, stack_bb):
         action = self._vocab.at(idx)
         if action.type in (sixmax.ActionType.Bet, sixmax.ActionType.AllIn):
-            ctx = sixmax.BetContext(pot=pot_bb, current_bet=current_bet_bb,
-                                    to_call=to_call_bb, stack=stack_bb)
+            ctx = engine_bet_context(pot_bb, current_bet_bb, to_call_bb,
+                                     stack_bb)
             raise_to = self._vocab.target_bb(idx, ctx)
         else:
             raise_to = 0.0
@@ -398,8 +412,8 @@ class DreamDeployStrategy:
 
         action = self._vocab.at(idx)
         if action.type in (sixmax.ActionType.Bet, sixmax.ActionType.AllIn):
-            ctx = sixmax.BetContext(pot=pot_bb, current_bet=current_bet_bb,
-                                    to_call=to_call_bb, stack=stack_bb)
+            ctx = engine_bet_context(pot_bb, current_bet_bb, to_call_bb,
+                                     stack_bb)
             raise_to = self._vocab.target_bb(idx, ctx)
         else:
             raise_to = 0.0
@@ -582,10 +596,8 @@ class SixmaxAgent(PokerAgent):
                     action = self._deploy._vocab.at(idx)
                     if action.type in (sixmax.ActionType.Bet,
                                        sixmax.ActionType.AllIn):
-                        ctx = sixmax.BetContext(pot=pot_bb,
-                                                current_bet=current_bet_bb,
-                                                to_call=to_call_bb,
-                                                stack=stack_bb)
+                        ctx = engine_bet_context(pot_bb, current_bet_bb,
+                                                 to_call_bb, stack_bb)
                         raise_to_bb = self._deploy._vocab.target_bb(idx, ctx)
                     else:
                         raise_to_bb = 0.0
@@ -914,8 +926,7 @@ class SixmaxAgent(PokerAgent):
         unopened_preflop = street == 0 and current_bet_bb <= 1.0 + 1e-9
         min_raise_to_bb = (game_state.current_bet + max(
             game_state.big_blind, to_call_chips)) / game_state.big_blind
-        ctx = sixmax.BetContext(pot=pot_bb, current_bet=current_bet_bb,
-                                to_call=to_call_bb, stack=stack_bb)
+        ctx = engine_bet_context(pot_bb, current_bet_bb, to_call_bb, stack_bb)
         mask = [0] * vocab.size()
         for i in range(vocab.size()):
             a = vocab.at(i)

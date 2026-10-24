@@ -190,15 +190,15 @@ def test_agent_key_matches_engine_key(c5_checkpoint, monkeypatch):
     """At every live decision, the key the deploy bridge looks up through its
     own pack_key equals the engine's abstract_key for the hand replay.
 
-    Chip rounding (the live engine deals whole chips) and a pre-existing
-    pot-basis difference between the deploy's bet translation and the engine's
-    BetContext move the replayed pot on some raised lines, which can even flip
-    a stack-off. So the strict comparison is split:
+    The deploy sizes raises with the engine's net-of-call BetContext
+    (engine_bet_context), so the replay reproduces the live pot on every
+    decision up to whole-chip rounding:
 
     * at EVERY decision the replay-derived fields (card, street, raises and the
       new last-raise classes) must equal the engine's;
-    * on lines whose pot the replay reproduces (within chip rounding, bar an
-      exact pot-edge tie) the whole key must match, live/after included.
+    * at EVERY decision the replayed pot matches the live pot within chip
+      rounding, and the whole key matches, live/after included, bar an
+      exact pot-edge tie.
     """
     from agents.sixmax_agent import SixmaxAgent, SixmaxDeployStrategy
     from game.poker import PokerGame
@@ -212,7 +212,12 @@ def test_agent_key_matches_engine_key(c5_checkpoint, monkeypatch):
     hero._rng.seed(1)
     villain._rng.seed(2)
     layout = recorder.abstraction().pot_layout()
-    tol = 3.0 / 20.0     # three chips, at the 20-chip big blind below
+    def tol(pot_bb):
+        # Chip rounding: the live engine deals whole chips (20-chip big blind
+        # below) and later pot-fraction raises compound the rounding, so allow
+        # three chips or 1% of the pot. The old gross-pot sizing bug moved the
+        # pot by fraction * owe (e.g. 11% of a 7 BB pot), far outside this.
+        return max(3.0 / 20.0, 0.01 * pot_bb)
 
     original_get_action = SixmaxAgent.get_action
     original_decide = SixmaxDeployStrategy.decide
@@ -264,14 +269,20 @@ def test_agent_key_matches_engine_key(c5_checkpoint, monkeypatch):
     for d in decisions:
         assert d["live"]["pot"] == sa._pot_index(layout, d["live_pot"],
                                                   d["eff_stack"])
-    exact = [d for d in decisions if abs(d["replay_pot"] - d["live_pot"]) <= tol]
+    exact = [d for d in decisions
+             if abs(d["replay_pot"] - d["live_pot"]) <= tol(d["live_pot"])]
     unequal = [d for d in exact if d["live"] != d["engine"]]
     unexplained = [d for d in unequal
-                   if not _near_pot_edge(d["live_pot"], tol)]
+                   if not _near_pot_edge(d["live_pot"], tol(d["live_pot"]))]
     assert not unexplained, (
         f"{len(unexplained)} of {len(exact)} reproduced lines key differently: "
         f"{unexplained[:2]}")
     assert len(exact) > 100, f"only {len(exact)} lines reproduced"
+    # With raises sized from the engine's net-of-call pot, the replay must
+    # reproduce the live pot on every decision (it diverged on raised lines
+    # while the deploy sized from the gross pot).
+    assert len(exact) == len(decisions), (
+        f"{len(decisions) - len(exact)} decisions' replayed pot diverged")
     earlier = [d for d in decisions if any(d["classes"][:d["street"]])]
     assert earlier, "no decision carried an earlier street's raise class"
     print(f"[parity] decisions={len(decisions)} earlier_street_class={len(earlier)} "
