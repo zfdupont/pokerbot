@@ -87,7 +87,11 @@ def test_resume_bet_history_mismatch_refused(tmp_path,
         assert f.read(8) == b"SIXBP004"
 
     # C4 has the same pot layout and vocabulary, but bet_history = "off".
+    # --bucket-map pins the checkpoint's own map: C4's TOML names the real
+    # sixmax/tables map, which exists in some checkouts and would be refused
+    # on content hash before the bet-history check is reached.
     result = _run_cli("--config", _C4, "--resume", ckpt,
+                      "--bucket-map", str(directory / "idxmod.bin"),
                       "--checkpoint", str(tmp_path / "out.bin"))
     assert result.returncode != 0
     assert "bet history mismatch" in result.stderr
