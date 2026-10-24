@@ -128,6 +128,118 @@ def test_slumbot_state_replays_to_last_raise_classes(c5_agent):
 
 
 # ---------------------------------------------------------------------------
+# Replay vs trainer: engine lines rendered as Slumbot action strings
+# ---------------------------------------------------------------------------
+_SUIT_TEXT = "cdhs"
+_RANK_TEXT = "23456789TJQKA"
+
+
+def _card_text(code):
+    """Engine card code (rank*4 + suit, clubs..spades) as Slumbot text."""
+    return _RANK_TEXT[code // 4] + _SUIT_TEXT[code % 4]
+
+
+def _pick_action(vocab, eng, rng):
+    """A random legal action, biased toward raises so all-in and re-raise
+    lines occur. Returns (vocab index, raise-to in BB or None)."""
+    import sixmax
+
+    legal = [i for i, m in enumerate(eng.legal_mask()) if m]
+    raising = [i for i in legal
+               if vocab.at(i).type in (sixmax.ActionType.Bet,
+                                       sixmax.ActionType.AllIn)]
+    if raising and rng.random() < 0.5:
+        idx = rng.choice(raising)
+    else:
+        nonfold = [i for i in legal
+                   if vocab.at(i).type != sixmax.ActionType.Fold]
+        idx = rng.choice(nonfold or legal)
+    target = None
+    if idx in raising:
+        target = vocab.target_bb(idx, eng.bet_context())
+    return idx, target
+
+
+def _token(vocab, idx, target_bb):
+    import sixmax
+
+    a = vocab.at(idx)
+    if a.type == sixmax.ActionType.Fold:
+        return "f"
+    if a.type == sixmax.ActionType.Check:
+        return "k"
+    if a.type == sixmax.ActionType.Call:
+        return "c"
+    # Slumbot `b<amt>` is the raise-to total in chips; BB = 100 chips here.
+    return f"b{int(round(target_bb * 100))}"
+
+
+def _sample_slumbot_decisions(vocab, abstraction, rng, hands=60):
+    """Walk random legal lines in a trainer-path EngineGameState and record,
+    at every decision, the Slumbot action string of the line so far plus the
+    engine's own last-raise classes at that point."""
+    import sixmax
+
+    cfg = sixmax.EngineConfig(num_players=2, starting_stack=200.0)
+    out = []
+    for _ in range(hands):
+        deck = rng.sample(range(52), 9)
+        button = rng.randrange(2)
+        eng = sixmax.EngineGameState(cfg, button, deck, vocab, [],
+                                     abstraction=abstraction)
+        segments = [[] for _ in range(4)]
+        while not eng.is_terminal():
+            seat, street = eng.current_player(), eng.street()
+            idx, target = _pick_action(vocab, eng, rng)
+            out.append(dict(
+                street=street, seat=seat, button=button,
+                hole=list(eng.hole_cards(seat)), board=list(eng.board()),
+                classes=list(eng.last_raise_classes()),
+                line="/".join("".join(segments[s]) for s in range(street + 1)),
+                chose_class=vocab.raise_class(idx),
+                facing=eng.bet_context().to_call > 1e-9))
+            segments[street].append(_token(vocab, idx, target))
+            eng.apply(idx)
+    return out
+
+
+def test_slumbot_strings_replay_to_engine_classes(c5_agent):
+    """Independent of _replay_to_now: render trainer-path engine lines as
+    Slumbot ACPC action strings, read them back through build_state, and
+    compare the agent's replay-derived classes with the engine's own at every
+    hero decision."""
+    import random as _random
+
+    pytest.importorskip("sixmax")
+    abstraction = c5_agent._deploy._strategy.abstraction()
+    decisions = _sample_slumbot_decisions(sa._load_vocab(_C5_TOML, "blueprint"),
+                                          abstraction,
+                                          _random.Random(20261023))
+    seen = set()
+    for d in decisions:
+        seen.update(d["classes"])
+        # Slumbot pos 1 is the button/SB, pos 0 the BB; our engine seat's
+        # button is `d["button"]`, so the acting seat maps accordingly.
+        hero_pos = 1 if d["seat"] == d["button"] else 0
+        gs, hero, _facing = build_state({
+            "action": d["line"], "client_pos": hero_pos,
+            "hole_cards": [_card_text(c) for c in d["hole"]],
+            "board": [_card_text(c) for c in d["board"]]})
+        c5_agent._hero = hero
+        replayed = c5_agent._last_raise_classes(gs, d["hole"], d["board"])
+        assert replayed == d["classes"], (d, replayed)
+
+    assert len(decisions) > 200
+    assert seen == {0, 1, 2, 3, 4}
+    # Coverage: a raise while facing a bet (3-bet+), an all-in, and a class
+    # that survives into a later street.
+    assert any(d["facing"] and d["chose_class"] > 0 for d in decisions)
+    assert any(d["chose_class"] == 4 for d in decisions)
+    assert any(d["street"] > 0 and any(d["classes"][:d["street"]])
+               for d in decisions)
+
+
+# ---------------------------------------------------------------------------
 # Outbound translation
 # ---------------------------------------------------------------------------
 def test_to_incr_maps_and_caps():
