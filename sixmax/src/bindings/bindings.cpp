@@ -821,8 +821,9 @@ PYBIND11_MODULE(sixmax, m) {
         // Peek only the vocab hash: reuse the loader with the stored hash so
         // it cannot mismatch, then rebuild the abstraction (stored edges for
         // SIXBP001, resolved + hash-checked bucket map for SIXBP002/SIXBP003).
-        // SIXBP003 also restores its stored pot layout. `bucket_map` is an
-        // optional explicit map path (config/CLI override).
+        // SIXBP003 restores its stored pot layout; SIXBP004 also restores its
+        // bet-history mode. `bucket_map` is an optional explicit map path
+        // (config/CLI override).
         auto loaded = sixmax::load_blueprint(
             path, [&] {
                 std::ifstream i(path, std::ios::binary);
@@ -864,8 +865,14 @@ PYBIND11_MODULE(sixmax, m) {
               auto loaded = sixmax::load_blueprint(path, vocab->hash());
               // The abstraction is supplied by the caller, so refuse one that
               // does not match the artifact: resuming into the wrong key space
-              // would silently corrupt the imported table. The pot layout is
-              // checked first because a layout difference changes every key.
+              // would silently corrupt the imported table. The bet-history
+              // setting is checked first because it changes every key too, then
+              // the pot layout, which a layout difference also changes
+              // wholesale.
+              if (abstraction->bet_history() != loaded.bet_history)
+                  throw std::runtime_error(
+                      "bet history mismatch: checkpoint " + path +
+                      " was trained with a different bet-history setting");
               if (!same_pot_layout(abstraction->pot_layout(),
                                    loaded.pot_layout))
                   throw std::runtime_error(

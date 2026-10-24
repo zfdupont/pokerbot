@@ -23,6 +23,10 @@ namespace sixmax {
 //    prefix through the map hint, then int32 mode, uint32 edge count and that
 //    many doubles, then the table. Legacy layouts keep the SIXBP001/SIXBP002
 //    bytes exactly.
+//  * SIXBP004 — map-backed kind with the opt-in bet-history field on. The
+//    SIXBP002 prefix through the map hint, then the pot layout ALWAYS (int32
+//    mode, uint32 edge count, edges — legacy or not), then int32 bet-history
+//    mode, then the table. Off keeps SIXBP001/SIXBP002/SIXBP003 exactly.
 // Native-endian; artifacts move between same-arch machines.
 struct BlueprintMeta {
     uint64_t vocab_hash;
@@ -37,9 +41,10 @@ void save_blueprint(const std::string& path, const BlueprintMeta& meta,
 struct LoadedBlueprint {
     BlueprintMeta meta;
     int abs_kind = 0;  // 0 = legacy edges, 1 = bucket map
-    uint64_t map_hash = 0;   // SIXBP002/SIXBP003 only
-    std::string map_hint;    // SIXBP002/SIXBP003 only: the map's basename
+    uint64_t map_hash = 0;   // map-backed kinds only (SIXBP002+)
+    std::string map_hint;    // map-backed kinds only: the map's basename
     PotLayout pot_layout;    // legacy default for SIXBP001/SIXBP002
+    BetHistory bet_history = BetHistory::Off;  // SIXBP004 only, else Off
     AbstractionConfig abs_cfg;                    // legacy kind only
     std::array<std::vector<double>, 3> edges;     // legacy kind only
     uint64_t iterations;
@@ -48,19 +53,21 @@ struct LoadedBlueprint {
 
 // Throws std::runtime_error on bad magic, truncation, or vocab-hash
 // mismatch against expected_vocab_hash.
+// SIXBP004 (bet history on) is written only for map-backed abstractions; an
+// off-mode save keeps the artifact's historical bytes.
 LoadedBlueprint load_blueprint(const std::string& path,
                                uint64_t expected_vocab_hash);
 
-// Locate a SIXBP002 checkpoint's bucket map. Search order:
+// Locate a map-backed (SIXBP002+) checkpoint's bucket map. Search order:
 //   1. $SIXMAX_BUCKET_MAP (full path) if set,
 //   2. `explicit_path` if non-empty (config/CLI override),
 //   3. dirname(ckpt_path)/hint,
 //   4. $SIXMAX_TABLES_DIR/hint (default `sixmax/tables`, relative to cwd).
 //
-// $SIXMAX_BUCKET_MAP applies to EVERY SIXBP002 resolution in the process, so
-// a head-to-head between checkpoints that live on different maps must leave
-// it unset (use per-load explicit paths instead). A wrong map is still refused
-// downstream by the content-hash check, never used silently.
+// $SIXMAX_BUCKET_MAP applies to EVERY map-backed checkpoint resolution in the
+// process, so a head-to-head between checkpoints that live on different maps
+// must leave it unset (use per-load explicit paths instead). A wrong map is
+// still refused downstream by the content-hash check, never used silently.
 //
 // Throws std::runtime_error listing every path tried.
 std::string resolve_bucket_map(const std::string& ckpt_path,
@@ -77,7 +84,8 @@ Abstraction load_abstraction_for(const std::string& ckpt_path,
 
 // Read-only average-strategy view of an artifact, for eval and deployment.
 // Owns its Abstraction (reconstructed from the stored edges, or from the
-// resolved bucket map for a SIXBP002 checkpoint).
+// resolved bucket map for a map-backed checkpoint, with the stored pot layout
+// and bet-history setting applied).
 class BlueprintStrategy {
 public:
     static BlueprintStrategy load(const std::string& path,

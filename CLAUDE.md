@@ -40,7 +40,7 @@ Always edit  Non-Negotiables after modifying any of these. Condensed from `.mex/
 - In `cfr/`/`neural_cfr/` the 6-action vocabulary order is fixed (`0=fold 1=check 2=call 3=b0.5 4=b1.0 5=allin`); in `sixmax/` the vocab is config-defined and checkpoints embed its hash. Everywhere: mask illegal actions, never reorder or filter storage.
 - The C++ evaluator's (`common/`) `12 - rank` kicker inversion (lower = better) must be preserved — removing it inverts learned hand strength; new consumers use the opaque `safe_eval` API only.
 - Chip values crossing an engine boundary must be rescaled to the big_blind=1 training frame. `cfr/`/`neural_cfr/` train at starting_stack=100; `sixmax/` checkpoints record their own starting_stack (read it from the checkpoint or its config, never assume 100).
-- Map-based checkpoints (SIXBP002/SIXBP003) are bound to their bucket map by content hash, and SIXBP003 also to its pot layout; the hand indexer (`kHandIndexVersion`) is part of that contract; never change either without a version bump.
+- Map-based checkpoints (SIXBP002/SIXBP003/SIXBP004) are bound to their bucket map by content hash, SIXBP003/SIXBP004 to their pot layout, and SIXBP004 to its bet-history mode; the hand indexer (`kHandIndexVersion`) is part of that contract; never change either without a version bump.
 - Never commit secrets (`OPENPOKER_API_KEY`) or checkpoint files.
 
 ## Quick Commands

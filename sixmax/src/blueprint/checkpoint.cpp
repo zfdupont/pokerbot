@@ -13,6 +13,7 @@ namespace {
 constexpr char kMagicV1[8] = {'S', 'I', 'X', 'B', 'P', '0', '0', '1'};
 constexpr char kMagicV2[8] = {'S', 'I', 'X', 'B', 'P', '0', '0', '2'};
 constexpr char kMagicV3[8] = {'S', 'I', 'X', 'B', 'P', '0', '0', '3'};
+constexpr char kMagicV4[8] = {'S', 'I', 'X', 'B', 'P', '0', '0', '4'};
 constexpr size_t kMaxHintLength = 1u << 16;
 constexpr uint32_t kMaxPotEdges = 15;
 
@@ -117,6 +118,8 @@ Abstraction load_abstraction_for(const std::string& ckpt_path,
     }();
     // SIXBP001/SIXBP002 imply the legacy layout; SIXBP003 stores its own.
     abs.set_pot_layout(loaded.pot_layout);
+    // SIXBP001..003 imply the bet-history field off; SIXBP004 stores its mode.
+    abs.set_bet_history(loaded.bet_history);
     return abs;
 }
 
@@ -124,10 +127,17 @@ void save_blueprint(const std::string& path, const BlueprintMeta& meta,
                     const Abstraction& abs, const BlueprintTrainer& trainer) {
     const bool mapped = abs.is_map();
     const bool layout_v3 = !abs.pot_layout().is_legacy();
+    const bool bet_history_on = abs.bet_history() != BetHistory::Off;
     if (layout_v3 && !mapped)
         throw std::invalid_argument(
             "blueprint checkpoint: non-legacy pot layout requires a "
             "bucket map");
+    if (bet_history_on && !mapped)
+        throw std::invalid_argument(
+            "blueprint checkpoint: bet_history requires a bucket map");
+    // V4 marks the opt-in key field; it always writes the pot layout so a
+    // single reader handles every v4 artifact. Off keeps the old magics.
+    const bool v4 = bet_history_on;
     std::string hint;
     if (mapped) {
         hint = base_name(abs.bucket_map()->path());
@@ -139,7 +149,10 @@ void save_blueprint(const std::string& path, const BlueprintMeta& meta,
     {
         std::ofstream o(tmp, std::ios::binary | std::ios::trunc);
         if (!o) throw std::runtime_error("cannot open " + tmp);
-        o.write(layout_v3 ? kMagicV3 : (mapped ? kMagicV2 : kMagicV1), 8);
+        o.write(v4 ? kMagicV4
+                   : (layout_v3 ? kMagicV3
+                                : (mapped ? kMagicV2 : kMagicV1)),
+                8);
         put<uint64_t>(o, meta.vocab_hash);
         put<int32_t>(o, meta.num_players);
         put<int32_t>(o, meta.action_dim);
@@ -150,12 +163,13 @@ void save_blueprint(const std::string& path, const BlueprintMeta& meta,
             put<uint64_t>(o, map->content_hash());
             put<uint32_t>(o, (uint32_t)hint.size());
             o.write(hint.data(), (std::streamsize)hint.size());
-            if (layout_v3) {
+            if (layout_v3 || v4) {
                 const PotLayout& layout = abs.pot_layout();
                 put<int32_t>(o, (int32_t)layout.mode);
                 put<uint32_t>(o, (uint32_t)layout.edges.size());
                 for (double edge : layout.edges) put<double>(o, edge);
             }
+            if (v4) put<int32_t>(o, (int32_t)abs.bet_history());
         } else {
             const AbstractionConfig& c = abs.config();
             put<int32_t>(o, c.flop_buckets);
@@ -193,7 +207,10 @@ LoadedBlueprint load_blueprint(const std::string& path,
     if (!i) throw std::runtime_error("cannot open " + path);
     char magic[8];
     i.read(magic, 8);
-    const bool v3 = i && std::memcmp(magic, kMagicV3, 8) == 0;
+    // V4 keeps every V3 field (incl. the pot layout) and appends the
+    // bet-history mode, so it reads through the same v3 branch below.
+    const bool v4 = i && std::memcmp(magic, kMagicV4, 8) == 0;
+    const bool v3 = v4 || (i && std::memcmp(magic, kMagicV3, 8) == 0);
     const bool mapped = v3 || (i && std::memcmp(magic, kMagicV2, 8) == 0);
     if (!i || (!mapped && std::memcmp(magic, kMagicV1, 8) != 0))
         throw std::runtime_error("not a blueprint checkpoint: " + path);
@@ -243,6 +260,15 @@ LoadedBlueprint load_blueprint(const std::string& path,
                     "blueprint checkpoint: invalid pot layout: " +
                     std::string(e.what()));
             }
+        }
+        if (v4) {
+            const int32_t bh = get<int32_t>(i);
+            if (bh != (int32_t)BetHistory::Off &&
+                bh != (int32_t)BetHistory::LastRaise)
+                throw std::runtime_error(
+                    "blueprint checkpoint: unknown bet history " +
+                    std::to_string(bh) + ": " + path);
+            out.bet_history = (BetHistory)bh;
         }
     } else {
         out.abs_cfg.flop_buckets = get<int32_t>(i);

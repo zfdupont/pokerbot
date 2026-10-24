@@ -88,6 +88,7 @@ BUILTIN_DEFAULTS = {
     "abstraction_seed": 20260719,
     "pot_mode": "bb",                 # "bb" or "spr"; map-backed only
     "pot_edges": [7.0, 15.0, 40.0],   # legacy layout unless overridden
+    "bet_history": "off",            # "off" or "last_raise"; map-backed only
     # [train.blueprint]
     "num_players": 6, "starting_stack": 100.0,
     "iterations": 100_000, "num_threads": 0,
@@ -330,6 +331,14 @@ def main() -> None:
         raise SystemExit(
             "pot_edges requires bucket_map (set [abstraction].bucket_map "
             "or pass --bucket-map)")
+    if cfg["bet_history"] not in ("off", "last_raise"):
+        raise SystemExit(
+            "bet_history must be 'off' or 'last_raise', got "
+            f"{cfg['bet_history']!r}")
+    if not cfg["bucket_map"] and cfg["bet_history"] != "off":
+        raise SystemExit(
+            "bet_history requires bucket_map (set [abstraction].bucket_map "
+            "or pass --bucket-map)")
     vocab = _load_vocab(repo_root, cfg["config_path"])
     engine_cfg = sixmax.EngineConfig(num_players=cfg["num_players"],
                                      starting_stack=cfg["starting_stack"])
@@ -351,6 +360,12 @@ def main() -> None:
                 "pot layout mismatch: checkpoint layout "
                 f"{abstraction.pot_layout()} differs from config "
                 f"({cfg['pot_mode']}, {cfg['pot_edges']})")
+        # Same rule for the bet-history field: it moves every key too.
+        if abstraction.bet_history() != cfg["bet_history"]:
+            raise SystemExit(
+                "bet history mismatch: checkpoint "
+                f"{abstraction.bet_history()!r} differs from config "
+                f"{cfg['bet_history']!r}")
         trainer = sixmax.resume_blueprint(
             args.resume, engine_cfg, vocab, abstraction,
             num_threads=cfg["num_threads"], seed=cfg["seed"])
@@ -358,6 +373,9 @@ def main() -> None:
         logging.info(f"Loading bucket map {cfg['bucket_map']} …")
         abstraction = sixmax.Abstraction.from_bucket_map(cfg["bucket_map"])
         abstraction.set_pot_layout(cfg["pot_mode"], list(cfg["pot_edges"]))
+        # Must be set BEFORE the trainer builds any EngineGameState: the state
+        # records last-raise classes only while the field is on.
+        abstraction.set_bet_history(cfg["bet_history"])
         buckets = [abstraction.num_buckets(s) for s in (1, 2, 3)]
         logging.info(f"Bucket map hash {abstraction.hash():016x} "
                      f"(buckets {buckets[0]}/{buckets[1]}/{buckets[2]})")
@@ -379,6 +397,7 @@ def main() -> None:
 
     pot_mode, pot_edges = abstraction.pot_layout()
     logging.info(f"pot layout {pot_mode} {pot_edges}")
+    logging.info(f"bet history {abstraction.bet_history()}")
     ckpt_interval = cfg["checkpoint_interval"] or cfg["iterations"]
     completed = 0
     logging.info(f"Running {cfg['iterations']:,} iterations …")
