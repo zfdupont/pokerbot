@@ -204,3 +204,32 @@ Every logged decision of ours (29,096) was replayed through the deploy agent's k
 - Regression check vs the confirmed C2 score: pass. Baseline -25.4 is one SE from the -20 target.
 - C2's small-pot profit was largely fold equity from uniform-fallback jams; with the 2 BB open on-tree that disappears, and big-pot losses fall about 80%.
 - Still open: the verified deploy raise-sizing gap (gross vs net pot for pot-fraction raises facing a bet) affects C4 too.
+
+## Trainer deterministic speedup, 2026-10-25
+
+No trained value changed: the single-threaded digests from `scripts/trainer_perf_check.py digest` are byte-identical before and after (pinned by `tests/sixmax/test_trainer_golden.py`). What changed in `sixmax/src/`: `traverse` does one table lookup per node instead of two, settlement (`settle_pots`) writes into caller buffers with a fixed `kMaxPlayers=6` stack array instead of allocating vectors, and `HandState`/`EngineGameState` copies use fixed-capacity buffers (no per-copy heap allocation).
+
+Benchmark (`scripts/trainer_perf_check.py bench`, 1.5M iterations, 8 threads, M-series laptop, each config twice):
+
+| Config | Before it/s | After it/s | Change |
+|---|---:|---|---:|
+| D1 `hu200_c5_d1.toml` | 4,055.7 | 6,868.7 / 6,966.2 | +70% |
+| C5 `hu200_c5.toml` | 4,154.6 | 7,969.4 / 7,830.5 | +90% |
+
+Profile (D1, 1.5M-iteration run, `/usr/bin/sample 20`, 8 threads; busy-time shares exclude idle/parked threads):
+
+| Bucket | Before | After |
+|---|---:|---:|
+| malloc/free | 38.0% | 8.0% |
+| mutex waits | 23.0% | 37.9% |
+| other trainer code | 19.9% | 27.9% |
+| infoset hash table | 8.4% | 12.9% |
+| hand index / bucket map | 3.8% | 6.7% |
+| memset/memmove | 3.0% | 2.3% |
+| hand evaluator | 1.3% | 2.3% |
+| uncategorized | - | 1.9% |
+| idle (`__psynch_cvwait`/`__ulock_wait`), share of all samples | 23.9% | 21.2% |
+
+- Allocation is no longer the bottleneck: the malloc/free share fell from 38.0% to 8.0% of busy samples; the profiled run itself reported 9,714 it/s at 583k iterations (the "before" profile ran at 5,176 it/s).
+- What remains is lock contention on hot preflop shards: `__psynch_mutexwait` alone is 29.8% of busy samples (macOS mutexes park instead of spinning, so every contended `std::mutex` pays a syscall), with the `unordered_map` infoset lookup at 12.9% and `regret_matched` at 8.4% next.
+- Nothing else obvious to take without giving up reproducibility (lock-free/racy updates) or reordering checkpoint bytes (`kShards`, `shard_of`). Full suite green (645 passed, 30 skipped, 3 xpassed).
