@@ -216,7 +216,7 @@ Benchmark (`scripts/trainer_perf_check.py bench`, 1.5M iterations, 8 threads, M-
 | D1 `hu200_c5_d1.toml` | 4,055.7 | 6,868.7 / 6,966.2 | +70% |
 | C5 `hu200_c5.toml` | 4,154.6 | 7,969.4 / 7,830.5 | +90% |
 
-Profile (D1, 1.5M-iteration run, `/usr/bin/sample 20`, 8 threads; busy-time shares exclude idle/parked threads):
+Profile (`/usr/bin/sample 20`, 8 threads; busy-time shares exclude idle/parked threads). Before: during a 1.5M-iteration D1 run on unmodified code, 2026-10-24. After: during a fresh 3,000,000-iteration D1 run on this branch:
 
 | Bucket | Before | After |
 |---|---:|---:|
@@ -230,6 +230,8 @@ Profile (D1, 1.5M-iteration run, `/usr/bin/sample 20`, 8 threads; busy-time shar
 | uncategorized | - | 1.9% |
 | idle (`__psynch_cvwait`/`__ulock_wait`), share of all samples | 23.9% | 21.2% |
 
-- Allocation is no longer the bottleneck: the malloc/free share fell from 38.0% to 8.0% of busy samples; the profiled run itself reported 9,714 it/s at 583k iterations (the "before" profile ran at 5,176 it/s).
-- What remains is lock contention on hot preflop shards: `__psynch_mutexwait` alone is 29.8% of busy samples (macOS mutexes park instead of spinning, so every contended `std::mutex` pays a syscall), with the `unordered_map` infoset lookup at 12.9% and `regret_matched` at 8.4% next.
+The after shares are fractions of a smaller busy total, and the mutex design is unchanged: mutex rising reflects the other buckets shrinking, not more locking in absolute terms.
+
+- Allocation is no longer the bottleneck: the malloc/free share fell from 38.0% to 8.0% of busy samples. The sampling runs' own progress readouts were 5,176 it/s (before run) and 9,714 it/s at 583k iterations (after run); those are single progress lines, not benchmark results — the throughput comparison is the bench table above (D1 6,868.7 / 6,966.2 vs 4,055.7 it/s).
+- What remains is shard-mutex contention (likely hot preflop shards): `__psynch_mutexwait` alone is 29.8% of busy samples (macOS mutexes park instead of spinning, so every contended `std::mutex` pays a syscall), with the `unordered_map` infoset lookup at 12.9% and `regret_matched` at 8.4% next.
 - Nothing else obvious to take without giving up reproducibility (lock-free/racy updates) or reordering checkpoint bytes (`kShards`, `shard_of`). Full suite green (645 passed, 30 skipped, 3 xpassed).
