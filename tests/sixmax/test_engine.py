@@ -259,3 +259,30 @@ def test_settle_pots_rejects_more_than_six_players():
     # than overrun the tables.
     with pytest.raises(ValueError):
         sixmax.settle_pots([1.0] * 7, [False] * 7, [0] * 7)
+
+
+def test_settle_pots_rejects_mismatched_lengths():
+    # The per-player inputs are read by index, so a short vector would read out
+    # of bounds; reject instead.
+    with pytest.raises(ValueError):
+        sixmax.settle_pots([1.0, 2.0], [False], [0, 0])
+    with pytest.raises(ValueError):
+        sixmax.settle_pots([1.0, 2.0], [False, False], [0])
+
+
+def test_hand_state_rejects_more_than_six_players():
+    # kMaxPlayers = 6: the hand buffers are fixed-capacity, so a 7-seat config
+    # must be rejected (pybind maps std::invalid_argument to ValueError) rather
+    # than write past them.
+    cfg = sixmax.EngineConfig(num_players=7)
+    with pytest.raises(ValueError):
+        sixmax.HandState(cfg, 0, list(range(52)))
+    with pytest.raises(ValueError):
+        sixmax.HandState.deal(cfg, 0, 1)
+
+
+def test_hand_state_rejects_short_deck():
+    # 6 players need 2*6+5 = 17 card codes.
+    cfg = sixmax.EngineConfig(num_players=6)
+    with pytest.raises(ValueError):
+        sixmax.HandState(cfg, 0, list(range(16)))

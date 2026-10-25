@@ -37,7 +37,8 @@ struct PlayerState {
 // Pure side-pot settlement from total contributions. rank_order[i] is the
 // dense showdown rank of player i (0 = best, ties share a value); entries
 // for folded players are ignored. Returns gross payouts (winnings only).
-// Throws std::invalid_argument for more than kMaxPlayers rows.
+// Throws std::invalid_argument for more than kMaxPlayers rows or when the
+// three inputs disagree on length.
 std::vector<double> settle_pots(const std::vector<double>& total_bets,
                                 const std::vector<uint8_t>& folded,
                                 const std::vector<int>& rank_order);
@@ -53,6 +54,8 @@ public:
     // player i holds deck[2i], deck[2i+1]; board = deck[2n..2n+4]; no burn.
     // stacks: per-seat starting stacks; empty = cfg.starting_stack for all.
     // Precondition: every stack > 1.0 BB (blind posting cannot go all-in).
+    // Throws std::invalid_argument unless 2 <= cfg.num_players <= kMaxPlayers
+    // and deck holds at least 2*cfg.num_players + 5 cards.
     HandState(const EngineConfig& cfg, int button, std::vector<int> deck,
               std::vector<double> stacks = {});
     static HandState deal(const EngineConfig& cfg, int button,

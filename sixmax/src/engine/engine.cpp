@@ -75,6 +75,11 @@ std::vector<double> settle_pots(const std::vector<double>& total_bets,
     if (total_bets.size() > (size_t)kMaxPlayers)
         throw std::invalid_argument(
             "settle_pots: at most kMaxPlayers players are supported");
+    if (folded.size() != total_bets.size() ||
+        rank_order.size() != total_bets.size())
+        throw std::invalid_argument(
+            "settle_pots: total_bets, folded and rank_order must have equal "
+            "length");
     int n = (int)total_bets.size();
     std::vector<double> payout(n, 0.0);
     settle_pots_into(total_bets.data(), folded.data(), rank_order.data(), n,
@@ -86,8 +91,14 @@ HandState::HandState(const EngineConfig& cfg, int button, std::vector<int> deck,
                      std::vector<double> stacks)
     : cfg_(cfg), button_(button), n_(cfg.num_players) {
     int n = n_;
-    assert(n >= 2 && n <= kMaxPlayers);
-    assert((int)deck.size() >= 2 * n + 5);
+    // Throw rather than assert: release builds define NDEBUG, and the buffers
+    // below are sized to kMaxPlayers regardless of the requested seat count.
+    if (n < 2 || n > kMaxPlayers)
+        throw std::invalid_argument(
+            "HandState: num_players must be in [2, kMaxPlayers=6]");
+    if ((int)deck.size() < 2 * n + 5)
+        throw std::invalid_argument(
+            "HandState: deck must hold at least 2*num_players + 5 cards");
     std::copy(deck.begin(), deck.begin() + (2 * n + 5), deck_.begin());
     for (int i = 0; i < n; ++i) {
         double st = stacks.empty() ? cfg_.starting_stack : stacks[i];
