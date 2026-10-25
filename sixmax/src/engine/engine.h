@@ -37,6 +37,7 @@ struct PlayerState {
 // Pure side-pot settlement from total contributions. rank_order[i] is the
 // dense showdown rank of player i (0 = best, ties share a value); entries
 // for folded players are ignored. Returns gross payouts (winnings only).
+// Throws std::invalid_argument for more than kMaxPlayers rows.
 std::vector<double> settle_pots(const std::vector<double>& total_bets,
                                 const std::vector<uint8_t>& folded,
                                 const std::vector<int>& rank_order);

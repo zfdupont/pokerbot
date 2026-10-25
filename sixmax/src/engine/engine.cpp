@@ -5,6 +5,7 @@
 #include <limits>
 #include <numeric>
 #include <optional>
+#include <stdexcept>
 #include "game/safe_eval.h"
 
 namespace sixmax {
@@ -70,6 +71,9 @@ void settle_pots_into(const double* total_bets, const uint8_t* folded,
 std::vector<double> settle_pots(const std::vector<double>& total_bets,
                                 const std::vector<uint8_t>& folded,
                                 const std::vector<int>& rank_order) {
+    if (total_bets.size() > (size_t)kMaxPlayers)
+        throw std::invalid_argument(
+            "settle_pots: at most kMaxPlayers players are supported");
     int n = (int)total_bets.size();
     std::vector<double> payout(n, 0.0);
     settle_pots_into(total_bets.data(), folded.data(), rank_order.data(), n,

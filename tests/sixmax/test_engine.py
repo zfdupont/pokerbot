@@ -1,6 +1,7 @@
 """NLHE engine: BB frame (SB=0.5, BB=1.0, stacks in BB). Card code =
 (rank-2)*4 + suit. Deck layout: player i holds deck[2i], deck[2i+1];
 board = deck[2n .. 2n+4]."""
+import pytest
 import sixmax
 
 
@@ -250,3 +251,11 @@ def test_settle_pots_into_matches_reference_on_random_sidepots():
 
         assert sixmax.settle_pots(totals, folded, ranks) == \
             reference(totals, folded, ranks), (totals, folded, ranks)
+
+
+def test_settle_pots_rejects_more_than_six_players():
+    # kMaxPlayers = 6: the settlement buffers are fixed-capacity, so a 7th row
+    # must be rejected (pybind maps std::invalid_argument to ValueError) rather
+    # than overrun the tables.
+    with pytest.raises(ValueError):
+        sixmax.settle_pots([1.0] * 7, [False] * 7, [0] * 7)
