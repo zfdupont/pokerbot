@@ -73,7 +73,7 @@ private:
     HandState hand_;
     const ActionVocab* vocab_;
     const Abstraction* abstraction_ = nullptr;
-    std::vector<int> history_;          // naive-keyer input (unchanged)
+    std::vector<int> history_;          // naive-keyer input; attached states skip it
     std::array<uint8_t, 4> raises_{};   // per-street raise count, capped 3
     std::array<uint8_t, 4> last_raise_{};  // per-street last-raise size class
 };

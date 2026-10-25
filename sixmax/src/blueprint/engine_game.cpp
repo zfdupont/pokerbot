@@ -108,7 +108,9 @@ void EngineGameState::apply(int action) {
             break;
         }
     }
-    history_.push_back(action);
+    // Attached states key through the abstraction, which never reads the
+    // action history, so only the naive fallback pays for it.
+    if (!abstraction_) history_.push_back(action);
 }
 
 uint64_t EngineGameState::abstract_key(const Abstraction& abs) const {
@@ -125,8 +127,18 @@ uint64_t EngineGameState::abstract_key(const Abstraction& abs) const {
     const int n = hand_.num_players();
     const int street = (int)hand_.street();
     auto hole = hand_.hole_cards(p);
-    const int card = street == 0 ? preflop_class(hole)
-                                 : abs.bucket(hole, hand_.board());
+    int card;
+    if (street == 0) {
+        card = preflop_class(hole);
+    } else {
+        // Abstraction::bucket keeps its vector API, but a reused per-thread
+        // buffer removes the per-node allocation (assign reuses capacity).
+        std::array<int, 5> cards{};
+        const int count = hand_.board_into(cards);
+        thread_local std::vector<int> board;
+        board.assign(cards.begin(), cards.begin() + count);
+        card = abs.bucket(hole, board);
+    }
     // Canonical action-order start: preflop = seat after BB (HU: button);
     // postflop = seat after button.
     const int start = street == 0

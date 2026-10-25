@@ -61,7 +61,7 @@ public:
     bool is_terminal() const { return terminal_; }
     int current_player() const { return next_; }
     Street street() const { return street_; }
-    int num_players() const { return (int)players_.size(); }
+    int num_players() const { return n_; }
     int button() const { return button_; }
     double pot() const;                // total contributed by everyone
     double current_bet() const { return current_bet_; }
@@ -104,11 +104,16 @@ private:
     void showdown_order(std::array<int, kMaxPlayers>& order) const;
     void settle();
 
+    // Fixed-capacity buffers: the table never exceeds kMaxPlayers seats, so a
+    // clone is a flat copy and the hot paths allocate nothing. Only the first
+    // `n_` player slots and the first `2*n_+5` deck slots are live: hole cards
+    // in seat order, then the board (unrevealed cards included).
     EngineConfig cfg_;
     int button_;
-    std::vector<int> deck_;
-    std::vector<PlayerState> players_;
-    std::vector<double> start_stacks_;
+    std::array<int, 2 * kMaxPlayers + 5> deck_{};
+    std::array<PlayerState, kMaxPlayers> players_{};
+    int n_ = 0;                    // live seats (2..kMaxPlayers)
+    std::array<double, kMaxPlayers> start_stacks_{};
     Street street_ = Street::Preflop;
     int next_ = -1;
     int to_act_ = 0;               // players still owed an action this round

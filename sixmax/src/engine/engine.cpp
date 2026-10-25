@@ -20,7 +20,8 @@ void HandState::reroll_hidden(int hero, std::vector<int> pool,
         deck_[2 * i] = pool[p++];
         deck_[2 * i + 1] = pool[p++];
     }
-    const int revealed = (int)board().size();
+    std::array<int, 5> bd{};
+    const int revealed = board_into(bd);
     for (int j = revealed; j < 5; ++j) deck_[2 * n + j] = pool[p++];
 }
 
@@ -83,12 +84,11 @@ std::vector<double> settle_pots(const std::vector<double>& total_bets,
 
 HandState::HandState(const EngineConfig& cfg, int button, std::vector<int> deck,
                      std::vector<double> stacks)
-    : cfg_(cfg), button_(button), deck_(std::move(deck)) {
-    int n = cfg_.num_players;
-    assert(n >= 2 && n <= 6);
-    assert((int)deck_.size() >= 2 * n + 5);
-    players_.resize(n);
-    start_stacks_.resize(n);
+    : cfg_(cfg), button_(button), n_(cfg.num_players) {
+    int n = n_;
+    assert(n >= 2 && n <= kMaxPlayers);
+    assert((int)deck.size() >= 2 * n + 5);
+    std::copy(deck.begin(), deck.begin() + (2 * n + 5), deck_.begin());
     for (int i = 0; i < n; ++i) {
         double st = stacks.empty() ? cfg_.starting_stack : stacks[i];
         assert(st > 1.0 + kChipEps);  // blinds may not force an all-in
@@ -115,7 +115,7 @@ HandState HandState::deal(const EngineConfig& cfg, int button,
 
 double HandState::pot() const {
     double p = 0.0;
-    for (const auto& pl : players_) p += pl.total_bet;
+    for (int i = 0; i < n_; ++i) p += players_[i].total_bet;
     return p;
 }
 
@@ -127,7 +127,7 @@ double HandState::to_call() const {
 bool HandState::can_raise() const {
     const PlayerState& p = players_[next_];
     if (p.stack <= (current_bet_ - p.street_bet) + kChipEps) return false;
-    for (int i = 0; i < (int)players_.size(); ++i)
+    for (int i = 0; i < n_; ++i)
         if (i != next_ && !players_[i].folded && !players_[i].all_in)
             return true;  // someone can respond, so a bet has meaning
     return false;
@@ -139,7 +139,7 @@ std::array<int, 2> HandState::hole_cards(int i) const {
 
 int HandState::board_into(std::array<int, 5>& out) const {
     static const int reveal[4] = {0, 3, 4, 5};
-    int n = (int)players_.size();
+    int n = n_;
     int count = reveal[(int)street_];
     for (int j = 0; j < count; ++j) out[j] = deck_[2 * n + j];
     return count;
@@ -164,7 +164,7 @@ void HandState::commit(int seat, double amount) {
 }
 
 int HandState::next_active_after(int seat) const {
-    int n = (int)players_.size();
+    int n = n_;
     for (int k = 1; k <= n; ++k) {
         int i = (seat + k) % n;
         if (!players_[i].folded && !players_[i].all_in) return i;
@@ -174,8 +174,8 @@ int HandState::next_active_after(int seat) const {
 
 int HandState::num_can_act() const {
     int c = 0;
-    for (const auto& p : players_)
-        if (!p.folded && !p.all_in) ++c;
+    for (int i = 0; i < n_; ++i)
+        if (!players_[i].folded && !players_[i].all_in) ++c;
     return c;
 }
 
@@ -203,7 +203,7 @@ void HandState::apply(const EngineAction& a) {
             current_bet_ = target;
             commit(seat, target - p.street_bet);
             to_act_ = 0;  // everyone else live owes a response
-            for (int i = 0; i < (int)players_.size(); ++i)
+            for (int i = 0; i < n_; ++i)
                 if (i != seat && !players_[i].folded && !players_[i].all_in)
                     ++to_act_;
             break;
@@ -214,8 +214,8 @@ void HandState::apply(const EngineAction& a) {
 
 void HandState::finish_action(int seat) {
     int unfolded = 0;
-    for (const auto& p : players_)
-        if (!p.folded) ++unfolded;
+    for (int i = 0; i < n_; ++i)
+        if (!players_[i].folded) ++unfolded;
     if (unfolded == 1) {
         terminal_ = true;
         settle();
@@ -236,7 +236,7 @@ void HandState::close_round_or_advance() {
             return;
         }
         street_ = (Street)((int)street_ + 1);
-        for (auto& p : players_) p.street_bet = 0.0;
+        for (int i = 0; i < n_; ++i) players_[i].street_bet = 0.0;
         current_bet_ = 0.0;
         last_raise_ = 1.0;  // min bet is 1 BB on a fresh street
         if (num_can_act() >= 2) {
@@ -249,7 +249,7 @@ void HandState::close_round_or_advance() {
 }
 
 void HandState::showdown_order(std::array<int, kMaxPlayers>& order) const {
-    int n = (int)players_.size();
+    int n = n_;
     order.fill(0);
     std::array<int, kMaxPlayers> alive{};
     int nalive = 0;
@@ -280,7 +280,7 @@ void HandState::showdown_order(std::array<int, kMaxPlayers>& order) const {
 }
 
 void HandState::settle() {
-    int n = (int)players_.size();
+    int n = n_;
     std::array<double, kMaxPlayers> totals{};
     std::array<uint8_t, kMaxPlayers> folded{};
     std::array<int, kMaxPlayers> ranks{};

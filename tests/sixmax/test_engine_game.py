@@ -106,6 +106,24 @@ def test_random_playouts_are_zero_sum_and_legal():
             assert abs(total) < 1e-6
 
 
+def test_naive_key_still_tracks_history_without_abstraction():
+    # Unattached EngineGameState (no abstraction): infoset_key() is the FNV
+    # hash over hole cards, board and action history. Two states that differ
+    # only in an earlier action at the same decision point must differ.
+    limp = _hu_state()
+    limp.apply(CALL)          # SB limps
+    limp.apply(CHECK)         # BB checks its option -> flop
+    raise_call = _hu_state()
+    raise_call.apply(OPEN25)  # SB opens to 2.5
+    raise_call.apply(CALL)    # BB calls -> flop
+    # Same deal, same board, same actor (BB first to act on the flop)...
+    assert limp.board() == raise_call.board()
+    assert limp.current_player() == raise_call.current_player() == 1
+    assert limp.hole_cards(1) == raise_call.hole_cards(1)
+    # ...but the preflop action history differs, so the keys must differ.
+    assert limp.infoset_key() != raise_call.infoset_key()
+
+
 def test_mccfr_smoke_on_hu_engine():
     g = sixmax.EngineGame(sixmax.EngineConfig(num_players=2), VOCAB)
     t = sixmax.MCCFRTrainer(g, seed=11)
