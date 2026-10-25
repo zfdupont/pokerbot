@@ -9,6 +9,9 @@ namespace sixmax {
 // All chip quantities are doubles denominated in big blinds:
 // big_blind = 1.0, small_blind = 0.5. No absolute-chip frame anywhere.
 constexpr double kChipEps = 1e-9;
+// Fixed table size; every per-hand buffer is sized to this, not to the seat
+// count, so hot paths never allocate.
+constexpr int kMaxPlayers = 6;
 
 struct EngineConfig {
     int num_players = 6;             // 2..6
@@ -38,6 +41,11 @@ std::vector<double> settle_pots(const std::vector<double>& total_bets,
                                 const std::vector<uint8_t>& folded,
                                 const std::vector<int>& rank_order);
 
+// Allocation-free core of settle_pots: writes n gross payouts into `payout`,
+// zeroing it first. `payout` must hold at least n values; n <= kMaxPlayers.
+void settle_pots_into(const double* total_bets, const uint8_t* folded,
+                      const int* rank_order, int n, double* payout);
+
 class HandState {
 public:
     // deck: >= 2n+5 card codes, code = (rank-2)*4 + suit. Deal order:
@@ -62,6 +70,8 @@ public:
     const PlayerState& player(int i) const { return players_[i]; }
     std::array<int, 2> hole_cards(int i) const;
     std::vector<int> board() const;    // cards revealed so far (0/3/4/5)
+    // Writes the revealed cards into out[0..count) and returns the count.
+    int board_into(std::array<int, 5>& out) const;
 
     HandState clone() const { return *this; }
     // Reassign every seat's hole cards except `hero`, plus every not-yet-
@@ -90,7 +100,7 @@ private:
     void close_round_or_advance();
     int next_active_after(int seat) const;  // next seat that can still act
     int num_can_act() const;
-    std::vector<int> showdown_order() const;
+    void showdown_order(std::array<int, kMaxPlayers>& order) const;
     void settle();
 
     EngineConfig cfg_;

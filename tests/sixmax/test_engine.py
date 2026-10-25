@@ -179,3 +179,74 @@ def test_reroll_hidden_preserves_revealed_board():
     s.reroll_hidden(0, pool, 3)
     assert s.board() == revealed
     assert s.hole_cards(0) == hero_hole
+
+
+def test_settle_pots_into_matches_reference_on_random_sidepots():
+    # 20k random tables, 2-6 players: unequal all-ins, random folds (never all),
+    # random dense ranks with ties.
+    # The reference is the current C++ loop, transcribed in Python, so float
+    # results are compared exactly (==). It pins the allocation-free rewrite to
+    # the pre-change algorithm, addition order included.
+    import random
+
+    rng = random.Random(20261024)
+
+    def reference(totals, folded, ranks):
+        n = len(totals)
+        payout = [0.0] * n
+        levels = sorted(t for t in totals if t > 1e-9)
+        # std::unique: keep the first of every run of near-equal levels.
+        deduped = []
+        for level in levels:
+            if not deduped or not abs(deduped[-1] - level) < 1e-9:
+                deduped.append(level)
+        prev = 0.0
+        for level in deduped:
+            amount = 0.0
+            for i in range(n):
+                amount += max(0.0, min(totals[i], level) - prev)
+            best = None
+            for i in range(n):
+                if not folded[i] and totals[i] >= level - 1e-9:
+                    best = ranks[i] if best is None else min(best, ranks[i])
+            if best is not None:
+                winners = [i for i in range(n)
+                           if not folded[i] and totals[i] >= level - 1e-9
+                           and ranks[i] == best]
+            else:
+                # Defensive: every contributor at this level folded.
+                winners = [i for i in range(n) if not folded[i]]
+            for w in winners:
+                payout[w] += amount / len(winners)
+            prev = level
+        return payout
+
+    for _ in range(20000):
+        n = rng.randint(2, 6)
+        # Shared contribution levels so exact duplicates and near-duplicates
+        # (within kChipEps) both occur.
+        levels = [rng.choice([0.0, 0.0, 5.0, 10.0, 25.0, 100.0])
+                  for _ in range(rng.randint(1, 3))]
+        totals = []
+        for _ in range(n):
+            t = rng.choice(levels)
+            if t > 0.0 and rng.random() < 0.3:
+                t += rng.choice([5e-10, -5e-10])   # inside kChipEps
+            totals.append(t)
+        # Random folds, but never everyone.
+        folded = [rng.random() < 0.35 for _ in range(n)]
+        if all(folded):
+            folded[rng.randrange(n)] = False
+        # Dense ranks 0..k-1 with ties; folded seats often get the best rank so
+        # a rewrite that forgets to skip them fails loudly.
+        k = rng.randint(1, n)
+        ranks = [rng.randrange(k) for _ in range(n)]
+        best_vals = sorted(set(ranks))
+        ranks = [best_vals.index(r) for r in ranks]
+        if rng.random() < 0.5:
+            folded_idx = [i for i in range(n) if folded[i]]
+            if folded_idx:
+                ranks[rng.choice(folded_idx)] = 0
+
+        assert sixmax.settle_pots(totals, folded, ranks) == \
+            reference(totals, folded, ranks), (totals, folded, ranks)

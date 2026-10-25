@@ -4,6 +4,7 @@
 #include <cmath>
 #include <limits>
 #include <numeric>
+#include <optional>
 #include "game/safe_eval.h"
 
 namespace sixmax {
@@ -22,22 +23,24 @@ void HandState::reroll_hidden(int hero, std::vector<int> pool,
     for (int j = revealed; j < 5; ++j) deck_[2 * n + j] = pool[p++];
 }
 
-std::vector<double> settle_pots(const std::vector<double>& total_bets,
-                                const std::vector<uint8_t>& folded,
-                                const std::vector<int>& rank_order) {
-    int n = (int)total_bets.size();
-    std::vector<double> payout(n, 0.0);
-    std::vector<double> levels;
+void settle_pots_into(const double* total_bets, const uint8_t* folded,
+                      const int* rank_order, int n, double* payout) {
+    assert(n >= 0 && n <= kMaxPlayers);
+    for (int i = 0; i < n; ++i) payout[i] = 0.0;
+    std::array<double, kMaxPlayers> levels{};
+    int nlevels = 0;
     for (int i = 0; i < n; ++i)
-        if (total_bets[i] > kChipEps) levels.push_back(total_bets[i]);
-    std::sort(levels.begin(), levels.end());
-    levels.erase(std::unique(levels.begin(), levels.end(),
-                             [](double a, double b) {
-                                 return std::abs(a - b) < kChipEps;
-                             }),
-                 levels.end());
+        if (total_bets[i] > kChipEps) levels[nlevels++] = total_bets[i];
+    std::sort(levels.begin(), levels.begin() + nlevels);
+    nlevels = (int)(std::unique(levels.begin(), levels.begin() + nlevels,
+                                [](double a, double b) {
+                                    return std::abs(a - b) < kChipEps;
+                                }) -
+                     levels.begin());
+    std::array<int, kMaxPlayers> winners{};
     double prev = 0.0;
-    for (double level : levels) {
+    for (int k = 0; k < nlevels; ++k) {
+        const double level = levels[k];
         double amount = 0.0;
         for (int i = 0; i < n; ++i)
             amount += std::max(0.0, std::min(total_bets[i], level) - prev);
@@ -45,22 +48,32 @@ std::vector<double> settle_pots(const std::vector<double>& total_bets,
         for (int i = 0; i < n; ++i)
             if (!folded[i] && total_bets[i] >= level - kChipEps)
                 best = std::min(best, rank_order[i]);
-        std::vector<int> winners;
+        int nwinners = 0;
         if (best != std::numeric_limits<int>::max()) {
             for (int i = 0; i < n; ++i)
                 if (!folded[i] && total_bets[i] >= level - kChipEps &&
                     rank_order[i] == best)
-                    winners.push_back(i);
+                    winners[nwinners++] = i;
         } else {
             // Defensive: every contributor at this level folded. Unreachable
             // from valid play (the closing aggressor never folds); dead money
             // goes to all live players so chips are conserved.
             for (int i = 0; i < n; ++i)
-                if (!folded[i]) winners.push_back(i);
+                if (!folded[i]) winners[nwinners++] = i;
         }
-        for (int w : winners) payout[w] += amount / (double)winners.size();
+        for (int j = 0; j < nwinners; ++j)
+            payout[winners[j]] += amount / (double)nwinners;
         prev = level;
     }
+}
+
+std::vector<double> settle_pots(const std::vector<double>& total_bets,
+                                const std::vector<uint8_t>& folded,
+                                const std::vector<int>& rank_order) {
+    int n = (int)total_bets.size();
+    std::vector<double> payout(n, 0.0);
+    settle_pots_into(total_bets.data(), folded.data(), rank_order.data(), n,
+                     payout.data());
     return payout;
 }
 
@@ -120,12 +133,18 @@ std::array<int, 2> HandState::hole_cards(int i) const {
     return {deck_[2 * i], deck_[2 * i + 1]};
 }
 
-std::vector<int> HandState::board() const {
+int HandState::board_into(std::array<int, 5>& out) const {
     static const int reveal[4] = {0, 3, 4, 5};
     int n = (int)players_.size();
     int count = reveal[(int)street_];
-    return std::vector<int>(deck_.begin() + 2 * n,
-                            deck_.begin() + 2 * n + count);
+    for (int j = 0; j < count; ++j) out[j] = deck_[2 * n + j];
+    return count;
+}
+
+std::vector<int> HandState::board() const {
+    std::array<int, 5> cards{};
+    int count = board_into(cards);
+    return std::vector<int>(cards.begin(), cards.begin() + count);
 }
 
 void HandState::commit(int seat, double amount) {
@@ -225,43 +244,50 @@ void HandState::close_round_or_advance() {
     }
 }
 
-std::vector<int> HandState::showdown_order() const {
+void HandState::showdown_order(std::array<int, kMaxPlayers>& order) const {
     int n = (int)players_.size();
-    std::vector<int> order(n, 0);
-    std::vector<int> alive;
+    order.fill(0);
+    std::array<int, kMaxPlayers> alive{};
+    int nalive = 0;
     for (int i = 0; i < n; ++i)
-        if (!players_[i].folded) alive.push_back(i);
-    if (alive.size() < 2) return order;  // fold-win: ranks are irrelevant
-    std::vector<int> bd = board();       // river reached: 5 cards
-    std::vector<safe_eval::HandRank> hr;
-    hr.reserve(alive.size());
-    for (int seat : alive) {
-        auto hc = hole_cards(seat);
+        if (!players_[i].folded) alive[nalive++] = i;
+    if (nalive < 2) return;  // fold-win: ranks are irrelevant
+    std::array<int, 5> bd{};
+    board_into(bd);  // river reached: 5 cards
+    // HandRank is opaque and not default-constructible, so slots stay empty
+    // until filled.
+    std::array<std::optional<safe_eval::HandRank>, kMaxPlayers> hr{};
+    for (int k = 0; k < nalive; ++k) {
+        auto hc = hole_cards(alive[k]);
         std::array<int, 7> codes = {hc[0], hc[1], bd[0], bd[1],
                                     bd[2], bd[3], bd[4]};
-        hr.push_back(safe_eval::rank7(codes));
+        hr[k] = safe_eval::rank7(codes);
     }
-    std::vector<int> pos(alive.size());
-    std::iota(pos.begin(), pos.end(), 0);
-    std::sort(pos.begin(), pos.end(),
-              [&](int a, int b) { return hr[a].beats(hr[b]); });
+    std::array<int, kMaxPlayers> pos{};
+    for (int k = 0; k < nalive; ++k) pos[k] = k;
+    std::sort(pos.begin(), pos.begin() + nalive, [&](int a, int b) {
+        return hr[a]->beats(*hr[b]);
+    });
     int rank = 0;
-    for (size_t k = 0; k < pos.size(); ++k) {
-        if (k > 0 && !hr[pos[k - 1]].ties(hr[pos[k]])) rank = (int)k;
+    for (int k = 0; k < nalive; ++k) {
+        if (k > 0 && !hr[pos[k - 1]]->ties(*hr[pos[k]])) rank = k;
         order[alive[pos[k]]] = rank;
     }
-    return order;
 }
 
 void HandState::settle() {
     int n = (int)players_.size();
-    std::vector<double> totals(n);
-    std::vector<uint8_t> folded(n);
+    std::array<double, kMaxPlayers> totals{};
+    std::array<uint8_t, kMaxPlayers> folded{};
+    std::array<int, kMaxPlayers> ranks{};
     for (int i = 0; i < n; ++i) {
         totals[i] = players_[i].total_bet;
         folded[i] = players_[i].folded ? 1 : 0;
     }
-    std::vector<double> payout = settle_pots(totals, folded, showdown_order());
+    showdown_order(ranks);
+    std::array<double, kMaxPlayers> payout{};
+    settle_pots_into(totals.data(), folded.data(), ranks.data(), n,
+                     payout.data());
     payoffs_.assign(n, 0.0);
     for (int i = 0; i < n; ++i) {
         players_[i].stack += payout[i];
