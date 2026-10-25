@@ -207,12 +207,12 @@ Every logged decision of ours (29,096) was replayed through the deploy agent's k
 
 ## Trainer deterministic speedup, 2026-10-25
 
-No trained value changed: the single-threaded digests from `scripts/trainer_perf_check.py digest` are byte-identical before and after (pinned by `tests/sixmax/test_trainer_golden.py`). What changed in `sixmax/src/`: `traverse` does one table lookup per node instead of two, settlement (`settle_pots`) writes into caller buffers with a fixed `kMaxPlayers=6` stack array instead of allocating vectors, and `HandState`/`EngineGameState` copies use fixed-capacity buffers (no per-copy heap allocation).
+No trained value changed: the single-threaded digests from `scripts/trainer_perf_check.py digest` are byte-identical before and after (pinned by `tests/sixmax/test_trainer_golden.py`). What changed in `sixmax/src/`: `traverse` does one table lookup per node instead of two, settlement (`settle_pots`) writes into caller buffers with a fixed `kMaxPlayers=6` stack array instead of allocating vectors, and `HandState`/`EngineGameState` copies use fixed-capacity buffers, so a clone no longer allocates the hand's card and player vectors (one allocation per clone remains for the cloned state object, and terminal states still allocate `payoffs_`).
 
 Benchmark (`scripts/trainer_perf_check.py bench`, 1.5M iterations, 8 threads, M-series laptop, each config twice):
 
 | Config | Before it/s | After it/s | Change |
-|---|---:|---|---:|
+|---|---:|---:|---:|
 | D1 `hu200_c5_d1.toml` | 4,055.7 | 6,868.7 / 6,966.2 | +70% |
 | C5 `hu200_c5.toml` | 4,154.6 | 7,969.4 / 7,830.5 | +90% |
 
@@ -232,6 +232,6 @@ Profile (`/usr/bin/sample 20`, 8 threads; busy-time shares exclude idle/parked t
 
 The after shares are fractions of a smaller busy total, and the mutex design is unchanged: mutex rising reflects the other buckets shrinking, not more locking in absolute terms.
 
-- Allocation is no longer the bottleneck: the malloc/free share fell from 38.0% to 8.0% of busy samples. The sampling runs' own progress readouts were 5,176 it/s (before run) and 9,714 it/s at 583k iterations (after run); those are single progress lines, not benchmark results — the throughput comparison is the bench table above (D1 6,868.7 / 6,966.2 vs 4,055.7 it/s).
+- Allocation is no longer the bottleneck: the malloc/free share fell from 38.0% to 8.0% of busy samples. The sampling runs' own progress readouts were 5,176 it/s (before run) and 9,714 it/s at 583k iterations (after run); those are single progress lines, not benchmark results; the throughput comparison is the bench table above (D1 6,868.7 / 6,966.2 vs 4,055.7 it/s).
 - What remains is shard-mutex contention (likely hot preflop shards): `__psynch_mutexwait` alone is 29.8% of busy samples (macOS mutexes park instead of spinning, so every contended `std::mutex` pays a syscall), with the `unordered_map` infoset lookup at 12.9% and `regret_matched` at 8.4% next.
 - Nothing else obvious to take without giving up reproducibility (lock-free/racy updates) or reordering checkpoint bytes (`kShards`, `shard_of`). Full suite green (645 passed, 30 skipped, 3 xpassed).
