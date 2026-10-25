@@ -23,9 +23,8 @@ std::vector<double> regret_matched(const std::vector<double>& regret,
     return sigma;
 }
 
-void regret_matched(const std::vector<double>& regret,
-                    const std::vector<uint8_t>& mask, int n,
-                    std::array<double, kMaxActions>& out) {
+void regret_matched(const std::vector<double>& regret, const uint8_t* mask,
+                    int n, std::array<double, kMaxActions>& out) {
     for (int a = 0; a < n; ++a) out[a] = 0.0;
     double pos = 0.0;
     for (int a = 0; a < n; ++a)
@@ -41,7 +40,7 @@ void regret_matched(const std::vector<double>& regret,
 }
 
 void MCCFRTrainer::matched_strategy(
-        const InfosetData& d, const std::vector<uint8_t>& mask, int n,
+        const InfosetData& d, const uint8_t* mask, int n,
         std::array<double, kMaxActions>& out) const {
     regret_matched(d.regret, mask, n, out);
 }
@@ -76,7 +75,7 @@ double MCCFRTrainer::traverse(GameState& s, int traverser) {
         d.strategy_sum.assign(n, 0.0);
     }
     std::array<double, kMaxActions> sigma;
-    matched_strategy(d, mask, n, sigma);
+    matched_strategy(d, mask.data(), n, sigma);
 
     if (s.current_player() == traverser) {
         std::array<double, kMaxActions> u{};

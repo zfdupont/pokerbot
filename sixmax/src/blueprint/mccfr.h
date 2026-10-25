@@ -30,9 +30,9 @@ std::vector<double> regret_matched(const std::vector<double>& regret,
 // Out-parameter form: writes sigma[0..n) into caller-provided fixed storage
 // instead of heap-allocating a std::vector. Behaviour is bit-identical to the
 // return-by-value overload above; only n leading entries are read/written.
-void regret_matched(const std::vector<double>& regret,
-                    const std::vector<uint8_t>& mask, int n,
-                    std::array<double, kMaxActions>& out);
+// mask points to at least n bytes so hot-path callers can pass stack storage.
+void regret_matched(const std::vector<double>& regret, const uint8_t* mask,
+                    int n, std::array<double, kMaxActions>& out);
 
 // External-sampling MCCFR with linear weighting: regret and strategy-sum
 // updates at iteration t are multiplied by t. Single-threaded; the
@@ -50,8 +50,7 @@ public:
 
 private:
     double traverse(GameState& s, int traverser);
-    void matched_strategy(const InfosetData& d,
-                          const std::vector<uint8_t>& mask, int n,
+    void matched_strategy(const InfosetData& d, const uint8_t* mask, int n,
                           std::array<double, kMaxActions>& out) const;
     Game& game_;
     std::unordered_map<uint64_t, InfosetData> table_;

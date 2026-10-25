@@ -48,21 +48,34 @@ double BlueprintTrainer::traverse(GameState& s, int traverser, double w,
                                   std::mt19937_64& rng, int n) {
     if (s.is_terminal()) return s.utility(traverser);
     assert(n <= kMaxActions);
-    std::vector<uint8_t> mask;
-    s.legal_mask(mask);
+    // legal_mask() fills a vector; keep its buffer per thread and copy the
+    // bytes to stack storage because the recursive children reuse the scratch.
+    thread_local std::vector<uint8_t> scratch;
+    s.legal_mask(scratch);
+    std::array<uint8_t, kMaxActions> mask{};
+    for (int a = 0; a < n; ++a) mask[a] = scratch[a];
     const uint64_t key = s.infoset_key();
     Shard& sh = shards_[shard_of(key)];
+    const bool traverser_node = s.current_player() == traverser;
     std::array<double, kMaxActions> sigma;
+    // The map element is never moved by a rehash, so this pointer stays valid
+    // across the second lock taken after the recursion below.
+    InfosetData* d;
     {
         std::lock_guard<std::mutex> lk(sh.mu);
-        InfosetData& d = sh.map[key];
-        if (d.regret.empty()) {
-            d.regret.assign(n, 0.0);
-            d.strategy_sum.assign(n, 0.0);
+        d = &sh.map[key];
+        if (d->regret.empty()) {
+            d->regret.assign(n, 0.0);
+            d->strategy_sum.assign(n, 0.0);
         }
-        regret_matched(d.regret, mask, n, sigma);
+        regret_matched(d->regret, mask.data(), n, sigma);
+        // Non-traverser nodes fold the average-strategy update into the same
+        // critical section; the traverser updates regret after recursion.
+        if (!traverser_node)
+            for (int a = 0; a < n; ++a)
+                if (mask[a]) d->strategy_sum[a] += w * sigma[a];
     }
-    if (s.current_player() == traverser) {
+    if (traverser_node) {
         std::array<double, kMaxActions> u{};
         double ev = 0.0;
         for (int a = 0; a < n; ++a) {
@@ -73,16 +86,9 @@ double BlueprintTrainer::traverse(GameState& s, int traverser, double w,
             ev += sigma[a] * u[a];
         }
         std::lock_guard<std::mutex> lk(sh.mu);
-        InfosetData& d = sh.map[key];
         for (int a = 0; a < n; ++a)
-            if (mask[a]) d.regret[a] += w * (u[a] - ev);
+            if (mask[a]) d->regret[a] += w * (u[a] - ev);
         return ev;
-    }
-    {
-        std::lock_guard<std::mutex> lk(sh.mu);
-        InfosetData& d = sh.map[key];
-        for (int a = 0; a < n; ++a)
-            if (mask[a]) d.strategy_sum[a] += w * sigma[a];
     }
     std::uniform_real_distribution<double> unif(0.0, 1.0);
     double r = unif(rng), acc = 0.0;
